@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "penpot": {
+      "type": "remote",
+      "url": "https://design.penpot.app/mcp/stream?userToken=eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMjU2R0NNIn0.Lx_oOmThO0XkjxzvO1Qi4US6MXQ6egA1lPls0BBI0sYSLLhTjAeRGg.wKMAglaBngUiy7vN.GhQgpUBnH3oN9Vd26R7qP3I4C5w4fZWCJia3hGe_a8p6tpcBQQsBuhtOmIZUA9t1p4NIO_HvAiz2WQLM0H0I9SF6VmmU27RboTMJaYGlqINmeYp-mtCHBO4ZOMR0qrjyqB3Yw1dMDAMf_1NiuGKRtHFrNmHs7AVUESkRUU2gZCzYiGBKcSZj3aMMuXj0bDMF8AxjTCu9JrAK.NeLu1fy3KFhcnUUqGhBNhA",
+      "enabled": true
+    }
+  }
+}

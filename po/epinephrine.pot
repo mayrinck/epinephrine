@@ -1,0 +1,491 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the epinephrine package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: epinephrine\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-14 23:20-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: data/io.github.mayrinck.epinephrine.desktop.in:2
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:4 data/ui/window.ui:8
+msgid "Epinephrine"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.desktop.in:6
+msgid ""
+"Configure gamescope settings, optimize system performance, and monitor "
+"hardware"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.desktop.in:13
+msgid "gamescope;game;compositor;optimization;hardware;"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:5
+msgid "System Optimization & Gamescope Configuration Tool"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:7
+msgid "mayrinck"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:10
+msgid ""
+"An all-in-one system optimization and configuration tool for Linux gamers."
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:13
+msgid ""
+"Epinephrine brings together hardware monitoring, system performance tuning, "
+"and Gamescope configuration into a single, intuitive interface."
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:17
+msgid "Features:"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:19
+msgid "Gamescope command generator with visual configuration"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:20
+msgid "System optimization and cleanup utilities (coming soon)"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:21
+msgid "Hardware monitoring and control (coming soon)"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:32
+msgid "gamescope"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:33
+msgid "game"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:34
+msgid "compositor"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:35
+msgid "scaling"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:36
+msgid "steam"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:37
+msgid "optimization"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:38
+msgid "hardware"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:42
+msgid "The main window of Epinephrine"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:27
+msgid "Gamescope Manager"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:36
+msgid ""
+"Configure Gamescope parameters visually. Save your configuration as the "
+"system default or copy it to use with a specific game in Steam or other "
+"launchers."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:47
+msgid "Display"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:50
+msgid "Output Width"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:51
+msgid "Leave 0 for default (1280)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:64
+msgid "Output Height"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:65
+msgid "Leave 0 for default (720)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:78
+msgid "Game Width"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:79 data/ui/page-gamescope.ui:93
+msgid "Leave 0 to match output"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:92
+msgid "Game Height"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:106
+msgid "Refresh Rate"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:107
+msgid "FPS limit for vsync games (0 = unlimited)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:120
+msgid "Fullscreen"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:121
+msgid "Create a full-screen window"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:127
+msgid "Borderless"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:128
+msgid "Create a border-less window"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:134
+msgid "Display Index"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:135
+msgid "Force a specific display in nested mode"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:148
+msgid "Unfocused Refresh"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:149
+msgid "FPS limit when unfocused (0 = unlimited)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:165
+msgid "Scaling"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:168
+msgid "Scaler"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:169
+msgid "Scaling algorithm"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:173 data/ui/page-gamescope.ui:358
+msgid "Auto"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:174
+msgid "Integer"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:175
+msgid "Fit"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:176
+msgid "Fill"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:177
+msgid "Stretch"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:186
+msgid "Filter"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:187
+msgid "Upscaler filter type"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:191
+msgid "Linear"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:192
+msgid "Nearest"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:193
+msgid "FSR"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:194
+msgid "NIS"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:195
+msgid "Pixel"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:204
+msgid "Sharpness"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:205
+msgid "0 = sharpest, 20 = blurriest (default: 2)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:227
+msgid "Max Scale"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:228
+msgid "Maximum scale factor (0 = no limit)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:245
+msgid "Frame Rate"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:248
+msgid "Framerate Limit"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:249 data/ui/page-gamescope.ui:473
+msgid "0 = disabled"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:265
+msgid "HDR and Color"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:268
+msgid "HDR Enabled"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:269
+msgid "Enable HDR10 output"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:275
+msgid "SDR Content Nits"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:276
+msgid "Brightness of SDR in HDR mode (default: 400)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:289
+msgid "ITM Enabled"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:290
+msgid "SDR to HDR inverse tone mapping"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:296
+msgid "ITM SDR Nits"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:297
+msgid "SDR input luminance (default: 100)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:310
+msgid "ITM Target Nits"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:311
+msgid "Target luminance (default: 1000)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:324
+msgid "SDR Gamut Wideness"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:325
+msgid "0.0 = standard, 1.0 = max"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:350
+msgid "Advanced"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:353
+msgid "Rendering Backend"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:354
+msgid "Auto-detect is recommended"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:359
+msgid "DRM"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:360
+msgid "SDL"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:361
+msgid "Wayland"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:362
+msgid "Headless"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:371
+msgid "Mouse Sensitivity"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:372
+msgid "Multiplier (default: 1.0)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:386
+msgid "Steam Integration"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:387
+msgid "Steam-specific protocols and logic"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:393
+msgid "Adaptive Sync"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:394
+msgid "Enable VRR if supported"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:400
+msgid "Grab Keyboard"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:401
+msgid "Grab keyboard input"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:407
+msgid "Force Grab Cursor"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:408
+msgid "Always use relative mouse mode"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:414
+msgid "Expose Wayland"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:415
+msgid "Support Wayland clients via xdg-shell"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:421
+msgid "MangoApp"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:422
+msgid "Launch with MangoHud overlay"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:428
+msgid "Force Orientation"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:429
+msgid "Rotate the display"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:433
+msgid "Normal"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:434
+msgid "Left"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:435
+msgid "Right"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:436
+msgid "Upside Down"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:445
+msgid "Prefer Output"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:446
+msgid "Connectors (ex: DP-1,HDMI-A-1)"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:458
+msgid "Immediate Flips"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:459
+msgid "May cause tearing"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:465
+msgid "Keep Alive"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:466
+msgid "Keep running after game exits"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:472
+msgid "Cursor Scale Height"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:489
+msgid "ReShade"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:492
+msgid "Effect Path"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:493
+msgid "Path to a .fx shader file"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:505
+msgid "Technique Index"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:506
+msgid "Technique index from the effect"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:540
+msgid "Save as System Default"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:599
+msgid "Copy"
+msgstr ""
+
+#: data/ui/page-placeholder.ui:30
+msgid "Este módulo será implementado em uma versão futura."
+msgstr ""

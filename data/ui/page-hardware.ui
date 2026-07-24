@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="gpu_detail_page">
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="GtkScrolledWindow" id="gpu_scrolled">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+        <property name="hscrollbar-policy">never</property>
+        <property name="propagate-natural-width">True</property>
+        <property name="propagate-natural-height">True</property>
+
+        <child>
+          <object class="GtkBox" id="content">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="valign">start</property>
+            <property name="margin-start">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-top">16</property>
+            <property name="margin-bottom">16</property>
+
+            <!-- ===== Branding ===== -->
+            <child>
+              <object class="GtkBox" id="branding_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">16</property>
+
+                <child>
+                  <object class="GtkImage" id="gpu_brand_icon">
+                    <property name="pixel-size">64</property>
+                    <property name="valign">start</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkBox" id="branding_text">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">2</property>
+                    <property name="hexpand">True</property>
+
+                    <child>
+                      <object class="GtkLabel" id="gpu_name_label">
+                        <property name="halign">start</property>
+                        <style>
+                          <class name="title-1"/>
+                        </style>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox" id="vram_row">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">12</property>
+                        <child>
+                          <object class="GtkLabel" id="gpu_vram_label">
+                            <property name="halign">start</property>
+                            <style>
+                              <class name="dim-label"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="gpu_release_label">
+                            <property name="halign">start</property>
+                            <style>
+                              <class name="dim-label"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="gpu_specs_btn">
+                    <property name="label" translatable="yes">Official Page</property>
+                    <property name="valign">start</property>
+                    <property name="margin-top">4</property>
+                    <style>
+                      <class name="text-button"/>
+                    </style>
+                  </object>
+                </child>
+
+              </object>
+            </child>
+
+            <!-- ===== Monitor Group ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="monitor_group">
+                <property name="title" translatable="yes">Monitor</property>
+
+                <child>
+                  <object class="GtkBox" id="monitor_panel">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-bottom">8</property>
+
+                    <child>
+                      <object class="GtkDrawingArea" id="monitor_graph">
+                        <property name="hexpand">True</property>
+                        <property name="height-request">160</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox" id="monitor_left">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">1</property>
+                      </object>
+                    </child>
+
+                  </object>
+                </child>
+
+              </object>
+            </child>
+
+            <!-- ===== GPU Management (rows added programmatically) ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="gpu_mgt_group">
+                <property name="title" translatable="yes">GPU Management</property>
+              </object>
+            </child>
+
+            <!-- ===== Specs, Drivers and Features ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="specs_group">
+                <property name="title" translatable="yes">Specs, Drivers and Features</property>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_vendor_row">
+                    <property name="title" translatable="yes">Vendor</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_swdriver_row">
+                    <property name="title" translatable="yes">Software Driver</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_mesa_row">
+                    <property name="title" translatable="yes">Mesa Version</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_opengl_row">
+                    <property name="title" translatable="yes">OpenGL</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_vk_row">
+                    <property name="title" translatable="yes">Vulkan</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_vram_specs_row">
+                    <property name="title" translatable="yes">VRAM</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_resizable_bar_row">
+                    <property name="title" translatable="yes">Resizable BAR</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="AdwActionRow" id="gpu_deviceid_row">
+                    <property name="title" translatable="yes">Device ID</property>
+                  </object>
+                </child>
+
+                <child>
+                  <object class="GtkBox" id="gpu_specs_container">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">2</property>
+                    <property name="margin-start">12</property>
+                    <property name="margin-end">12</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                  </object>
+                </child>
+
+              </object>
+            </child>
+
+            <!-- ===== Lighting Controls ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="lighting_group">
+                <child>
+                  <object class="GtkBox" id="lighting_header">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel" id="lighting_title">
+                        <property name="label" translatable="yes">Lighting Controls</property>
+                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="gpu_lighting_status">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="wrap">True</property>
+                    <property name="max-width-chars">60</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

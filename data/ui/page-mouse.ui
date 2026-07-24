@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="mouse-page">
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+
+        <child>
+          <object class="GtkBox" id="mouse-scroll-box">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="margin-start">24</property>
+            <property name="margin-end">24</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">24</property>
+
+            <!-- Branding header (from MICE_INDEX.md lookup) -->
+            <child>
+              <object class="GtkBox" id="mouse-branding-box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">4</property>
+                <property name="margin-start">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-top">8</property>
+                <property name="margin-bottom">8</property>
+                <child>
+                  <object class="GtkLabel" id="mouse-branding-name">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label" translatable="yes">Mouse</property>
+                    <style>
+                      <class name="title-1"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="mouse-website-btn">
+                    <property name="label" translatable="yes">Official Website</property>
+                    <property name="halign">start</property>
+                    <property name="margin-top">2</property>
+                    <property name="visible">False</property>
+                    <style>
+                      <class name="text-button"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Device Info -->
+            <child>
+              <object class="AdwPreferencesGroup" id="mouse-device-section">
+                <property name="title" translatable="yes">Device Info</property>
+                <child>
+                  <object class="AdwActionRow" id="mouse-dpi-row">
+                    <property name="title" translatable="yes">Resolution (DPI)</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="mouse-dpi-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- G300s sections will be inserted here dynamically -->
+
+            <!-- Acceleration and Speed (libinput) -->
+            <child>
+              <object class="AdwPreferencesGroup" id="mouse-accel-section">
+                <property name="title" translatable="yes">Acceleration and Speed</property>
+                <property name="description" translatable="yes">Configure mouse acceleration, speed, and button mapping via libinput.</property>
+                <child>
+                  <object class="AdwActionRow" id="mouse-speed-row">
+                    <property name="title" translatable="yes">Pointer Speed</property>
+                    <property name="subtitle" translatable="yes">Mouse cursor speed. Range -1 (slowest) to 1 (fastest). 0 = default.</property>
+                    <child type="widget">
+                      <object class="GtkScale" id="mouse-speed-scale">
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">-1</property>
+                            <property name="upper">1</property>
+                            <property name="step-increment">0.1</property>
+                            <property name="value">0</property>
+                          </object>
+                        </property>
+                        <property name="width-request">180</property>
+                        <property name="draw-value">True</property>
+                        <property name="digits">1</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="mouse-accel-row">
+                    <property name="title" translatable="yes">Acceleration Profile</property>
+                    <property name="subtitle" translatable="yes">'flat' = no acceleration, 'adaptive' = standard, 'none' = raw.</property>
+                    <child type="widget">
+                      <object class="GtkDropDown" id="mouse-accel-dropdown">
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item translatable="yes">none</item>
+                              <item translatable="yes">flat</item>
+                              <item translatable="yes">adaptive</item>
+                            </items>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mouse-natural-scroll-row">
+                    <property name="title" translatable="yes">Natural Scrolling</property>
+                    <property name="subtitle" translatable="yes">Reverse scroll direction (content follows fingers).</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- ===== Lighting Controls ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="mouse-lighting-section">
+                <child>
+                  <object class="GtkBox" id="mouse-lighting-header">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel" id="mouse-lighting-title">
+                        <property name="label" translatable="yes">Lighting Controls</property>
+                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="mouse-lighting-status">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="wrap">True</property>
+                    <property name="max-width-chars">60</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+          </object>
+        </child>
+
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkActionBar">
+        <property name="margin-top">6</property>
+        <property name="margin-bottom">6</property>
+        <property name="margin-start">6</property>
+        <property name="margin-end">6</property>
+        <child type="center">
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">12</property>
+            <property name="halign">center</property>
+            <child>
+              <object class="GtkButton" id="mouse-save-btn">
+                <property name="label" translatable="yes">Apply Mouse Settings</property>
+                <style>
+                  <class name="suggested-action"/>
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="mouse-save-g300-btn">
+                <property name="label" translatable="yes">Save to Mouse</property>
+                <property name="visible">False</property>
+                <style>
+                  <class name="accent"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </object>
+</interface>

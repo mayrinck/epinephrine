@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="utilidades-page">
+    <property name="orientation">vertical</property>
+    <property name="hexpand">True</property>
+    <property name="vexpand">True</property>
+
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">horizontal</property>
+        <property name="margin-start">24</property>
+        <property name="margin-end">24</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+        <property name="halign">center</property>
+        <child>
+          <object class="AdwViewSwitcher" id="util-switcher">
+            <property name="stack">util-sub-stack</property>
+            <property name="policy">wide</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparator">
+        <property name="orientation">horizontal</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="AdwViewStack" id="util-sub-stack">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="settings-page">
+    <property name="orientation">vertical</property>
+    <property name="hexpand">True</property>
+    <property name="vexpand">True</property>
+
+    <child>
+      <object class="GtkBox" id="branding-header">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">16</property>
+        <property name="margin-start">24</property>
+        <property name="margin-end">24</property>
+        <property name="margin-top">24</property>
+        <property name="margin-bottom">16</property>
+        <child>
+          <object class="GtkImage" id="brand-icon">
+            <property name="icon-size">GTK_ICON_SIZE_INHERIT</property>
+            <property name="pixel-size">64</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">2</property>
+            <property name="valign">center</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Epinephrine</property>
+                <property name="xalign">0</property>
+                <style>
+                  <class name="title-2"/>
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="brand-version">
+                <property name="label" translatable="yes">Version: 0.1.0</property>
+                <property name="xalign">0</property>
+                <property name="opacity">0.7</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkSeparator">
+        <property name="orientation">horizontal</property>
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="margin-start">24</property>
+            <property name="margin-end">24</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">24</property>
+
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">Appearance</property>
+                <child>
+                  <object class="AdwComboRow" id="theme-row">
+                    <property name="title" translatable="yes">Tema</property>
+                    <property name="subtitle" translatable="yes">Define o estilo visual da interface</property>
+                    <property name="icon-name">preferences-desktop-theme-symbolic</property>
+                    <property name="model">
+                      <object class="GtkStringList">
+                        <items>
+                          <item translatable="yes">Seguir sistema</item>
+                          <item translatable="yes">Libadwaita (GNOME)</item>
+                          <item translatable="yes">Breeze (KDE)</item>
+                        </items>
+                      </object>
+                    </property>
+                    <property name="selected">0</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwComboRow" id="accent-color-row">
+                    <property name="title" translatable="yes">Cor</property>
+                    <property name="subtitle" translatable="yes">Escolhe a cor de destaque da interface</property>
+                    <property name="icon-name">preferences-color-symbolic</property>
+                    <property name="model">
+                      <object class="GtkStringList">
+                        <items>
+                          <item translatable="yes">Follow GPU brand</item>
+                          <item translatable="yes">AMD Red</item>
+                          <item translatable="yes">Intel Blue</item>
+                          <item translatable="yes">NVIDIA Green</item>
+                          <item translatable="yes">TUX Orange</item>
+                        </items>
+                      </object>
+                    </property>
+                    <property name="selected">0</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="apply-theme-row">
+                    <property name="title" translatable="yes">Apply theme to entire interface</property>
+                    <property name="subtitle" translatable="yes">Applies a color palette based on the chosen accent color</property>
+                    <property name="active">False</property>
+                    <property name="visible">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">Language</property>
+                <child>
+                  <object class="AdwComboRow" id="language-row">
+                    <property name="title" translatable="yes">Application Language</property>
+                    <property name="subtitle" translatable="yes">Choose the display language</property>
+                    <property name="icon-name">preferences-desktop-locale-symbolic</property>
+                    <property name="model">
+                      <object class="GtkStringList">
+                        <items>
+                          <item translatable="yes">System</item>
+                          <item translatable="yes">Português</item>
+                          <item translatable="yes">English</item>
+                        </items>
+                      </object>
+                    </property>
+                    <property name="selected">0</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">About</property>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Application Name</property>
+                    <property name="subtitle" translatable="yes">Epinephrine</property>
+                    <property name="icon-name">application-x-executable-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Version</property>
+                    <property name="subtitle" translatable="yes">0.1.0</property>
+                    <property name="icon-name">help-about-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">Toolkit</property>
+                    <property name="subtitle">GTK 4 / libadwaita</property>
+                    <property name="icon-name">resource-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow">
+                    <property name="title" translatable="yes">License</property>
+                    <property name="subtitle" translatable="yes">GNU General Public License v3.0</property>
+                    <property name="icon-name">document-symbolic</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

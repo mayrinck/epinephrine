@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mayrinck.epinephrine</id>
+  <name>Epinephrine</name>
+  <summary>System Optimization &amp; Gamescope Configuration Tool</summary>
+  <developer id="io.github.mayrinck">
+    <name>mayrinck</name>
+  </developer>
+  <description>
+    <p>
+      An all-in-one system optimization and configuration tool for Linux gamers.
+    </p>
+    <p>
+      Epinephrine brings together hardware monitoring, system performance tuning,
+      and Gamescope configuration into a single, intuitive interface.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Gamescope command generator with visual configuration</li>
+      <li>System optimization and cleanup utilities (coming soon)</li>
+      <li>Hardware monitoring and control (coming soon)</li>
+    </ul>
+  </description>
+  <url type="homepage">https://github.com/mayrinck/epinephrine</url>
+  <project_license>MIT</project_license>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>gamescope</keyword>
+    <keyword>gamemode</keyword>
+    <keyword>performance</keyword>
+    <keyword>monitor</keyword>
+    <keyword>joystick</keyword>
+    <keyword>launcher</keyword>
+    <keyword>adrenalin</keyword>
+    <keyword>game</keyword>
+    <keyword>compositor</keyword>
+    <keyword>scaling</keyword>
+    <keyword>steam</keyword>
+    <keyword>optimization</keyword>
+    <keyword>hardware</keyword>
+  </keywords>
+  <screenshots>
+    <screenshot type="default">
+      <caption>The main window of Epinephrine</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.0" date="2025-01-01"/>
+  </releases>
+  <launchable type="desktop-id">io.github.mayrinck.epinephrine.desktop</launchable>
+</component>

@@ -1,0 +1,574 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="gamescope-page">
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="AdwPreferencesPage">
+        <property name="vexpand">True</property>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Gamescope Manager</property>
+            <property name="description" translatable="yes">Configure Gamescope parameters visually. Save your configuration as the system default or copy it to use with a specific game in Steam or other launchers as startup command.</property>
+          </object>
+        </child>
+
+        <!-- Display Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Display</property>
+            <child>
+              <object class="AdwSpinRow" id="output-width">
+                <property name="title" translatable="yes">Output Width</property>
+                <property name="subtitle" translatable="yes">Leave 0 for default (1280)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">7680</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="output-height">
+                <property name="title" translatable="yes">Output Height</property>
+                <property name="subtitle" translatable="yes">Leave 0 for default (720)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">4320</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="nested-width">
+                <property name="title" translatable="yes">Game Width</property>
+                <property name="subtitle" translatable="yes">Leave 0 to match output</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">7680</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="nested-height">
+                <property name="title" translatable="yes">Game Height</property>
+                <property name="subtitle" translatable="yes">Leave 0 to match output</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">4320</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="nested-refresh">
+                <property name="title" translatable="yes">Refresh Rate</property>
+                <property name="subtitle" translatable="yes">FPS limit for vsync games (0 = unlimited)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">360</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="nested-unfocused-refresh">
+                <property name="title" translatable="yes">Unfocused Refresh</property>
+                <property name="subtitle" translatable="yes">FPS limit when unfocused (0 = unlimited)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">360</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="fullscreen">
+                <property name="title" translatable="yes">Fullscreen</property>
+                <property name="subtitle" translatable="yes">Create a full-screen window</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="borderless">
+                <property name="title" translatable="yes">Borderless</property>
+                <property name="subtitle" translatable="yes">Create a border-less window</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="display-index">
+                <property name="title" translatable="yes">Display Index</property>
+                <property name="subtitle" translatable="yes">Force a specific display in nested mode</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">10</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Scaling Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Scaling</property>
+            <child>
+              <object class="AdwComboRow" id="scaler">
+                <property name="title" translatable="yes">Scaler</property>
+                <property name="subtitle" translatable="yes">Scaling algorithm</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Auto</item>
+                      <item translatable="yes">Integer</item>
+                      <item translatable="yes">Fit</item>
+                      <item translatable="yes">Fill</item>
+                      <item translatable="yes">Stretch</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="filter">
+                <property name="title" translatable="yes">Filter</property>
+                <property name="subtitle" translatable="yes">Upscaler filter type</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Linear</item>
+                      <item translatable="yes">Nearest</item>
+                      <item translatable="yes">FSR</item>
+                      <item translatable="yes">NIS</item>
+                      <item translatable="yes">Pixel</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="sharpness-row">
+                <property name="title" translatable="yes">Sharpness</property>
+                <property name="subtitle" translatable="yes">0 = sharpest, 20 = blurriest (default: 2)</property>
+                <child type="widget">
+                  <object class="GtkScale" id="sharpness">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">20</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">2</property>
+                      </object>
+                    </property>
+                    <property name="draw-value">True</property>
+                    <property name="digits">0</property>
+                    <property name="width-request">180</property>
+                    <property name="hexpand">True</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="max-scale">
+                <property name="title" translatable="yes">Max Scale</property>
+                <property name="subtitle" translatable="yes">Maximum scale factor (0 = no limit)</property>
+                <property name="digits">1</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">10</property>
+                    <property name="step-increment">0.1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Frame Rate Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Frame Rate</property>
+            <child>
+              <object class="AdwSpinRow" id="framerate-limit">
+                <property name="title" translatable="yes">Framerate Limit</property>
+                <property name="subtitle" translatable="yes">0 = disabled</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">360</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- HDR and Color Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">HDR and Color</property>
+            <child>
+              <object class="AdwSwitchRow" id="hdr-enabled">
+                <property name="title" translatable="yes">HDR Enabled</property>
+                <property name="subtitle" translatable="yes">Enable HDR10 output</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="hdr-sdr-content-nits">
+                <property name="title" translatable="yes">SDR Content Nits</property>
+                <property name="subtitle" translatable="yes">Brightness of SDR in HDR mode (default: 400)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">80</property>
+                    <property name="upper">10000</property>
+                    <property name="step-increment">10</property>
+                    <property name="value">400</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="hdr-itm-enabled">
+                <property name="title" translatable="yes">ITM Enabled</property>
+                <property name="subtitle" translatable="yes">SDR to HDR inverse tone mapping</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="hdr-itm-sdr-nits">
+                <property name="title" translatable="yes">ITM SDR Nits</property>
+                <property name="subtitle" translatable="yes">SDR input luminance (default: 100)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">1000</property>
+                    <property name="step-increment">10</property>
+                    <property name="value">100</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="hdr-itm-target-nits">
+                <property name="title" translatable="yes">ITM Target Nits</property>
+                <property name="subtitle" translatable="yes">Target luminance (default: 1000)</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">10000</property>
+                    <property name="step-increment">100</property>
+                    <property name="value">1000</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="sdr-gamut-wideness-row">
+                <property name="title" translatable="yes">SDR Gamut Wideness</property>
+                <property name="subtitle" translatable="yes">0.0 = standard, 1.0 = max</property>
+                <child type="widget">
+                  <object class="GtkScale" id="sdr-gamut-wideness">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">1</property>
+                        <property name="step-increment">0.01</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
+                    <property name="draw-value">True</property>
+                    <property name="digits">2</property>
+                    <property name="width-request">180</property>
+                    <property name="hexpand">True</property>
+                    <property name="valign">center</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Advanced Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">Advanced</property>
+            <child>
+              <object class="AdwComboRow" id="backend">
+                <property name="title" translatable="yes">Rendering Backend</property>
+                <property name="subtitle" translatable="yes">Auto-detect is recommended</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Auto</item>
+                      <item translatable="yes">DRM</item>
+                      <item translatable="yes">SDL</item>
+                      <item translatable="yes">Wayland</item>
+                      <item translatable="yes">Headless</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="mouse-sensitivity">
+                <property name="title" translatable="yes">Mouse Sensitivity</property>
+                <property name="subtitle" translatable="yes">Multiplier (default: 1.0)</property>
+                <property name="digits">2</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0.1</property>
+                    <property name="upper">10</property>
+                    <property name="step-increment">0.1</property>
+                    <property name="value">1</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="steam-integration">
+                <property name="title" translatable="yes">Steam Integration</property>
+                <property name="subtitle" translatable="yes">Steam-specific protocols and logic</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="adaptive-sync">
+                <property name="title" translatable="yes">Adaptive Sync</property>
+                <property name="subtitle" translatable="yes">Enable VRR if supported</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="grab-keyboard">
+                <property name="title" translatable="yes">Grab Keyboard</property>
+                <property name="subtitle" translatable="yes">Grab keyboard input</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="force-grab-cursor">
+                <property name="title" translatable="yes">Force Grab Cursor</property>
+                <property name="subtitle" translatable="yes">Always use relative mouse mode</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="expose-wayland">
+                <property name="title" translatable="yes">Expose Wayland</property>
+                <property name="subtitle" translatable="yes">Support Wayland clients via xdg-shell</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="mangoapp">
+                <property name="title" translatable="yes">MangoApp</property>
+                <property name="subtitle" translatable="yes">Launch with MangoHud overlay</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="force-orientation">
+                <property name="title" translatable="yes">Force Orientation</property>
+                <property name="subtitle" translatable="yes">Rotate the display</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Normal</item>
+                      <item translatable="yes">Left</item>
+                      <item translatable="yes">Right</item>
+                      <item translatable="yes">Upside Down</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="prefer-output-row">
+                <property name="title" translatable="yes">Prefer Output</property>
+                <property name="subtitle" translatable="yes">Connectors (ex: DP-1,HDMI-A-1)</property>
+                <child type="widget">
+                  <object class="GtkEntry" id="prefer-output">
+                    <property name="hexpand">True</property>
+                    <property name="halign">end</property>
+                    <property name="width-request">200</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="immediate-flips">
+                <property name="title" translatable="yes">Immediate Flips</property>
+                <property name="subtitle" translatable="yes">May cause tearing</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="keep-alive">
+                <property name="title" translatable="yes">Keep Alive</property>
+                <property name="subtitle" translatable="yes">Keep running after game exits</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="cursor-scale-height">
+                <property name="title" translatable="yes">Cursor Scale Height</property>
+                <property name="subtitle" translatable="yes">0 = disabled</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">4320</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ReShade Section -->
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">ReShade</property>
+            <child>
+              <object class="AdwActionRow" id="reshade-effect-row">
+                <property name="title" translatable="yes">Effect Path</property>
+                <property name="subtitle" translatable="yes">Path to a .fx shader file</property>
+                <child type="widget">
+                  <object class="GtkEntry" id="reshade-effect">
+                    <property name="hexpand">True</property>
+                    <property name="halign">end</property>
+                    <property name="width-request">200</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSpinRow" id="reshade-technique-idx">
+                <property name="title" translatable="yes">Technique Index</property>
+                <property name="subtitle" translatable="yes">Technique index from the effect</property>
+                <property name="adjustment">
+                  <object class="GtkAdjustment">
+                    <property name="lower">0</property>
+                    <property name="upper">100</property>
+                    <property name="step-increment">1</property>
+                    <property name="value">0</property>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </child>
+
+    <!-- Bottom Action Bar -->
+    <child>
+      <object class="GtkBox" id="command-bar">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
+        <property name="margin-start">24</property>
+        <property name="margin-end">24</property>
+        <property name="margin-top">8</property>
+        <property name="margin-bottom">12</property>
+        <style>
+          <class name="toolbar"/>
+        </style>
+        <child>
+          <object class="GtkButton" id="restore-defaults-button">
+            <property name="label" translatable="yes">Restore Defaults</property>
+            <property name="halign">start</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkSeparator">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkEntry" id="command-entry">
+            <property name="hexpand">True</property>
+            <property name="editable">False</property>
+            <property name="placeholder-text" translatable="yes">gamescope command will appear here</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="copy-button">
+            <property name="label" translatable="yes">Copy</property>
+            <property name="halign">end</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkSeparator">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="save-defaults-button">
+            <property name="halign">end</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <property name="halign">center</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">document-save-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Save Configuration</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </object>
+</interface>

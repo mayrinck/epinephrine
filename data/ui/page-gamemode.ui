@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="gamemode-page">
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="AdwPreferencesPage">
+        <property name="vexpand">True</property>
+
+        <child>
+          <object class="AdwPreferencesGroup">
+            <property name="title" translatable="yes">GameMode Settings</property>
+            <property name="description" translatable="yes">Configure Feral GameMode for optimal gaming performance. GameMode applies system-level optimizations when games are running.</property>
+          </object>
+        </child>
+
+        <!-- Process Priority Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-priority-content">
+            <property name="title" translatable="yes">Process Priority</property>
+            <child>
+              <object class="AdwActionRow" id="renice-row">
+                <property name="title" translatable="yes">Nice Value</property>
+                <property name="subtitle" translatable="yes">Process priority (-20 = highest, 19 = lowest). Default: 0</property>
+                <property name="icon-name">preferences-system-performance-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="renice">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">-20</property>
+                        <property name="upper">19</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
+                    <property name="width-request">80</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwComboRow" id="ioprio">
+                <property name="title" translatable="yes">I/O Priority</property>
+                <property name="subtitle" translatable="yes">Disk I/O scheduling class. Default: none</property>
+                <property name="icon-name">drive-harddisk-symbolic</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">None</item>
+                      <item translatable="yes">Realtime</item>
+                      <item translatable="yes">Best-effort</item>
+                      <item translatable="yes">Idle</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- CPU Settings Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-cpu-content">
+            <property name="title" translatable="yes">CPU Settings</property>
+            <child>
+              <object class="AdwComboRow" id="cpu-governor">
+                <property name="title" translatable="yes">CPU Governor</property>
+                <property name="subtitle" translatable="yes">CPU frequency scaling policy. Performance mode keeps max frequency. Default: performance</property>
+                <property name="icon-name">cpu-symbolic</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Performance</item>
+                      <item translatable="yes">Powersave</item>
+                      <item translatable="yes">Schedutil</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="cpu-min-freq-row">
+                <property name="title" translatable="yes">CPU Min Frequency</property>
+                <property name="subtitle" translatable="yes">Minimum CPU frequency in kHz. 0 = no minimum. Default: 0</property>
+                <property name="icon-name">media-playback-start-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="cpu-min-freq">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">10000000</property>
+                        <property name="step-increment">100000</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
+                    <property name="width-request">120</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="cpu-max-freq-row">
+                <property name="title" translatable="yes">CPU Max Frequency</property>
+                <property name="subtitle" translatable="yes">Maximum CPU frequency in kHz. 0 = no maximum. Default: 0</property>
+                <property name="icon-name">media-playback-stop-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="cpu-max-freq">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">10000000</property>
+                        <property name="step-increment">100000</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
+                    <property name="width-request">120</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="cpu-perf-pct-row">
+                <property name="title" translatable="yes">CPU Performance Percentage</property>
+                <property name="subtitle" translatable="yes">CPU performance level (0-100). Higher = more aggressive. Default: 100</property>
+                <property name="icon-name">power-system-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="cpu-perf-pct">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">100</property>
+                      </object>
+                    </property>
+                    <property name="width-request">80</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Scheduler Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-scheduler-content">
+            <property name="title" translatable="yes">Scheduler</property>
+            <child>
+              <object class="AdwActionRow" id="scheduler-priority-row">
+                <property name="title" translatable="yes">Scheduler Priority</property>
+                <property name="subtitle" translatable="yes">Process scheduler priority (-20 to 19). Default: 0</property>
+                <property name="icon-name">view-sort-ascending-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="scheduler-priority">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">-20</property>
+                        <property name="upper">19</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
+                    <property name="width-request">80</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="io-weight-row">
+                <property name="title" translatable="yes">I/O Weight</property>
+                <property name="subtitle" translatable="yes">I/O scheduling weight (1-10000). Higher = more I/O priority. Default: 100</property>
+                <property name="icon-name">format-justify-fill-symbolic</property>
+                <child type="widget">
+                  <object class="GtkSpinButton" id="io-weight">
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">1</property>
+                        <property name="upper">10000</property>
+                        <property name="step-increment">10</property>
+                        <property name="page-increment">100</property>
+                        <property name="value">100</property>
+                      </object>
+                    </property>
+                    <property name="width-request">100</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- GPU Settings Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-gpu-content">
+            <property name="title" translatable="yes">GPU Settings</property>
+            <child>
+              <object class="AdwComboRow" id="gpu-governor">
+                <property name="title" translatable="yes">GPU Governor</property>
+                <property name="subtitle" translatable="yes">GPU frequency scaling policy. Default: performance</property>
+                <property name="icon-name">video-display-symbolic</property>
+                <property name="model">
+                  <object class="GtkStringList">
+                    <items>
+                      <item translatable="yes">Performance</item>
+                      <item translatable="yes">Powersave</item>
+                      <item translatable="yes">Default</item>
+                    </items>
+                  </object>
+                </property>
+                <property name="selected">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="apply-gpu-governor">
+                <property name="title" translatable="yes">Apply GPU Governor</property>
+                <property name="subtitle" translatable="yes">Enable GPU governor override when GameMode is active</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Tweaks Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-tweaks-content">
+            <property name="title" translatable="yes">Tweaks</property>
+            <property name="description" translatable="yes">System tweaks applied while GameMode is active. Changes are reverted when GameMode stops.</property>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-disable-animations">
+                <property name="title" translatable="yes">Disable animations</property>
+                <property name="subtitle" translatable="yes">System animations will not occur while gamemode is active</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-disable-notifications">
+                <property name="title" translatable="yes">Disable notifications</property>
+                <property name="subtitle" translatable="yes">System notification bubbles will not occur while gamemode is active</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-suspend-compositor">
+                <property name="title" translatable="yes">Suspend compositor</property>
+                <property name="subtitle" translatable="yes">Suspend the desktop compositor to reduce input lag and eliminate forced vsync. Supported on KDE and GNOME.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-swappiness">
+                <property name="title" translatable="yes">Reduce swappiness</property>
+                <property name="subtitle" translatable="yes">Keep data in RAM longer by reducing the kernel's tendency to swap. Safer with 8 GB+ of RAM.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-nmi-watchdog">
+                <property name="title" translatable="yes">Disable NMI watchdog</property>
+                <property name="subtitle" translatable="yes">Disables periodic CPU interrupt monitoring. Most useful on older CPUs to reclaim a small amount of cycles.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-usb-autosuspend">
+                <property name="title" translatable="yes">Disable USB autosuspend</property>
+                <property name="subtitle" translatable="yes">Prevents USB devices from entering sleep during gameplay, reducing potential input micro-lags.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-timer-khz">
+                <property name="title" translatable="yes">Increase timer frequency</property>
+                <property name="subtitle" translatable="yes">Raises kernel timer resolution from 250 Hz to 1000 Hz for more consistent frametimes.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-disable-wakeup">
+                <property name="title" translatable="yes">Disable USB wakeup</property>
+                <property name="subtitle" translatable="yes">Prevents USB devices from waking the CPU, avoiding micro-interruptions during gameplay.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-dirty-ratio">
+                <property name="title" translatable="yes">Reduce write cache</property>
+                <property name="subtitle" translatable="yes">Lowers kernel dirty page thresholds so writes happen more frequently, reducing I/O spikes.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-kill-trackers">
+                <property name="title" translatable="yes">Kill background indexers</property>
+                <property name="subtitle" translatable="yes">Terminates file indexers (baloo, tracker) that consume CPU and disk during gameplay.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-sched-rt">
+                <property name="title" translatable="yes">Increase scheduler limit</property>
+                <property name="subtitle" translatable="yes">Allows real-time processes to use a larger CPU slice. Useful for audio/PipeWire and Wine.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+            <child>
+              <object class="AdwSwitchRow" id="tweak-stop-services">
+                <property name="title" translatable="yes">Stop auto-updaters</property>
+                <property name="subtitle" translatable="yes">Disables packagekit and snapd during gameplay to prevent unexpected download/install spikes.</property>
+                <property name="active">False</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- Custom Scripts Section -->
+        <child>
+          <object class="AdwPreferencesGroup" id="gm-section-scripts-content">
+            <property name="title" translatable="yes">Custom Scripts</property>
+            <child>
+              <object class="AdwActionRow" id="script-start-row">
+                <property name="title" translatable="yes">Start Script</property>
+                <property name="subtitle" translatable="yes">Script to run when GameMode activates</property>
+                <property name="icon-name">media-playback-start-symbolic</property>
+                <child type="widget">
+                  <object class="GtkEntry" id="script-start">
+                    <property name="placeholder-text" translatable="yes">/path/to/start.sh</property>
+                    <property name="hexpand">True</property>
+                    <property name="width-request">250</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="AdwActionRow" id="script-end-row">
+                <property name="title" translatable="yes">End Script</property>
+                <property name="subtitle" translatable="yes">Script to run when GameMode deactivates</property>
+                <property name="icon-name">media-playback-stop-symbolic</property>
+                <child type="widget">
+                  <object class="GtkEntry" id="script-end">
+                    <property name="placeholder-text" translatable="yes">/path/to/end.sh</property>
+                    <property name="hexpand">True</property>
+                    <property name="width-request">250</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </child>
+
+    <!-- Bottom Action Bar -->
+    <child>
+      <object class="GtkBox" id="gm-bottom-bar">
+        <property name="orientation">horizontal</property>
+        <property name="spacing">8</property>
+        <property name="margin-start">24</property>
+        <property name="margin-end">24</property>
+        <property name="margin-top">8</property>
+        <property name="margin-bottom">12</property>
+        <style>
+          <class name="toolbar"/>
+        </style>
+        <child>
+          <object class="GtkButton" id="reset-config-button">
+            <property name="label" translatable="yes">Restore Defaults</property>
+            <property name="halign">start</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="save-config-button">
+            <property name="halign">end</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <property name="halign">center</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon-name">document-save-symbolic</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Save Configuration</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

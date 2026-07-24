@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Epinephrine
+Name[pt_BR]=Epinephrine
+Summary=Configuration Tool for Gamers
+Summary[pt_BR]=Ferramenta de configuração para Gamers
+Comment=Configure gamescope settings, optimize system performance, and monitor hardware
+Comment[pt_BR]=Configure as opções do gamescope, otimize o desempenho do sistema e monitore o hardware
+Exec=epinephrine
+Icon=io.github.mayrinck.epinephrine
+Terminal=false
+Type=Application
+Categories=Utility;Game;Settings;System;
+Keywords=gamescope;game;compositor;optimization;hardware;

@@ -1,0 +1,6 @@
+data/io.github.mayrinck.epinephrine.desktop.in
+data/io.github.mayrinck.epinephrine.metainfo.xml.in
+data/ui/window.ui
+data/ui/page-gamescope.ui
+data/ui/page-placeholder.ui
+src/application.c

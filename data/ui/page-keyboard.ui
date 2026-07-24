@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="GtkBox" id="keyboard-page">
+    <property name="orientation">vertical</property>
+
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
+            <property name="margin-start">24</property>
+            <property name="margin-end">24</property>
+            <property name="margin-top">12</property>
+            <property name="margin-bottom">24</property>
+
+            <child>
+              <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">Keyboard Settings</property>
+                <property name="description" translatable="yes">Configure keyboard layout, repeat rate, delay, and other input settings.</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="AdwPreferencesGroup" id="kb-info-section">
+                <property name="title" translatable="yes">Information</property>
+                <child>
+                  <object class="AdwActionRow" id="kb-name-row">
+                    <property name="title" translatable="yes">Name</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-name-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-vendor-row">
+                    <property name="title" translatable="yes">Vendor</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-vendor-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-speed-row">
+                    <property name="title" translatable="yes">Speed</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-speed-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-driver-row">
+                    <property name="title" translatable="yes">Driver</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-driver-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-chipset-row">
+                    <property name="title" translatable="yes">Chipset</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-chipset-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="AdwPreferencesGroup" id="kb-settings-section">
+                <property name="title" translatable="yes">Settings</property>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-numlock-row">
+                    <property name="title" translatable="yes">Ativar NumLock no Boot</property>
+                    <property name="subtitle" translatable="yes">Enable NumLock when logging in.</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-capslock-row">
+                    <property name="title" translatable="yes">Ativar CapsLock no Boot</property>
+                    <property name="subtitle" translatable="yes">Enable CapsLock when logging in.</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-scrolllock-row">
+                    <property name="title" translatable="yes">Ativar ScrollLock no Boot</property>
+                    <property name="subtitle" translatable="yes">Enable ScrollLock when logging in.</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-repeat-rate-row">
+                    <property name="title" translatable="yes">Repeat Rate</property>
+                    <property name="subtitle" translatable="yes">Characters per second when holding a key (via kbdrate).</property>
+                    <property name="tooltip-text" translatable="yes">Controls how many times per second a key press is registered while holding it down. Higher values make key repeat faster.</property>
+                    <child type="widget">
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <child>
+                          <object class="GtkSpinButton" id="kb-repeat-rate-spin">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">50</property>
+                                <property name="step-increment">1</property>
+                                <property name="value">33</property>
+                              </object>
+                            </property>
+                            <property name="width-request">80</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">cps</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwActionRow" id="kb-repeat-delay-row">
+                    <property name="title" translatable="yes">Repeat Delay</property>
+                    <property name="subtitle" translatable="yes">Delay in milliseconds before key repeat starts.</property>
+                    <property name="tooltip-text" translatable="yes">How long a key must be held before it starts repeating. Lower values trigger repeat sooner.</property>
+                    <child type="widget">
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <child>
+                          <object class="GtkSpinButton" id="kb-repeat-delay-spin">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">100</property>
+                                <property name="upper">2000</property>
+                                <property name="step-increment">50</property>
+                                <property name="value">500</property>
+                              </object>
+                            </property>
+                            <property name="width-request">80</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">ms</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- ===== Layout ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="kb-layout-section">
+                <property name="title" translatable="yes">Layout</property>
+                <child>
+                  <object class="AdwActionRow" id="kb-layout-row">
+                    <property name="title" translatable="yes">Current Layout</property>
+                    <child type="widget">
+                      <object class="GtkLabel" id="kb-layout-label">
+                        <property name="halign">end</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- ===== Lighting Controls ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="kb-lighting-section">
+                <child>
+                  <object class="GtkBox" id="kb-lighting-header">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel" id="kb-lighting-title">
+                        <property name="label" translatable="yes">Lighting Controls</property>
+                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
+                        <style>
+                          <class name="heading"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-backlight-switch-row">
+                    <property name="title" translatable="yes">Toggle Keyboard Illumination</property>
+                    <property name="subtitle" translatable="yes">Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards.</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+          </object>
+        </child>
+
+      </object>
+    </child>
+
+    <child>
+      <object class="GtkActionBar">
+        <property name="margin-top">6</property>
+        <property name="margin-bottom">6</property>
+        <property name="margin-start">6</property>
+        <property name="margin-end">6</property>
+        <child type="center">
+          <object class="GtkButton" id="kb-save-btn">
+            <property name="label" translatable="yes">Apply Keyboard Settings</property>
+            <property name="halign">center</property>
+            <style>
+              <class name="suggested-action"/>
+            </style>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </object>
+</interface>

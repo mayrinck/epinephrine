@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/mayrinck/epinephrine">
+    <file preprocess="xml-stripblanks">ui/window.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-gamescope.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-dashboard.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-utilities.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-gamemode.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-settings.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-mangohud.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-cpu.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-keyboard.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-mouse.ui</file>
+    <file preprocess="xml-stripblanks">ui/page-hardware.ui</file>
+    <file>fonts/ShareTech-Regular.ttf</file>
+    <file preprocess="xml-stripblanks">icons/source-steam.svg</file>
+    <file preprocess="xml-stripblanks">icons/source-heroic.svg</file>
+    <file preprocess="xml-stripblanks">icons/source-lutris.svg</file>
+    <file preprocess="xml-stripblanks">icons/source-bottles.svg</file>
+    <file preprocess="xml-stripblanks">icons/source-other.svg</file>
+    <file preprocess="xml-stripblanks">icons/source-appimage.svg</file>
+    <file>icons/launchers/steam.png</file>
+    <file>icons/launchers/heroic.png</file>
+    <file>icons/launchers/lutris.png</file>
+    <file>icons/launchers/bottles.png</file>
+    <file>icons/generic-ps2.svg</file>
+    <file>icons/brand-default.svg</file>
+    <file>icons/brand-blue.svg</file>
+    <file>icons/brand-green.svg</file>
+    <file>icons/brand-orange.svg</file>
+    <file>icons/feral.svg</file>
+    <file preprocess="xml-stripblanks">icons/gpu-amd.svg</file>
+    <file preprocess="xml-stripblanks">icons/gpu-nvidia.svg</file>
+    <file preprocess="xml-stripblanks">icons/gpu-intel-xe.svg</file>
+    <file>icons/gpu-intel-arc.png</file>
+    <file>icons/gpu-intel.png</file>
+    <file preprocess="xml-stripblanks">icons/gpu-qualcomm.svg</file>
+    <file>icons/gpu-innosilicon.png</file>
+    <file>icons/gpu-generic.png</file>
+    <file preprocess="xml-stripblanks">icons-sym/addon-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/chip-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/cpu-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/executable-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/gamescope-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/harddisk-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/headset-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/keyboard-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/memory-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/mic-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/mouse-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/pci-card-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/pocket-knife-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/resource-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/speedometer-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/ssd-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/joystick-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/joystick-arcade-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/motherboard-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/bulb-symbolic.svg</file>
+    <file>../database/GPU_INDEX.md</file>
+    <file>../database/JOY_INDEX.md</file>
+    <file>../database/MICE_INDEX.md</file>
+  </gresource>
+</gresources>

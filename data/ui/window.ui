@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <object class="AdwApplicationWindow" id="window">
+    <property name="width-request">800</property>
+    <property name="height-request">550</property>
+    <property name="default-width">1100</property>
+    <property name="default-height">750</property>
+    <property name="title" translatable="yes">Epinephrine</property>
+
+    <child>
+      <object class="AdwToolbarView">
+        <property name="top-bar-style">flat</property>
+
+        <child type="top">
+          <object class="AdwHeaderBar" id="header-bar">
+
+            <property name="title-widget">
+              <object class="AdwViewSwitcher" id="view-switcher">
+                <property name="stack">view-stack</property>
+                <property name="policy">wide</property>
+              </object>
+            </property>
+
+          </object>
+        </child>
+
+        <property name="content">
+          <object class="AdwToastOverlay" id="toast-overlay">
+            <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="AdwViewStack" id="view-stack"/>
+            </child>
+          </object>
+        </property>
+      </object>
+    </child>
+
+  </object>
+</interface>
