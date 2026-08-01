@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "page-mouse.h"
 #include "page-dashboard.h"
+#include "epi-privilege.h"
 
 #include <string.h>
 #include <sys/stat.h>
@@ -11,10 +12,13 @@
 #include <linux/input.h>
 #include <linux/hidraw.h>
 #include <linux/input-event-codes.h>
+#include "../epi-i18n.h"
 
 #ifndef _IOC
 #include <asm-generic/ioctl.h>
 #endif
+
+#define tr(x) epi_i18n_get (x)
 
 /* ---- bitmap helpers (from page-hardware.c) ---- */
 #ifndef test_bit
@@ -396,11 +400,12 @@ hid_code_to_name (uint8_t code)
 /* ─────────────── Forward declarations ─────────────── */
 static void     populate_g300_widgets      (MousePage *page);
 static void     read_g300_widgets          (MousePage *page, int profile_idx);
-static int      g300_feature_get           (int fd, uint8_t id, uint8_t *buf, size_t len);
-static int      g300_feature_set           (int fd, uint8_t *buf, size_t len);
-static int      g300_read_profile          (int fd, int idx, uint8_t *out);
-static int      g300_write_profile         (int fd, int idx, const uint8_t *data);
+static int      g300_feature_get           (const char *path, int fd, uint8_t id, uint8_t *buf, size_t len);
+static int      g300_feature_set           (const char *path, int fd, uint8_t *buf, size_t len);
+static int      g300_read_profile          (const char *path, int fd, int idx, uint8_t *out);
+static int      g300_write_profile         (const char *path, int fd, int idx, const uint8_t *data);
 static int      find_g300_hidraw           (void);
+static char    *find_g300_hidraw_priv      (void);
 static gboolean detect_ratbagd             (void);
 static void     dump_profile               (const uint8_t *data, int idx);
 static void     on_profile_clicked         (GtkButton *btn, MousePage *page);
@@ -413,44 +418,150 @@ static void     on_capture_clicked         (GtkButton *btn, MousePage *page);
 static void     on_mod_toggled             (GtkCheckButton *cb, MousePage *page);
 static void     on_save_g300_clicked       (GtkButton *btn, MousePage *page);
 
-/* ─────────────── HID feature report helpers ─────────────── */
+/* ─────────────── Admin session helpers (epi-hidraw) ─────────────── */
 
-static int
-g300_feature_get (int fd, uint8_t id, uint8_t *buf, size_t len)
+static char *
+epi_hidraw_program (void)
 {
-  if (fd < 0) return -1;
-  memset (buf, 0, len);
-  buf[0] = id;
-  int ret = ioctl (fd, HIDIOCGFEATURE (len), buf);
-  if (ret < 0) return -1;
-  return 0;
+  char linkbuf[4096];
+  ssize_t n = readlink ("/proc/self/exe", linkbuf, sizeof (linkbuf) - 1);
+  if (n > 0)
+    {
+      linkbuf[n] = '\0';
+      char *slash = strrchr (linkbuf, '/');
+      if (slash)
+        {
+          *slash = '\0';
+          char *cand = g_build_filename (linkbuf, "epi-hidraw", NULL);
+          if (g_file_test (cand, G_FILE_TEST_IS_EXECUTABLE))
+            return cand;
+          g_free (cand);
+        }
+    }
+  return g_strdup ("epi-hidraw");
 }
 
 static int
-g300_feature_set (int fd, uint8_t *buf, size_t len)
+hex_to_bytes (const char *hex, uint8_t *out, size_t max)
 {
-  if (fd < 0) return -1;
-  int ret = ioctl (fd, HIDIOCSFEATURE (len), buf);
-  if (ret < 0) return -1;
-  return 0;
+  size_t n = strlen (hex);
+  if (n == 0 || n % 2 != 0 || n / 2 > max) return -1;
+  for (size_t i = 0; i < n; i += 2)
+    {
+      char byte[3] = { hex[i], hex[i + 1], '\0' };
+      char *end = NULL;
+      long v = strtol (byte, &end, 16);
+      if (*end != '\0' || v < 0 || v > 0xFF) return -1;
+      out[i / 2] = (uint8_t) v;
+    }
+  return (int) (n / 2);
+}
+
+static char *
+bytes_to_hex (const unsigned char *data, size_t len)
+{
+  GString *s = g_string_new (NULL);
+  for (size_t i = 0; i < len; i++)
+    g_string_append_printf (s, "%02x", data[i]);
+  return g_string_free (s, FALSE);
+}
+
+/* Run epi-hidraw through the persistent admin session; returns TRUE and
+   (optionally) the captured stdout on success. */
+static gboolean
+run_epi_hidraw (const char *dev, const char *op, const char *arg, char **out)
+{
+  char *prog = epi_hidraw_program ();
+  char *cmd;
+  if (arg)
+    cmd = g_strdup_printf ("'%s' '%s' %s %s 2>/dev/null", prog, dev, op, arg);
+  else
+    cmd = g_strdup_printf ("'%s' '%s' %s", prog, dev, op);
+  g_free (prog);
+
+  int exit_code = -1;
+  char *stdout = NULL;
+  GError *err = NULL;
+  gboolean ok = epi_privilege_exec_sync (cmd, &exit_code, &stdout, &err);
+  g_free (cmd);
+  g_clear_error (&err);
+
+  if (!ok || exit_code != 0 || !stdout)
+    {
+      g_free (stdout);
+      return FALSE;
+    }
+
+  if (out)
+    {
+      g_strstrip (stdout);
+      *out = stdout;
+    }
+  else
+    g_free (stdout);
+  return TRUE;
+}
+
+/* ─────────────── HID feature report helpers ─────────────── */
+
+static int
+g300_feature_get (const char *path, int fd, uint8_t id, uint8_t *buf, size_t len)
+{
+  memset (buf, 0, len);
+  buf[0] = id;
+
+  if (fd >= 0)
+    return ioctl (fd, HIDIOCGFEATURE (len), buf) < 0 ? -1 : 0;
+
+  if (path)
+    {
+      char id_hex[4];
+      g_snprintf (id_hex, sizeof (id_hex), "%02x", id);
+      char len_str[16];
+      g_snprintf (len_str, sizeof (len_str), "%zu", len);
+      char *out = NULL;
+      if (run_epi_hidraw (path, "get-feature", id_hex, &out))
+        {
+          int n = hex_to_bytes (out, buf, len);
+          g_free (out);
+          return n < 0 ? -1 : 0;
+        }
+    }
+  return -1;
+}
+
+static int
+g300_feature_set (const char *path, int fd, uint8_t *buf, size_t len)
+{
+  if (fd >= 0)
+    return ioctl (fd, HIDIOCSFEATURE (len), buf) < 0 ? -1 : 0;
+
+  if (path)
+    {
+      char *hex = bytes_to_hex (buf, len);
+      gboolean ok = run_epi_hidraw (path, "set-feature", hex, NULL);
+      g_free (hex);
+      return ok ? 0 : -1;
+    }
+  return -1;
 }
 
 /* ─────────────── Profile helpers ─────────────── */
 
 static int
-g300_read_profile (int fd, int idx, uint8_t *out)
+g300_read_profile (const char *path, int fd, int idx, uint8_t *out)
 {
   uint8_t id = G300_REPORT_F3 + idx;
-  return g300_feature_get (fd, id, out, G300_PROFILE_SIZE);
+  return g300_feature_get (path, fd, id, out, G300_PROFILE_SIZE);
 }
 
 static int
-g300_write_profile (int fd, int idx, const uint8_t *data)
+g300_write_profile (const char *path, int fd, int idx, const uint8_t *data)
 {
   uint8_t buf[G300_PROFILE_SIZE];
   memcpy (buf, data, G300_PROFILE_SIZE);
   buf[0] = G300_REPORT_F3 + idx;
-  return g300_feature_set (fd, buf, G300_PROFILE_SIZE);
+  return g300_feature_set (path, fd, buf, G300_PROFILE_SIZE);
 }
 
 /* ─────────────── HIDRAW detection ─────────────── */
@@ -496,6 +607,49 @@ find_g300_hidraw (void)
   g_dir_close (dir);
 
   return fd;
+}
+
+/* Same detection but through the persistent admin session (works when the
+   device is only accessible as root). Returns a g_malloc'd /dev/hidrawX path. */
+static char *
+find_g300_hidraw_priv (void)
+{
+  GDir *dir = g_dir_open ("/sys/class/hidraw", 0, NULL);
+  if (!dir) return NULL;
+
+  char *result = NULL;
+  const char *entry;
+  while ((entry = g_dir_read_name (dir)))
+    {
+      char *uevent = g_build_filename ("/sys/class/hidraw", entry, "device", "uevent", NULL);
+      char *content = NULL;
+      if (g_file_get_contents (uevent, &content, NULL, NULL))
+        {
+          if (strstr (content, "HID_ID=0003:0000046D:0000C246"))
+            {
+              char *path = g_build_filename ("/dev", entry, NULL);
+              char *out = NULL;
+              if (run_epi_hidraw (path, "get-feature", "f0 4", &out))
+                {
+                  uint8_t test_buf[4];
+                  if (hex_to_bytes (out, test_buf, sizeof (test_buf)) == 4
+                      && test_buf[0] == G300_REPORT_F0)
+                    result = path;
+                  g_free (out);
+                }
+              if (!result)
+                g_free (path);
+              g_free (content);
+              g_free (uevent);
+              break;
+            }
+          g_free (content);
+        }
+      g_free (uevent);
+    }
+  g_dir_close (dir);
+
+  return result;
 }
 
 /* ─────────────── Ratbagd detection ─────────────── */
@@ -582,14 +736,14 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *prof_section = create_g300_section (page, parent_box);
   page->g300_section_revealer[0] = prof_section;
 
-  GtkWidget *prof_title = gtk_label_new ("Profiles (Onboard Memory)");
+  GtkWidget *prof_title = gtk_label_new (tr ("Profiles (Onboard Memory)"));
   gtk_widget_add_css_class (prof_title, "heading");
   gtk_widget_set_halign (prof_title, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (prof_section), prof_title);
 
   GtkWidget *prof_subtitle = gtk_label_new (
-    "The G300s stores 3 profiles in its onboard memory. "
-    "Select a profile to configure its settings.");
+    tr ("The G300s stores 3 profiles in its onboard memory. "
+    "Select a profile to configure its settings."));
   gtk_widget_add_css_class (prof_subtitle, "dim-label");
   gtk_label_set_wrap (GTK_LABEL (prof_subtitle), TRUE);
   gtk_box_append (GTK_BOX (prof_section), prof_subtitle);
@@ -615,12 +769,12 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *dpi_section = create_g300_section (page, parent_box);
   page->g300_section_revealer[1] = dpi_section;
 
-  GtkWidget *dpi_title = gtk_label_new ("DPI Settings");
+  GtkWidget *dpi_title = gtk_label_new (tr ("DPI Settings"));
   gtk_widget_add_css_class (dpi_title, "heading");
   gtk_widget_set_halign (dpi_title, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (dpi_section), dpi_title);
 
-  GtkWidget *dpi_sub = gtk_label_new ("Configure up to 4 DPI levels (250–2500, steps of 250).");
+  GtkWidget *dpi_sub = gtk_label_new (tr ("Configure up to 4 DPI levels (250–2500, steps of 250)."));
   gtk_widget_add_css_class (dpi_sub, "dim-label");
   gtk_label_set_wrap (GTK_LABEL (dpi_sub), TRUE);
   gtk_box_append (GTK_BOX (dpi_section), dpi_sub);
@@ -628,7 +782,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   for (int i = 0; i < 4; i++)
     {
       char label[32];
-      g_snprintf (label, sizeof (label), "Level %d", i + 1);
+      g_snprintf (label, sizeof (label), tr ("Level %d"), i + 1);
       GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
       gtk_widget_set_margin_top (row, 4);
 
@@ -650,7 +804,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
       GtkWidget *star = gtk_label_new ("★");
       gtk_widget_set_halign (star, GTK_ALIGN_CENTER);
       gtk_button_set_child (GTK_BUTTON (page->dpi_default_btns[i]), star);
-      gtk_widget_set_tooltip_text (page->dpi_default_btns[i], "Default DPI");
+      gtk_widget_set_tooltip_text (page->dpi_default_btns[i], tr ("Default DPI"));
       g_object_set_data (G_OBJECT (page->dpi_default_btns[i]), "dpi-idx",
         GINT_TO_POINTER (i));
       g_signal_connect (page->dpi_default_btns[i], "clicked",
@@ -664,7 +818,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *rate_section = create_g300_section (page, parent_box);
   page->g300_section_revealer[2] = rate_section;
 
-  GtkWidget *rate_title = gtk_label_new ("Polling Rate");
+  GtkWidget *rate_title = gtk_label_new (tr ("Polling Rate"));
   gtk_widget_add_css_class (rate_title, "heading");
   gtk_widget_set_halign (rate_title, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (rate_section), rate_title);
@@ -675,7 +829,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   for (int i = 0; i < 4; i++)
     {
       char label[16];
-      g_snprintf (label, sizeof (label), "%d Hz", rate_values[i]);
+      g_snprintf (label, sizeof (label), tr ("%d Hz"), rate_values[i]);
       page->rate_btn[i] = gtk_toggle_button_new_with_label (label);
       g_object_set_data (G_OBJECT (page->rate_btn[i]), "rate-idx",
         GINT_TO_POINTER (i));
@@ -691,7 +845,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *led_section = create_g300_section (page, parent_box);
   page->g300_section_revealer[3] = led_section;
 
-  GtkWidget *led_title = gtk_label_new ("LED Color");
+  GtkWidget *led_title = gtk_label_new (tr ("LED Color"));
   gtk_widget_add_css_class (led_title, "heading");
   gtk_widget_set_halign (led_title, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (led_section), led_title);
@@ -732,14 +886,14 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *btn_section = create_g300_section (page, parent_box);
   page->g300_section_revealer[4] = btn_section;
 
-  GtkWidget *btn_title = gtk_label_new ("Button Mapping");
+  GtkWidget *btn_title = gtk_label_new (tr ("Button Mapping"));
   gtk_widget_add_css_class (btn_title, "heading");
   gtk_widget_set_halign (btn_title, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (btn_section), btn_title);
 
   GtkWidget *btn_sub = gtk_label_new (
-    "Configure what each button (G1–G9) does. "
-    "Choose a function or assign a keyboard key.");
+    tr ("Configure what each button (G1–G9) does. "
+    "Choose a function or assign a keyboard key."));
   gtk_widget_add_css_class (btn_sub, "dim-label");
   gtk_label_set_wrap (GTK_LABEL (btn_sub), TRUE);
   gtk_box_append (GTK_BOX (btn_section), btn_sub);
@@ -772,12 +926,12 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
       gtk_widget_set_visible (page->button_key_box[b], FALSE);
       gtk_widget_set_margin_top (page->button_key_box[b], 2);
 
-      page->button_capture_label[b] = gtk_label_new ("None");
+      page->button_capture_label[b] = gtk_label_new (tr ("None"));
       gtk_widget_set_hexpand (page->button_capture_label[b], TRUE);
       gtk_widget_set_halign (page->button_capture_label[b], GTK_ALIGN_START);
       gtk_box_append (GTK_BOX (page->button_key_box[b]), page->button_capture_label[b]);
 
-      page->button_capture_btn[b] = gtk_button_new_with_label ("Capture Key");
+      page->button_capture_btn[b] = gtk_button_new_with_label (tr ("Capture Key"));
       g_object_set_data (G_OBJECT (page->button_capture_btn[b]), "btn-idx",
         GINT_TO_POINTER (b));
       g_signal_connect (page->button_capture_btn[b], "clicked",
@@ -1026,7 +1180,7 @@ on_capture_evdev_event (GIOChannel *src, GIOCondition cond, gpointer user_data)
               gtk_label_set_text (GTK_LABEL (page->button_capture_label[b]),
                 hid_code_to_name (hid));
 
-              dashboard_show_toast ("Key captured!");
+              dashboard_show_toast (tr ("Key captured!"));
               stop_key_capture (page);
               return G_SOURCE_REMOVE;
             }
@@ -1050,7 +1204,7 @@ on_capture_timeout (gpointer user_data)
   if (page->button_capturing[page->capture_btn_idx])
     {
       stop_key_capture (page);
-      dashboard_show_toast ("Key capture timed out. Try again.");
+      dashboard_show_toast (tr ("Key capture timed out. Try again."));
     }
   return G_SOURCE_REMOVE;
 }
@@ -1077,7 +1231,7 @@ stop_key_capture (MousePage *page)
     {
       page->button_capturing[page->capture_btn_idx] = FALSE;
       gtk_button_set_label (GTK_BUTTON (page->button_capture_btn[page->capture_btn_idx]),
-        "Capture Key");
+        tr ("Capture Key"));
     }
   page->capture_btn_idx = -1;
 }
@@ -1094,7 +1248,7 @@ start_key_capture (MousePage *page, int btn_idx)
   GDir *dir = g_dir_open ("/dev/input", 0, NULL);
   if (!dir)
     {
-      dashboard_show_toast ("Cannot access /dev/input for key capture");
+      dashboard_show_toast (tr ("Cannot access /dev/input for key capture"));
       return;
     }
 
@@ -1129,7 +1283,7 @@ start_key_capture (MousePage *page, int btn_idx)
 
   if (found_fd < 0)
     {
-      dashboard_show_toast ("No keyboard found for key capture");
+      dashboard_show_toast (tr ("No keyboard found for key capture"));
       return;
     }
 
@@ -1137,7 +1291,7 @@ start_key_capture (MousePage *page, int btn_idx)
   page->capture_btn_idx = btn_idx;
   page->button_capturing[btn_idx] = TRUE;
   gtk_button_set_label (GTK_BUTTON (page->button_capture_btn[btn_idx]),
-    "Press a key...");
+    tr ("Press a key..."));
 
   /* Set up GIOChannel for evdev monitoring */
   GIOChannel *chan = g_io_channel_unix_new (found_fd);
@@ -1302,20 +1456,20 @@ on_save_g300_clicked (GtkButton *btn, MousePage *page)
   int wrote = 0;
   for (int i = 0; i < 3; i++)
     {
-      if (g300_write_profile (page->hidraw_fd, i, page->profile_raw[i]) == 0)
+      if (g300_write_profile (page->hidraw_path, page->hidraw_fd, i, page->profile_raw[i]) == 0)
         wrote++;
     }
 
   if (wrote == 3)
-    dashboard_show_toast ("All 3 profiles saved to G300s");
+    dashboard_show_toast (tr ("All 3 profiles saved to G300s"));
   else if (wrote > 0)
     {
-      char *partial_msg = g_strdup_printf ("Partial write: only %d of 3 profiles saved", wrote);
+      char *partial_msg = g_strdup_printf (tr ("Partial write: only %d of 3 profiles saved"), wrote);
       dashboard_show_toast (partial_msg);
       g_free (partial_msg);
     }
   else
-    dashboard_show_toast ("Failed to write profiles to G300s");
+    dashboard_show_toast (tr ("Failed to write profiles to G300s"));
 
   if (wrote > 0)
     dump_profile (page->profile_raw[page->active_profile_idx],
@@ -1361,14 +1515,14 @@ on_mouse_save (GtkButton *btn, MousePage *page)
           natural ? "true" : "false", NULL },
         NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, NULL, NULL);
 
-      dashboard_show_toast ("Mouse settings applied (GNOME)");
+      dashboard_show_toast (tr ("Mouse settings applied (GNOME)"));
       return;
     }
 
   /* Try 2: xinput (X11 fallback) */
   if (!g_find_program_in_path ("xinput"))
     {
-      dashboard_show_toast ("No supported config tool found (gsettings or xinput)");
+      dashboard_show_toast (tr ("No supported config tool found (gsettings or xinput)"));
       return;
     }
 
@@ -1384,7 +1538,7 @@ on_mouse_save (GtkButton *btn, MousePage *page)
     {
       if (err) g_error_free (err);
       g_free (id_list);
-      dashboard_show_toast ("No XInput devices found. Are you on Wayland?");
+      dashboard_show_toast (tr ("No XInput devices found. Are you on Wayland?"));
       return;
     }
 
@@ -1404,7 +1558,7 @@ on_mouse_save (GtkButton *btn, MousePage *page)
   g_strfreev (ids);
   g_free (id_list);
 
-  dashboard_show_toast ("Mouse settings applied (X11)");
+  dashboard_show_toast (tr ("Mouse settings applied (X11)"));
 }
 
 static void
@@ -1503,7 +1657,7 @@ on_mouse_openrgb_clicked (GtkButton *btn, MousePage *page)
     NULL, NULL, NULL, &err);
   if (err)
     {
-      dashboard_show_toast ("OpenRGB not installed. Install it from openrgb.org");
+      dashboard_show_toast (tr ("OpenRGB not installed. Install it from openrgb.org"));
       g_error_free (err);
     }
 }
@@ -1546,7 +1700,7 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
   else
     {
       char fallback[64];
-      g_snprintf (fallback, sizeof (fallback), "Mouse (%04x:%04x)", vendor, product);
+      g_snprintf (fallback, sizeof (fallback), tr ("Mouse (%04x:%04x)"), vendor, product);
       gtk_label_set_text (GTK_LABEL (page->mouse_name_label), fallback);
       gtk_widget_set_visible (page->mouse_website_btn, FALSE);
     }
@@ -1567,6 +1721,8 @@ on_mouse_page_destroy (gpointer data, GObject *box)
       close (page->hidraw_fd);
       page->hidraw_fd = -1;
     }
+  g_free (page->hidraw_path);
+  page->hidraw_path = NULL;
 
   g_free (page->mouse_url);
   if (page->mouse_index) g_hash_table_unref (page->mouse_index);
@@ -1603,13 +1759,13 @@ mouse_page_new (void)
   /* Lighting Controls */
   page->lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-lighting-status"));
   gtk_label_set_text (GTK_LABEL (page->lighting_status),
-    g_dgettext (GETTEXT_PACKAGE, "The app couldn't find any light source to manage."));
+    tr ("The app couldn't find any light source to manage."));
 
   GtkWidget *mouse_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-lighting-header"));
   if (g_find_program_in_path ("openrgb"))
     {
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (mouse_lighting_header), openrgb_btn);
@@ -1618,14 +1774,16 @@ mouse_page_new (void)
 
   /* ── G300s Detection ── */
   page->hidraw_fd = find_g300_hidraw ();
-  page->g300_detected = (page->hidraw_fd >= 0);
+  if (page->hidraw_fd < 0)
+    page->hidraw_path = find_g300_hidraw_priv ();
+  page->g300_detected = (page->hidraw_fd >= 0 || page->hidraw_path != NULL);
 
   if (page->g300_detected)
     {
       /* Read all 3 profiles */
       for (int i = 0; i < 3; i++)
         {
-          if (g300_read_profile (page->hidraw_fd, i, page->profile_raw[i]) < 0)
+          if (g300_read_profile (page->hidraw_path, page->hidraw_fd, i, page->profile_raw[i]) < 0)
             {
               g_warning ("Failed to read G300 profile %d", i);
               memset (page->profile_raw[i], 0, G300_PROFILE_SIZE);
@@ -1667,8 +1825,8 @@ mouse_page_new (void)
     {
       page->ratbagd_warned = TRUE;
       dashboard_show_toast (
-        "ratbagd is running on your system and may conflict with G300 configuration. "
-        "Consider stopping ratbagd for exclusive access.");
+        tr ("ratbagd is running on your system and may conflict with G300 configuration. "
+        "Consider stopping ratbagd for exclusive access."));
     }
 
   /* ── Connect signals ── */

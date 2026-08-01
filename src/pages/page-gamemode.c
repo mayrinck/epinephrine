@@ -1,9 +1,12 @@
 #include "page-gamemode.h"
 #include "page-dashboard.h"
 #include "epi-privilege.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
 #include <fcntl.h>
+
+#define tr(x) epi_i18n_get (x)
 
 #define TWEAK_MARKER_START "# --- epinephrine-tweaks-start ---\n"
 #define TWEAK_MARKER_END   "# --- epinephrine-tweaks-end ---\n"
@@ -278,6 +281,8 @@ connect_section (GtkBuilder *builder, const char *toggle_id,
   GtkWidget *arrow  = GTK_WIDGET (gtk_builder_get_object (builder, arrow_id));
   GtkWidget *content = GTK_WIDGET (gtk_builder_get_object (builder, content_id));
 
+  if (!toggle) return;
+
   g_object_set_data (G_OBJECT (toggle), "arrow", arrow);
   g_signal_connect (toggle, "clicked", G_CALLBACK (on_section_toggle), content);
 }
@@ -366,21 +371,26 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
   g_free (tweaked_start);
   g_free (tweaked_end);
 
-  GError *err = NULL;
-  if (g_file_set_contents (config_path (), content->str, -1, &err))
+  const char *cfg_path = config_path ();
+  const char *home = g_get_home_dir ();
+  gboolean user_writable = (home && g_str_has_prefix (cfg_path, home));
+
+  if (user_writable)
     {
-      dashboard_show_toast ("Configuration saved successfully");
+      /* User-level config: write directly (stays owned by the user) */
+      if (g_file_set_contents (cfg_path, content->str, -1, NULL))
+        dashboard_show_toast (tr("Configuration saved successfully"));
+      else
+        dashboard_show_toast (tr("Failed to save configuration"));
     }
   else
     {
-      g_clear_error (&err);
-
-      /* Write to temp file first */
+      /* System-level config (/etc): write through the admin session */
       char tmp_path[] = "/tmp/gamemode-conf-XXXXXX";
       int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd < 0)
         {
-          dashboard_show_toast ("Failed to create temp file");
+          dashboard_show_toast (tr("Failed to create temp file"));
           g_string_free (content, TRUE);
           return;
         }
@@ -393,7 +403,6 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
       else
         close (fd);
 
-      const char *cfg_path = config_path ();
       char *install_cmd = g_strdup_printf (
         "install -D -m 644 '%s' '%s'", tmp_path, cfg_path);
       int exit_code = -1;
@@ -401,15 +410,16 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
       if (epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err2)
           && exit_code == 0)
         {
-          dashboard_show_toast ("Saved with admin privileges");
+          dashboard_show_toast (tr("Saved with admin privileges"));
           unlink (tmp_path);
         }
       else
         {
-          dashboard_show_toast ("Failed to save (elevation denied)");
+          dashboard_show_toast (tr("Failed to save (elevation denied)"));
           unlink (tmp_path);
         }
       g_free (install_cmd);
+      g_clear_error (&err2);
     }
 
   g_string_free (content, TRUE);
@@ -585,7 +595,7 @@ on_reset_clicked (GtkButton *btn, GameModePage *page)
   adw_switch_row_set_active (page->tweak_sched_rt, FALSE);
   adw_switch_row_set_active (page->tweak_stop_services, FALSE);
 
-  dashboard_show_toast ("Defaults restored (not saved)");
+  dashboard_show_toast (tr("Defaults restored (not saved)"));
 }
 
 /* ---- Constructor ---- */

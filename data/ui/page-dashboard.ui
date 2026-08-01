@@ -73,8 +73,8 @@
 
             <child>
               <object class="GtkBox" id="gaming-score-box">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">16</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
                 <property name="margin-top">4</property>
                 <property name="margin-bottom">4</property>
                 <property name="visible">False</property>
@@ -83,38 +83,170 @@
                 </style>
                 <child>
                   <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">16</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="hexpand">True</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Gaming Score</property>
+                            <property name="xalign">0</property>
+                            <style>
+                              <class name="title-2"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Check how your PC performs with modern gaming</property>
+                            <property name="xalign">0</property>
+                            <property name="opacity">0.7</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">4</property>
+                        <property name="halign">end</property>
+                        <child>
+                          <object class="GtkSpinner" id="gaming-score-spinner">
+                            <property name="width-request">32</property>
+                            <property name="height-request">32</property>
+                            <property name="halign">center</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">16</property>
+                            <property name="halign">center</property>
+                            <child>
+                              <object class="GtkLabel" id="gaming-score-tier">
+                                <property name="halign">center</property>
+                                <property name="visible">False</property>
+                                <style>
+                                  <class name="gaming-score-tier"/>
+                                </style>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="gaming-score-label">
+                                <property name="label">—</property>
+                                <style>
+                                  <class name="gaming-score-value"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="gaming-score-details">
                     <property name="orientation">vertical</property>
-                    <property name="spacing">4</property>
-                    <property name="hexpand">True</property>
+                    <property name="spacing">10</property>
+                    <property name="visible">False</property>
                     <child>
-                      <object class="GtkLabel">
-                        <property name="label" translatable="yes">Gaming Score</property>
-                        <property name="xalign">0</property>
-                        <style>
-                          <class name="title-2"/>
-                        </style>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">CPU</property>
+                            <property name="width-request">90</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="gaming-score-cpu-bar">
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkLabel">
-                        <property name="label" translatable="yes">Check how your PC performs with modern gaming</property>
-                        <property name="xalign">0</property>
-                        <property name="opacity">0.7</property>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">GPU</property>
+                            <property name="width-request">90</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="gaming-score-gpu-bar">
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">RAM</property>
+                            <property name="width-request">90</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="gaming-score-ram-bar">
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Monitor</property>
+                            <property name="width-request">90</property>
+                            <property name="halign">start</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="gaming-score-monitor-bar">
+                            <property name="hexpand">True</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinner" id="gaming-score-spinner">
-                    <property name="width-request">32</property>
-                    <property name="height-request">32</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="gaming-score-label">
-                    <property name="label">—</property>
+                  <object class="GtkLabel" id="gaming-score-footer">
+                    <property name="label" translatable="yes">Esta pontuação é uma referência e não deve ser levada em conta sem a percepção do contexto de quais jogos serão jogados. Computadores mais modestos também podem funcionar para jogar diversos tipos de jogos, quando bem configurados :)</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <property name="opacity">0.6</property>
+                    <property name="visible">False</property>
                     <style>
-                      <class name="gaming-score-value"/>
+                      <class name="gaming-score-footer"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="gaming-score-details-btn">
+                    <property name="label" translatable="yes">Details</property>
+                    <property name="halign">fill</property>
+                    <property name="hexpand">True</property>
+                    <property name="visible">False</property>
+                    <style>
+                      <class name="text-button"/>
                     </style>
                   </object>
                 </child>

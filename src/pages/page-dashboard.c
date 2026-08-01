@@ -2,10 +2,13 @@
 #include "page-games.h"
 #include "window.h"
 #include "epi-privilege.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
 #include <time.h>
 #include <sys/wait.h>
+
+#define tr(x) epi_i18n_get (x)
 
 typedef struct
 {
@@ -236,19 +239,19 @@ char *
 format_time_ago (gint64 last_played)
 {
   if (last_played == 0)
-    return g_strdup (g_dgettext (GETTEXT_PACKAGE, "Never played"));
+    return g_strdup (tr ("Never played"));
 
   gint64 now = g_get_real_time () / G_USEC_PER_SEC;
   gint64 diff = now - last_played;
 
-  if (diff < 0) return g_strdup (g_dgettext (GETTEXT_PACKAGE, "Just now"));
-  if (diff < 60)        return g_strdup (g_dgettext (GETTEXT_PACKAGE, "Just now"));
-  if (diff < 3600)      return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d min ago"), (int)(diff / 60));
-  if (diff < 86400)     return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d hours ago"), (int)(diff / 3600));
-  if (diff < 604800)    return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d days ago"), (int)(diff / 86400));
-  if (diff < 2592000)   return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d weeks ago"), (int)(diff / 604800));
-  if (diff < 31536000)  return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d months ago"), (int)(diff / 2592000));
-  return g_strdup_printf (g_dgettext (GETTEXT_PACKAGE, "%d years ago"), (int)(diff / 31536000));
+  if (diff < 0) return g_strdup (tr ("Just now"));
+  if (diff < 60)        return g_strdup (tr ("Just now"));
+  if (diff < 3600)      return g_strdup_printf (tr ("%d min ago"), (int)(diff / 60));
+  if (diff < 86400)     return g_strdup_printf (tr ("%d hours ago"), (int)(diff / 3600));
+  if (diff < 604800)    return g_strdup_printf (tr ("%d days ago"), (int)(diff / 86400));
+  if (diff < 2592000)   return g_strdup_printf (tr ("%d weeks ago"), (int)(diff / 604800));
+  if (diff < 31536000)  return g_strdup_printf (tr ("%d months ago"), (int)(diff / 2592000));
+  return g_strdup_printf (tr ("%d years ago"), (int)(diff / 31536000));
 }
 
 static void
@@ -430,7 +433,7 @@ create_recent_card (DashboardPage *page, int idx)
 
   GtkWidget *name = gtk_label_new (
     page->games[idx].name && page->games[idx].name[0]
-    ? page->games[idx].name : "?");
+    ? page->games[idx].name : tr ("?"));
   gtk_widget_add_css_class (name, "game-name");
   gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
   gtk_label_set_max_width_chars (GTK_LABEL (name), 15);
@@ -443,8 +446,8 @@ create_recent_card (DashboardPage *page, int idx)
   g_free (time_str);
 
   const char *btn_label = (page->running_game_idx == idx)
-    ? g_dgettext (GETTEXT_PACKAGE, "Running...")
-    : g_dgettext (GETTEXT_PACKAGE, "Play Now");
+    ? tr ("Running...")
+    : tr ("Play Now");
   GtkWidget *launch_btn = gtk_button_new_with_label (btn_label);
   gtk_widget_add_css_class (launch_btn, "suggested-action");
   gtk_widget_add_css_class (launch_btn, "play-now-btn");
@@ -977,7 +980,7 @@ on_delete_game_clicked (GtkButton *btn, gpointer user_data)
   refresh_games_grid (page);
   refresh_recent_games (page);
   adw_dialog_close (dialog);
-  dashboard_show_toast ("Game removed");
+  dashboard_show_toast (tr ("Game removed"));
 }
 
 static void
@@ -1137,7 +1140,7 @@ edit_source_factory_bind (GtkListItemFactory *factory, GtkListItem *item, gpoint
       "icons/launchers/lutris.png", "icons/launchers/bottles.png", NULL };
   static const char *sys_icons[] =
     { "media-optical-symbolic", NULL, NULL, NULL, NULL, "application-x-executable-symbolic" };
-  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? names[pos] : "?");
+  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? tr (names[pos]) : tr ("?"));
   if (pos < 6 && launcher_pngs[pos])
     {
       char *path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launcher_pngs[pos]);
@@ -1155,7 +1158,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   if (idx < 0 || idx >= page->n_games) return;
 
   AdwDialog *dialog = adw_dialog_new ();
-  adw_dialog_set_title (dialog, g_dgettext (GETTEXT_PACKAGE, "Edit Game"));
+  adw_dialog_set_title (dialog, tr ("Edit Game"));
   adw_dialog_set_content_width (dialog, 750);
   adw_dialog_set_content_height (dialog, 480);
 
@@ -1180,7 +1183,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   /* Play time */
   char *time_str = format_play_time (page->games[idx].play_time_secs);
   char *time_label_text = g_strdup_printf ("%s: %s",
-    g_dgettext (GETTEXT_PACKAGE, "Play Time"), time_str);
+    tr ("Play Time"), time_str);
   GtkWidget *time_label = gtk_label_new (time_label_text);
   gtk_widget_set_halign (time_label, GTK_ALIGN_CENTER);
   gtk_widget_add_css_class (time_label, "dim-label");
@@ -1189,7 +1192,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   g_free (time_label_text);
 
   /* FPS */
-  char *fps_str = g_strdup_printf ("%.1f FPS", page->games[idx].avg_fps);
+  char *fps_str = g_strdup_printf (tr ("%.1f FPS"), page->games[idx].avg_fps);
   GtkWidget *fps_label = gtk_label_new (fps_str);
   gtk_widget_set_halign (fps_label, GTK_ALIGN_CENTER);
   gtk_widget_add_css_class (fps_label, "dim-label");
@@ -1197,7 +1200,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   g_free (fps_str);
 
   /* Play button */
-  GtkWidget *play_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Play"));
+  GtkWidget *play_btn = gtk_button_new_with_label (tr ("Play"));
   gtk_widget_add_css_class (play_btn, "suggested-action");
   gtk_widget_set_halign (play_btn, GTK_ALIGN_CENTER);
   g_object_set_data (G_OBJECT (play_btn), "game-idx", GINT_TO_POINTER (idx + 1));
@@ -1211,22 +1214,22 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_box_append (GTK_BOX (hbox), right);
 
   /* Name */
-  GtkWidget *name_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Game Name"));
+  GtkWidget *name_label = gtk_label_new (tr ("Game Name"));
   gtk_widget_set_halign (name_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (name_label, "dim-label");
   gtk_box_append (GTK_BOX (right), name_label);
   GtkWidget *name_entry = gtk_entry_new ();
   gtk_editable_set_text (GTK_EDITABLE (name_entry),
-    page->games[idx].name ? page->games[idx].name : "Unnamed");
+    page->games[idx].name ? page->games[idx].name : tr ("Unnamed"));
   gtk_widget_set_hexpand (name_entry, TRUE);
   gtk_box_append (GTK_BOX (right), name_entry);
 
   /* Source */
-  GtkWidget *source_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Source / Platform"));
+  GtkWidget *source_label = gtk_label_new (tr ("Source / Platform"));
   gtk_widget_set_halign (source_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (source_label, "dim-label");
   gtk_box_append (GTK_BOX (right), source_label);
-  const char *sources[] = { "Local", "Steam", "Heroic", "Lutris", "Bottles", "Other", NULL };
+  const char *sources[] = { tr ("Local"), "Steam", "Heroic", "Lutris", "Bottles", tr ("Other"), NULL };
   GtkStringList *source_list = gtk_string_list_new (sources);
   GtkDropDown *source_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (source_list), NULL));
   g_object_unref (source_list);
@@ -1250,7 +1253,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_box_append (GTK_BOX (right), GTK_WIDGET (source_drop));
 
   /* Command */
-  GtkWidget *cmd_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Launch Command"));
+  GtkWidget *cmd_label = gtk_label_new (tr ("Launch Command"));
   gtk_widget_set_halign (cmd_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (cmd_label, "dim-label");
   gtk_box_append (GTK_BOX (right), cmd_label);
@@ -1260,14 +1263,14 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_editable_set_text (GTK_EDITABLE (cmd_entry), page->games[idx].command);
   gtk_widget_set_hexpand (cmd_entry, TRUE);
   gtk_box_append (GTK_BOX (cmd_hbox), cmd_entry);
-  GtkWidget *cmd_browse = gtk_button_new_with_label ("...");
+  GtkWidget *cmd_browse = gtk_button_new_with_label (tr ("..."));
   gtk_widget_set_size_request (cmd_browse, 36, -1);
   gtk_widget_add_css_class (cmd_browse, "flat");
   gtk_box_append (GTK_BOX (cmd_hbox), cmd_browse);
   gtk_box_append (GTK_BOX (right), cmd_hbox);
 
   /* Icon */
-  GtkWidget *icon_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Icon (name or path)"));
+  GtkWidget *icon_label = gtk_label_new (tr ("Icon (name or path)"));
   gtk_widget_set_halign (icon_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (icon_label, "dim-label");
   gtk_box_append (GTK_BOX (right), icon_label);
@@ -1278,14 +1281,14 @@ open_edit_dialog (DashboardPage *page, int idx)
     page->games[idx].icon ? page->games[idx].icon : "");
   gtk_widget_set_hexpand (icon_entry, TRUE);
   gtk_box_append (GTK_BOX (icon_hbox), icon_entry);
-  GtkWidget *icon_browse = gtk_button_new_with_label ("...");
+  GtkWidget *icon_browse = gtk_button_new_with_label (tr ("..."));
   gtk_widget_set_size_request (icon_browse, 36, -1);
   gtk_widget_add_css_class (icon_browse, "flat");
   gtk_box_append (GTK_BOX (icon_hbox), icon_browse);
   gtk_box_append (GTK_BOX (right), icon_hbox);
 
   /* Workdir */
-  GtkWidget *workdir_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Working Directory"));
+  GtkWidget *workdir_label = gtk_label_new (tr ("Working Directory"));
   gtk_widget_set_halign (workdir_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (workdir_label, "dim-label");
   gtk_box_append (GTK_BOX (right), workdir_label);
@@ -1296,7 +1299,7 @@ open_edit_dialog (DashboardPage *page, int idx)
     page->games[idx].workdir ? page->games[idx].workdir : "");
   gtk_widget_set_hexpand (workdir_entry, TRUE);
   gtk_box_append (GTK_BOX (workdir_hbox), workdir_entry);
-  GtkWidget *workdir_browse = gtk_button_new_with_label ("...");
+  GtkWidget *workdir_browse = gtk_button_new_with_label (tr ("..."));
   gtk_widget_set_size_request (workdir_browse, 36, -1);
   gtk_widget_add_css_class (workdir_browse, "flat");
   gtk_box_append (GTK_BOX (workdir_hbox), workdir_browse);
@@ -1313,18 +1316,18 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_widget_set_margin_bottom (sep, 8);
   gtk_box_append (GTK_BOX (right), sep);
 
-  GtkWidget *tweaks_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Tweaks"));
+  GtkWidget *tweaks_label = gtk_label_new (tr ("Tweaks"));
   gtk_widget_set_halign (tweaks_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (tweaks_label, "heading");
   gtk_box_append (GTK_BOX (right), tweaks_label);
 
-  GtkWidget *startup_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Startup commands"));
+  GtkWidget *startup_label = gtk_label_new (tr ("Startup commands"));
   gtk_widget_set_halign (startup_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (startup_label, "dim-label");
   gtk_box_append (GTK_BOX (right), startup_label);
   GtkWidget *startup_entry = gtk_entry_new ();
   gtk_entry_set_placeholder_text (GTK_ENTRY (startup_entry),
-    g_dgettext (GETTEXT_PACKAGE, "e.g. gamemoderun %command%"));
+    tr ("e.g. gamemoderun %command%"));
   if (page->games[idx].startup_cmd)
     gtk_editable_set_text (GTK_EDITABLE (startup_entry), page->games[idx].startup_cmd);
   gtk_widget_set_hexpand (startup_entry, TRUE);
@@ -1336,7 +1339,7 @@ open_edit_dialog (DashboardPage *page, int idx)
       GtkWidget *gamemode_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
       gtk_widget_set_margin_top (gamemode_row, 4);
       GtkWidget *gamemode_lbl = gtk_label_new (
-        g_dgettext (GETTEXT_PACKAGE, "Enable Feral GameMode"));
+        tr ("Enable Feral GameMode"));
       gtk_widget_set_halign (gamemode_lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (gamemode_lbl, TRUE);
       gtk_box_append (GTK_BOX (gamemode_row), gamemode_lbl);
@@ -1353,7 +1356,7 @@ open_edit_dialog (DashboardPage *page, int idx)
       GtkWidget *mangohud_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
       gtk_widget_set_margin_top (mangohud_row, 4);
       GtkWidget *mangohud_lbl = gtk_label_new (
-        g_dgettext (GETTEXT_PACKAGE, "Enable MangoHud"));
+        tr ("Enable MangoHud"));
       gtk_widget_set_halign (mangohud_lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (mangohud_lbl, TRUE);
       gtk_box_append (GTK_BOX (mangohud_row), mangohud_lbl);
@@ -1369,11 +1372,11 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_widget_set_halign (btn_box, GTK_ALIGN_END);
   gtk_widget_set_margin_top (btn_box, 8);
 
-  GtkWidget *cancel_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Cancel"));
+  GtkWidget *cancel_btn = gtk_button_new_with_label (tr ("Cancel"));
   g_signal_connect_swapped (cancel_btn, "clicked", G_CALLBACK (adw_dialog_close), dialog);
   gtk_box_append (GTK_BOX (btn_box), cancel_btn);
 
-  GtkWidget *delete_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Delete"));
+  GtkWidget *delete_btn = gtk_button_new_with_label (tr ("Delete"));
   gtk_widget_add_css_class (delete_btn, "destructive-action");
   g_object_set_data (G_OBJECT (delete_btn), "game-idx", GINT_TO_POINTER (idx + 1));
   g_object_set_data (G_OBJECT (delete_btn), "page", page);
@@ -1381,7 +1384,7 @@ open_edit_dialog (DashboardPage *page, int idx)
   g_signal_connect (delete_btn, "clicked", G_CALLBACK (on_delete_game_clicked), page);
   gtk_box_append (GTK_BOX (btn_box), delete_btn);
 
-  GtkWidget *save_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Save"));
+  GtkWidget *save_btn = gtk_button_new_with_label (tr ("Save"));
   gtk_widget_add_css_class (save_btn, "suggested-action");
   gtk_box_append (GTK_BOX (btn_box), save_btn);
 
@@ -1865,7 +1868,7 @@ on_install_clicked (GtkButton *btn, gpointer data)
   gtk_widget_set_visible (GTK_WIDGET (page->resources[idx].progress), TRUE);
   gtk_progress_bar_set_fraction (page->resources[idx].progress, 0.0);
   adw_action_row_set_subtitle (page->resources[idx].row,
-    g_dgettext (GETTEXT_PACKAGE, "Installing..."));
+    tr ("Installing..."));
 
   epi_privilege_exec_async (cmd);
 
@@ -1933,18 +1936,26 @@ typedef struct
  * Gaming Score (0.0 – 11.0)
  *
  * Reference system (baseline = 5.5/11):
- *   CPU: 8 cores, 8 threads, 2.5 GHz, 2020+
- *   GPU: 6 GB VRAM, 2020+
- *   RAM: 16 GB DDR4, 2400 MHz+
- *   Monitor: 1920×1080, 16:9
+ *   CPU: 8 cores, 8 threads, 2.5 GHz, 2020+        → 0 – 3.0
+ *   GPU: 6 GB VRAM, 2020+                          → 0 – 3.0
+ *   RAM: 16 GB DDR4, 2400 MHz+                     → 0 – 2.5
+ *   Monitor: 1920×1080, 16:9                       → 0 – 2.5
  *
  * Year factor: hardware from 2020+ = 1.0, each year before subtracts 0.1
  *   down to a minimum of 0.4 (7-year defasagem).
  *
  * A system with 1.5× the reference specs scores 11.0 (max).
  */
+typedef struct
+{
+  float cpu;
+  float gpu;
+  float ram;
+  float monitor;
+} GamingScoreParts;
+
 static float
-calculate_gaming_score (const GatherResult *r)
+calculate_gaming_score (const GatherResult *r, GamingScoreParts *parts)
 {
   if (!r->score_valid)
     return -1.0f;
@@ -2018,11 +2029,210 @@ calculate_gaming_score (const GatherResult *r)
   float mon_raw = res_factor * 1.5f + aspect_factor * 1.0f;
   if (mon_raw > 2.5f) mon_raw = 2.5f;
 
+  if (parts)
+    {
+      parts->cpu = cpu_raw;
+      parts->gpu = gpu_raw;
+      parts->ram = ram_raw;
+      parts->monitor = mon_raw;
+    }
+
   float total = cpu_raw + gpu_raw + ram_raw + mon_raw;
   if (total > 11.0f) total = 11.0f;
   if (total < 0.0f) total = 0.0f;
 
   return total;
+}
+
+/* ---- GPU_INDEX.md VRAM fallback ---- */
+
+typedef struct
+{
+  char *name;      /* normalized index GPU name */
+  float vram_gb;   /* VRAM declared in the index, 0 if unknown */
+} GpuIndexEntry;
+
+static GPtrArray *g_gpu_index_entries = NULL;
+
+static void
+free_gpu_index_entry (gpointer data)
+{
+  GpuIndexEntry *e = data;
+  if (e)
+    {
+      g_free (e->name);
+      g_free (e);
+    }
+}
+
+static char *
+normalize_gpu_name (const char *name)
+{
+  char *s = g_ascii_strdown (name, -1);
+
+  char *r;
+  while ((r = strstr (s, "(r)")) != NULL)
+    memmove (r, r + 3, strlen (r + 3) + 1);
+  while ((r = strstr (s, "(tm)")) != NULL)
+    memmove (r, r + 4, strlen (r + 4) + 1);
+
+  char *w = s;
+  for (char *p = s; *p; p++)
+    {
+      if ((unsigned char)*p == 0xC2 && (unsigned char)p[1] == 0xAE)
+        { p++; continue; }   /* ® */
+      if ((unsigned char)*p == 0xE2 && (unsigned char)p[1] == 0x84
+          && (unsigned char)p[2] == 0xA2)
+        { p += 2; continue; } /* ™ */
+      *w++ = *p;
+    }
+  *w = '\0';
+  g_strstrip (s);
+
+  /* Remove parenthesized suffix, e.g. "(RADV POLARIS11)" */
+  char *paren = strrchr (s, '(');
+  if (paren && paren != s)
+    {
+      *paren = '\0';
+      g_strstrip (s);
+    }
+  return s;
+}
+
+static void
+load_gpu_index_cache (void)
+{
+  if (g_gpu_index_entries) return;
+  g_gpu_index_entries = g_ptr_array_new_with_free_func (free_gpu_index_entry);
+
+  char *content = NULL;
+  GBytes *gbytes = g_resources_lookup_data (
+    "/io/github/mayrinck/epinephrine/database/GPU_INDEX.md", 0, NULL);
+  if (gbytes)
+    {
+      content = g_strndup (g_bytes_get_data (gbytes, NULL),
+        g_bytes_get_size (gbytes));
+      g_bytes_unref (gbytes);
+    }
+  if (!content)
+    g_file_get_contents (DATADIR "/epinephrine/database/GPU_INDEX.md", &content, NULL, NULL);
+  if (!content)
+    {
+      char *cwd = g_get_current_dir ();
+      char *rel = g_build_filename (cwd, "database", "GPU_INDEX.md", NULL);
+      g_file_get_contents (rel, &content, NULL, NULL);
+      g_free (cwd);
+      g_free (rel);
+    }
+
+  if (!content) return;
+
+  gboolean in_table = FALSE;
+  char **lines = g_strsplit (content, "\n", -1);
+  g_free (content);
+
+  for (int i = 0; lines[i]; i++)
+    {
+      const char *line = lines[i];
+
+      if (g_str_has_prefix (line, "|---|---"))
+        {
+          in_table = TRUE;
+          continue;
+        }
+
+      if (!in_table || line[0] != '|') continue;
+
+      char **cols = g_strsplit (line, "|", 0);
+      if (!cols[1])
+        {
+          g_strfreev (cols);
+          continue;
+        }
+
+      char *gpu_name = g_strstrip (cols[1]);
+      if (!gpu_name[0])
+        {
+          g_strfreev (cols);
+          continue;
+        }
+
+      GpuIndexEntry *e = g_new0 (GpuIndexEntry, 1);
+      e->name = normalize_gpu_name (gpu_name);
+
+      if (cols[2])
+        {
+          char *vram_str = g_strstrip (cols[2]);
+          if (vram_str[0] && g_strcmp0 (vram_str, "NULL") != 0)
+            {
+              char *end = NULL;
+              double gb = g_ascii_strtod (vram_str, &end);
+              if (gb <= 0)
+                {
+                  const char *p = vram_str;
+                  while (*p && !g_ascii_isdigit (*p)) p++;
+                  if (*p) gb = g_ascii_strtod (p, &end);
+                }
+              if (gb > 0) e->vram_gb = (float) gb;
+            }
+        }
+
+      g_ptr_array_add (g_gpu_index_entries, e);
+      g_strfreev (cols);
+    }
+
+  g_strfreev (lines);
+}
+
+static float
+gpu_vram_from_index (const char *detected_name)
+{
+  if (!detected_name || !detected_name[0]) return 0.0f;
+  load_gpu_index_cache ();
+  if (!g_gpu_index_entries || g_gpu_index_entries->len == 0) return 0.0f;
+
+  char *norm = normalize_gpu_name (detected_name);
+  float vram = 0.0f;
+
+  static const char *keys[] = {
+    "arc", "geforce", "radeon", "iris", "uhd", "hd graphics", "adreno", "fenghua"
+  };
+
+  for (guint i = 0; i < g_gpu_index_entries->len; i++)
+    {
+      GpuIndexEntry *e = g_ptr_array_index (g_gpu_index_entries, i);
+      if (!e->name || !e->name[0]) continue;
+
+      gboolean match = (g_strcmp0 (norm, e->name) == 0);
+      if (!match)
+        match = g_str_has_prefix (norm, e->name)
+             || g_str_has_prefix (e->name, norm);
+      if (!match)
+        {
+          const char *key_d = NULL;
+          for (guint k = 0; k < G_N_ELEMENTS (keys); k++)
+            if ((key_d = strstr (norm, keys[k]))) break;
+
+          const char *key_i = NULL;
+          for (guint k = 0; k < G_N_ELEMENTS (keys); k++)
+            if ((key_i = strstr (e->name, keys[k]))) break;
+
+          if (key_d && key_i)
+            {
+              size_t min_len = MIN (strlen (key_d), strlen (key_i));
+              match = (strncmp (key_d, key_i, min_len) == 0);
+            }
+        }
+
+      if (match && e->vram_gb > 0)
+        {
+          vram = e->vram_gb;
+          break;
+        }
+    }
+
+  g_free (norm);
+  return vram;
 }
 
 static GatherResult *
@@ -2033,27 +2243,49 @@ gather_all (void)
 
   tmp = RUN_SH_STATIC ("grep -m1 'model name' /proc/cpuinfo | sed 's/.*: //'");
   if (tmp) { g_strlcpy (r->cpu, tmp, sizeof (r->cpu)); g_free (tmp); }
-  else     g_strlcpy (r->cpu, "N/A", sizeof (r->cpu));
+  else     g_strlcpy (r->cpu, tr ("N/A"), sizeof (r->cpu));
 
   tmp = RUN_SH_STATIC ("awk '/MemTotal/{printf \"%.0f MB (%.1f GB)\", $2, $2/1024/1024}' /proc/meminfo");
   if (tmp) { g_strlcpy (r->ram, tmp, sizeof (r->ram)); g_free (tmp); }
-  else     g_strlcpy (r->ram, "N/A", sizeof (r->ram));
+  else     g_strlcpy (r->ram, tr ("N/A"), sizeof (r->ram));
 
   tmp = RUN_SH_STATIC ("lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //'");
   if (!tmp) tmp = RUN_SH_STATIC ("glxinfo 2>/dev/null | grep -i 'OpenGL renderer' | sed 's/.*: //'");
   if (tmp) { g_strlcpy (r->gpu, tmp, sizeof (r->gpu)); g_free (tmp); }
-  else     g_strlcpy (r->gpu, "N/A", sizeof (r->gpu));
+  else     g_strlcpy (r->gpu, tr ("N/A"), sizeof (r->gpu));
 
+  /* VRAM total. Prefer the live sysfs / nvidia-smi readings; when none of
+     them yields a relevant value, fall back to the VRAM declared for this
+     GPU in GPU_INDEX.md (matching by detected GPU name). */
   tmp = RUN_SH_STATIC ("cat /sys/class/drm/*/device/mem_info_vram_total 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1/1024/1024}'");
   if (!tmp)
-    tmp = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1}')");
-  if (tmp) { g_strlcpy (r->vram, tmp, sizeof (r->vram)); g_free (tmp); }
-  else     g_strlcpy (r->vram, "N/A", sizeof (r->vram));
+    tmp = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1}'");
+  if (tmp)
+    {
+      if (atof (tmp) > 1.0f)
+        {
+          g_strlcpy (r->vram, tmp, sizeof (r->vram));
+          g_free (tmp);
+        }
+      else
+        {
+          g_free (tmp);
+          tmp = NULL;
+        }
+    }
+  if (!tmp)
+    {
+      float idx_vram = gpu_vram_from_index (r->gpu);
+      if (idx_vram > 0.5f)
+        g_snprintf (r->vram, sizeof (r->vram), "%.0f MB", idx_vram * 1024.0f);
+      else
+        g_strlcpy (r->vram, tr ("N/A"), sizeof (r->vram));
+    }
 
   tmp = RUN_SH_STATIC ("vulkaninfo 2>/dev/null | grep -i 'Vulkan Instance Version' | head -1 | sed 's/.*: //'");
   if (!tmp) tmp = RUN_SH_STATIC ("glxinfo 2>/dev/null | grep -i 'OpenGL version' | sed 's/.*: //'");
   if (tmp) { g_strlcpy (r->vulkan, tmp, sizeof (r->vulkan)); g_free (tmp); }
-  else     g_strlcpy (r->vulkan, "N/A", sizeof (r->vulkan));
+  else     g_strlcpy (r->vulkan, tr ("N/A"), sizeof (r->vulkan));
 
   tmp = RUN_SH_STATIC ("lspci -v 2>/dev/null | grep -iE 'vga|3d|display' -A 20 | grep -i 'Kernel driver' | head -1 | sed 's/.*: //'");
   if (tmp)
@@ -2073,7 +2305,7 @@ gather_all (void)
       g_free (drv_name);
     }
   else
-    g_strlcpy (r->driver, "N/A", sizeof (r->driver));
+    g_strlcpy (r->driver, tr ("N/A"), sizeof (r->driver));
 
   /* ---- Gaming score: detailed hardware detection ---- */
   r->score_valid = TRUE;
@@ -2174,7 +2406,16 @@ gather_all (void)
             g_free (nv);
           }
       }
-    if (r->gpu_vram_gb < 0.5f) r->gpu_vram_gb = 0;
+    if (r->gpu_vram_gb < 0.5f)
+      {
+        /* Fallback: look up declared VRAM in GPU_INDEX.md using the
+           detected GPU name (lspci or glxinfo). */
+        float idx_vram = gpu_vram_from_index (r->gpu);
+        if (idx_vram > 0.5f)
+          r->gpu_vram_gb = idx_vram;
+        else
+          r->gpu_vram_gb = 0;
+      }
   }
   {
     char *gpu_name = RUN_SH_STATIC ("lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //'");
@@ -2374,7 +2615,7 @@ gather_all (void)
                                   if (df_lines[0] && df_lines[1])
                                     {
                                       if (sscanf (df_lines[1], "%31s %31s %15s", total_gb, used_gb, pct_str) >= 2)
-                                        used = g_strdup_printf ("Total: %s GB — Used: %s GB (%s)", total_gb, used_gb, pct_str);
+                                        used = g_strdup_printf (tr ("Total: %s GB — Used: %s GB (%s)"), total_gb, used_gb, pct_str);
                                     }
                                   g_strfreev (df_lines);
                                 }
@@ -2395,7 +2636,7 @@ gather_all (void)
               char used_gb[32] = {0}, total_gb[32] = {0}, pct[16] = {0};
               if (sscanf (used, "%31[^,],%31[^,],%15s", used_gb, total_gb, pct) >= 2)
                 g_snprintf (r->storage[r->n_storage], sizeof (r->storage[0]),
-                  "Total: %s GB — Used: %s GB (%s)", total_gb, used_gb, pct);
+                  tr ("Total: %s GB — Used: %s GB (%s)"), total_gb, used_gb, pct);
               else
                 g_snprintf (r->storage[r->n_storage], sizeof (r->storage[0]),
                   "/dev/%s %s", dev, size);
@@ -2449,7 +2690,28 @@ typedef struct
 {
   DashboardPage *page;
   float score;
+  GamingScoreParts parts;
 } ScoreDisplayData;
+
+/* Color the progress bar by how close the score is to its max:
+   < 40% red, 40–70% orange, >= 70% green. */
+static void
+set_score_bar_color (GtkWidget *bar, float fraction)
+{
+  gtk_widget_remove_css_class (bar, "score-bar-low");
+  gtk_widget_remove_css_class (bar, "score-bar-mid");
+  gtk_widget_remove_css_class (bar, "score-bar-good");
+
+  const char *cls;
+  if (fraction >= 0.7f)
+    cls = "score-bar-good";
+  else if (fraction >= 0.4f)
+    cls = "score-bar-mid";
+  else
+    cls = "score-bar-low";
+
+  gtk_widget_add_css_class (bar, cls);
+}
 
 static gboolean
 show_gaming_score (gpointer data)
@@ -2464,14 +2726,102 @@ show_gaming_score (gpointer data)
     {
       /* Score couldn't be calculated — hide module and show toast */
       gtk_widget_set_visible (page->gaming_score_box, FALSE);
-      dashboard_show_toast ("Hardware couldn't be properly identified for calculations. Try again later.");
+      dashboard_show_toast (tr ("Hardware couldn't be properly identified for calculations. Try again later."));
     }
   else
     {
       char buf[32];
-      g_snprintf (buf, sizeof (buf), "%.1f/11", sd->score);
+      g_snprintf (buf, sizeof (buf), tr ("%.1f/11"), sd->score);
       gtk_label_set_text (GTK_LABEL (page->gaming_score_label), buf);
       gtk_widget_set_visible (page->gaming_score_label, TRUE);
+
+      /* Tier label: colour + wording that conveys what the score means */
+      static const char *tier_classes[] = {
+        "tier-ruim", "tier-regular", "tier-boa",
+        "tier-muito-boa", "tier-ideal",
+      };
+      for (guint i = 0; i < G_N_ELEMENTS (tier_classes); i++)
+        gtk_widget_remove_css_class (page->gaming_score_tier, tier_classes[i]);
+
+      const char *tier_class;
+      const char *tier_text;
+      const char *tier_tooltip;
+      if (sd->score >= 9.5f)
+        {
+          tier_class = "tier-ideal";
+          tier_text = tr ("Ideal");
+          tier_tooltip =
+            tr ("Hardware suporta a maioria dos títulos modernos em até 4K e "
+            "configuração gráfica alta. Não se preocupe, apenas jogue :)");
+        }
+      else if (sd->score >= 7.5f)
+        {
+          tier_class = "tier-muito-boa";
+          tier_text = tr ("Muito Boa");
+          tier_tooltip =
+            tr ("Hardware permitirá jogar em 1080p com alta qualidade gráfica ou "
+            "1440p com qualidade gráfica média. A maioria dos títulos "
+            "funcionará em 60FPS ou acima. Configurações podem melhorar a taxa "
+            "de quadros.");
+        }
+      else if (sd->score >= 5.5f)
+        {
+          tier_class = "tier-boa";
+          tier_text = tr ("Boa");
+          tier_tooltip =
+            tr ("Hardware permite jogar a maioria dos jogos em 1080p em 30/60FPS "
+            "com qualidade média ou alta, a depender do tipo de jogo. Alguns "
+            "títulos modernos também poderão ser jogados com qualidade gráfica "
+            "baixa ou com mods LowSpec.");
+        }
+      else if (sd->score >= 3.0f)
+        {
+          tier_class = "tier-regular";
+          tier_text = tr ("Regular");
+          tier_tooltip =
+            tr ("Hardware um pouco defasado, mas ainda usável. Permite jogar "
+            "títulos indie, jogos leves, emulação em alta qualidade e jogos "
+            "antigos de PC em 1080p em 30FPS em média. Em alguns casos, também "
+            "jogos modernos, com configurações gráficas muito baixas ou mods "
+            "LowSpec.");
+        }
+      else
+        {
+          tier_class = "tier-ruim";
+          tier_text = tr ("Ruim");
+          tier_tooltip =
+            tr ("Hardware muito defasado; Recomendado para jogos leves, indies "
+            "(preferencialmente 2D), emulação e jogos legados. Recomenda-se "
+            "jogar em 720p ou abaixo para maior aproveitamento.");
+        }
+
+      gtk_widget_add_css_class (page->gaming_score_tier, tier_class);
+      gtk_label_set_text (GTK_LABEL (page->gaming_score_tier), tier_text);
+      gtk_widget_set_tooltip_text (page->gaming_score_tier, tier_tooltip);
+      gtk_widget_set_visible (page->gaming_score_tier, TRUE);
+
+      /* Per-component progress bars (fraction = score / component max) */
+      float fracs[4] = {
+        sd->parts.cpu / 3.0f,
+        sd->parts.gpu / 3.0f,
+        sd->parts.ram / 2.5f,
+        sd->parts.monitor / 2.5f,
+      };
+      GtkWidget *bars[4] = {
+        page->gaming_score_cpu_bar,
+        page->gaming_score_gpu_bar,
+        page->gaming_score_ram_bar,
+        page->gaming_score_monitor_bar,
+      };
+      for (int i = 0; i < 4; i++)
+        {
+          float f = CLAMP (fracs[i], 0.0f, 1.0f);
+          gtk_progress_bar_set_fraction (GTK_PROGRESS_BAR (bars[i]), f);
+          set_score_bar_color (bars[i], f);
+        }
+
+      gtk_widget_set_visible (page->gaming_score_footer, FALSE);
+      gtk_widget_set_visible (page->gaming_score_details_btn, TRUE);
     }
 
   g_free (sd);
@@ -2497,7 +2847,7 @@ apply_gathered_data (gpointer data)
     {
       page->storage_rows[i] = ADW_ACTION_ROW (adw_action_row_new ());
       g_object_set (page->storage_rows[i],
-                    "title", r->storage_ssd[i] ? "SSD" : "HDD",
+                    "title", r->storage_ssd[i] ? tr ("SSD") : tr ("HDD"),
                     "icon-name", r->storage_ssd[i] ? "ssd-symbolic" : "harddisk-symbolic",
                     "subtitle", r->storage[i], NULL);
       adw_preferences_group_add (page->hw_group, GTK_WIDGET (page->storage_rows[i]));
@@ -2513,7 +2863,7 @@ apply_gathered_data (gpointer data)
           gtk_widget_set_visible (GTK_WIDGET (page->resources[i].progress), FALSE);
           gtk_widget_set_visible (page->resources[i].status_icon, TRUE);
           gtk_widget_set_visible (page->resources[i].installed_label, TRUE);
-          adw_action_row_set_subtitle (page->resources[i].row, g_dgettext (GETTEXT_PACKAGE, "Installed"));
+          adw_action_row_set_subtitle (page->resources[i].row, tr ("Installed"));
         }
       else
         {
@@ -2521,7 +2871,7 @@ apply_gathered_data (gpointer data)
           gtk_widget_set_visible (GTK_WIDGET (page->resources[i].progress), FALSE);
           gtk_widget_set_visible (page->resources[i].status_icon, FALSE);
           gtk_widget_set_visible (page->resources[i].installed_label, FALSE);
-          adw_action_row_set_subtitle (page->resources[i].row, g_dgettext (GETTEXT_PACKAGE, "Not installed"));
+          adw_action_row_set_subtitle (page->resources[i].row, tr ("Not installed"));
         }
     }
 
@@ -2529,15 +2879,21 @@ apply_gathered_data (gpointer data)
   gtk_widget_set_visible (page->scroll, TRUE);
 
   /* Gaming Score: calculate and show with fake loading */
-  float score = calculate_gaming_score (r);
+  GamingScoreParts parts;
+  float score = calculate_gaming_score (r, &parts);
   gtk_widget_set_visible (page->gaming_score_box, TRUE);
   gtk_widget_set_visible (page->gaming_score_spinner, TRUE);
   gtk_widget_set_visible (page->gaming_score_label, FALSE);
+  gtk_widget_set_visible (page->gaming_score_tier, FALSE);
+  gtk_widget_set_visible (page->gaming_score_details_btn, FALSE);
+  gtk_widget_set_visible (page->gaming_score_details, FALSE);
+  gtk_widget_set_visible (page->gaming_score_footer, FALSE);
   gtk_spinner_start (GTK_SPINNER (page->gaming_score_spinner));
 
   ScoreDisplayData *sd = g_new0 (ScoreDisplayData, 1);
   sd->page = page;
   sd->score = score;
+  sd->parts = parts;
   g_timeout_add_seconds (1, show_gaming_score, sd);
 
   g_free (r);
@@ -2566,6 +2922,17 @@ on_see_more_clicked (GtkButton *btn, gpointer user_data)
   dashboard_navigate_to_games ();
 }
 
+static void
+on_gaming_score_details_clicked (GtkButton *btn, DashboardPage *page)
+{
+  (void) btn;
+  gboolean visible = gtk_widget_get_visible (page->gaming_score_details);
+  gtk_widget_set_visible (page->gaming_score_details, !visible);
+  gtk_widget_set_visible (page->gaming_score_footer, !visible);
+  gtk_button_set_label (GTK_BUTTON (page->gaming_score_details_btn),
+    tr (visible ? "Details" : "Hide details"));
+}
+
 /* ---- Public API ---- */
 
 DashboardPage *
@@ -2587,7 +2954,17 @@ dashboard_page_new (void)
   page->recent_box = GTK_WIDGET (gtk_builder_get_object (builder, "recent-games-box"));
   page->gaming_score_box = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-box"));
   page->gaming_score_label = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-label"));
+  page->gaming_score_tier = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-tier"));
   page->gaming_score_spinner = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-spinner"));
+  page->gaming_score_details_btn = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-details-btn"));
+  page->gaming_score_details = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-details"));
+  page->gaming_score_footer = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-footer"));
+  page->gaming_score_cpu_bar = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-cpu-bar"));
+  page->gaming_score_gpu_bar = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-gpu-bar"));
+  page->gaming_score_ram_bar = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-ram-bar"));
+  page->gaming_score_monitor_bar = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-monitor-bar"));
+  g_signal_connect (page->gaming_score_details_btn, "clicked",
+    G_CALLBACK (on_gaming_score_details_clicked), page);
 
   /* See more button -> navigate to Games tab */
   GtkWidget *see_more_btn = GTK_WIDGET (gtk_builder_get_object (builder, "see-more-button"));
@@ -2603,38 +2980,38 @@ dashboard_page_new (void)
 
   /* Hardware card */
   AdwPreferencesGroup *hw_group;
-  GtkWidget *hw_card = create_card ("Hardware Summary", &hw_group);
+  GtkWidget *hw_card = create_card (tr ("Hardware Summary"), &hw_group);
   page->hw_group = hw_group;
 
   page->cpu_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->cpu_row, "title", "CPU", "icon-name", "cpu-symbolic", NULL);
+  g_object_set (page->cpu_row, "title", tr ("CPU"), "icon-name", "cpu-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->cpu_row));
 
   page->ram_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->ram_row, "title", "RAM", "icon-name", "memory-symbolic", NULL);
+  g_object_set (page->ram_row, "title", tr ("RAM"), "icon-name", "memory-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->ram_row));
 
   page->gpu_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->gpu_row, "title", "GPU", "icon-name", "pci-card-symbolic", NULL);
+  g_object_set (page->gpu_row, "title", tr ("GPU"), "icon-name", "pci-card-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->gpu_row));
 
   page->vram_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->vram_row, "title", "VRAM", "icon-name", "memory-symbolic", NULL);
+  g_object_set (page->vram_row, "title", tr ("VRAM"), "icon-name", "memory-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->vram_row));
 
   page->vulkan_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->vulkan_row, "title", "Vulkan / OpenGL", "icon-name", "resource-symbolic", NULL);
+  g_object_set (page->vulkan_row, "title", tr ("Vulkan / OpenGL"), "icon-name", "resource-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->vulkan_row));
 
   page->driver_row = ADW_ACTION_ROW (adw_action_row_new ());
-  g_object_set (page->driver_row, "title", "Driver", "icon-name", "executable-symbolic", NULL);
+  g_object_set (page->driver_row, "title", tr ("Driver"), "icon-name", "executable-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->driver_row));
 
   gtk_flow_box_insert (page->flowbox, hw_card, -1);
 
   /* Gaming resources card */
   AdwPreferencesGroup *gr_group;
-  GtkWidget *gr_card = create_card ("Gaming Components", &gr_group);
+  GtkWidget *gr_card = create_card (tr ("Gaming Components"), &gr_group);
 
   for (int i = 0; i < DASHBOARD_N_RESOURCES; i++)
     {
@@ -2678,7 +3055,7 @@ dashboard_page_new (void)
       page->resources[i].status_icon = chk;
 
       /* Green "Installed" label (visible only when installed) */
-      GtkWidget *inst_lbl = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Installed"));
+      GtkWidget *inst_lbl = gtk_label_new (tr ("Installed"));
       gtk_widget_add_css_class (inst_lbl, "status-ok");
       gtk_box_append (GTK_BOX (hbox), inst_lbl);
       page->resources[i].installed_label = inst_lbl;
@@ -2692,7 +3069,7 @@ dashboard_page_new (void)
       page->resources[i].progress = GTK_PROGRESS_BAR (pbar);
 
       /* Install button (visible only when not installed) */
-      GtkWidget *ibtn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Install"));
+      GtkWidget *ibtn = gtk_button_new_with_label (tr ("Install"));
       gtk_widget_add_css_class (ibtn, "suggested-action");
       gtk_widget_set_valign (ibtn, GTK_ALIGN_CENTER);
       g_object_set_data (G_OBJECT (ibtn), "res-idx", GINT_TO_POINTER (i));

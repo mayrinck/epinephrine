@@ -4,12 +4,15 @@
 #include "page-dashboard.h"
 #include "epi-privilege.h"
 #include "usb-ids.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <glib-unix.h>
+
+#define tr(x) epi_i18n_get (x)
 
 /* Forward declarations for load_gpu_config / save callbacks */
 static void write_epinephrine_gpu_config (const char *key, const char *value);
@@ -1400,7 +1403,7 @@ populate_gpu_specs (HardwarePage *page)
     }
 
   /* Show Features header (always visible, even if no specs loaded) */
-  GtkWidget *features_title = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Features"));
+  GtkWidget *features_title = gtk_label_new (tr ("Features"));
   gtk_widget_add_css_class (features_title, "dim-label");
   gtk_widget_set_halign (features_title, GTK_ALIGN_START);
   gtk_widget_set_margin_bottom (features_title, 2);
@@ -1604,14 +1607,14 @@ classify_evdev (int fd)
 static const char *
 type_to_subtitle (const char *type)
 {
-  if (!type) return "Input Device";
+  if (!type) return tr ("Input Device");
   switch (type[0])
     {
-    case 'c': return "Controller";
-    case 'j': return "Joystick";
-    case 'k': return "Keyboard";
-    case 'm': return "Mouse";
-    default:  return "Input Device";
+    case 'c': return tr ("Controller");
+    case 'j': return tr ("Joystick");
+    case 'k': return tr ("Keyboard");
+    case 'm': return tr ("Mouse");
+    default:  return tr ("Input Device");
     }
 }
 
@@ -1689,7 +1692,7 @@ process_input_device (HardwarePage *page, GHashTable *seen,
   if (!display_name || !display_name[0])
     {
       const char *sub = type_to_subtitle (type);
-      char *fallback = g_strdup_printf ("Unknown %s", sub);
+      char *fallback = g_strdup_printf (tr ("Unknown %s"), sub);
       add_device (page, fallback, type ? type : "input", type_to_subtitle (type), devpath,
         0, 0, NULL, NULL);
       g_free (fallback);
@@ -1803,14 +1806,14 @@ detect_devices (HardwarePage *page)
 
         char *name = g_strdup_printf ("%s %s", vendor, model);
         char *info = g_strdup_printf ("%s %s",
-          g_dgettext (GETTEXT_PACKAGE, "BIOS:"),
+          tr ("BIOS:"),
           bios ? bios : "?");
         add_device (page, name, "motherboard", info, NULL, 0, 0, NULL, NULL);
         g_free (name);
         g_free (info);
       }
     else
-      add_device (page, g_dgettext (GETTEXT_PACKAGE, "Unknown Motherboard"),
+      add_device (page, tr ("Unknown Motherboard"),
         "motherboard", NULL, NULL, 0, 0, NULL, NULL);
 
     g_free (vendor);
@@ -1828,15 +1831,15 @@ detect_devices (HardwarePage *page)
         {
           double gb = page->gpu->vram_total / (1024.0 * 1024.0 * 1024.0);
           g_snprintf (info, sizeof (info), "%s (%.1f GB)",
-            g_dgettext (GETTEXT_PACKAGE, "Video Card"), gb);
+            tr ("Video Card"), gb);
         }
       else
         g_snprintf (info, sizeof (info), "%s",
-          g_dgettext (GETTEXT_PACKAGE, "Video Card"));
+          tr ("Video Card"));
       add_device (page, page->gpu->device_name, "gpu", info, NULL, 0, 0, NULL, NULL);
     }
   else
-    add_device (page, g_dgettext (GETTEXT_PACKAGE, "Unknown GPU"), "gpu", NULL, NULL, 0, 0, NULL, NULL);
+    add_device (page, tr ("Unknown GPU"), "gpu", NULL, NULL, 0, 0, NULL, NULL);
 
   /* CPU */
   {
@@ -1853,7 +1856,7 @@ detect_devices (HardwarePage *page)
                   {
                     g_strstrip (colon + 1);
                     add_device (page, colon + 1, "cpu",
-                      g_dgettext (GETTEXT_PACKAGE, "Processor"), NULL, 0, 0, NULL, NULL);
+                      tr ("Processor"), NULL, 0, 0, NULL, NULL);
                     break;
                   }
               }
@@ -1861,7 +1864,7 @@ detect_devices (HardwarePage *page)
         fclose (f);
       }
     else
-      add_device (page, g_dgettext (GETTEXT_PACKAGE, "Unknown CPU"), "cpu", NULL, NULL, 0, 0, NULL, NULL);
+      add_device (page, tr ("Unknown CPU"), "cpu", NULL, NULL, 0, 0, NULL, NULL);
   }
 
   /* RAM — per-DIMM via dmidecode, fallback to /proc/meminfo */
@@ -2051,13 +2054,13 @@ detect_devices (HardwarePage *page)
 
                 char total_str[32];
                 if (total_mb >= 1024 && total_mb % 1024 == 0)
-                  g_snprintf (total_str, sizeof (total_str), "%.0f GB Total",
+                  g_snprintf (total_str, sizeof (total_str), tr ("%.0f GB Total"),
                     total_mb / 1024.0);
                 else if (total_mb >= 1024)
-                  g_snprintf (total_str, sizeof (total_str), "%.1f GB Total",
+                  g_snprintf (total_str, sizeof (total_str), tr ("%.1f GB Total"),
                     total_mb / 1024.0);
                 else
-                  g_snprintf (total_str, sizeof (total_str), "%ld MB Total",
+                  g_snprintf (total_str, sizeof (total_str), tr ("%ld MB Total"),
                     (long) total_mb);
 
                 ram_str = g_strdup_printf ("%s (%dx %s - %s)", name, count, per_str, total_str);
@@ -2065,7 +2068,7 @@ detect_devices (HardwarePage *page)
             else
               ram_str = g_strdup_printf ("%s %s", name, size0);
 
-            add_device (page, ram_str, "ram", "Memory", NULL, 0, 0, NULL, NULL);
+            add_device (page, ram_str, "ram", tr ("Memory"), NULL, 0, 0, NULL, NULL);
             g_free (ram_str);
           }
 
@@ -2100,7 +2103,7 @@ detect_devices (HardwarePage *page)
                         else
                           ram_str = g_strdup_printf ("%.0f MB", kb / 1024.0);
                         add_device (page, ram_str, "ram",
-                          g_dgettext (GETTEXT_PACKAGE, "Memory"), NULL, 0, 0, NULL, NULL);
+                          tr ("Memory"), NULL, 0, 0, NULL, NULL);
                         g_free (ram_str);
                       }
                     break;
@@ -2253,7 +2256,7 @@ detect_devices (HardwarePage *page)
                 }
               else
                 {
-                  char *fallback = g_strdup_printf ("Unknown %s", type_to_subtitle (type));
+                  char *fallback = g_strdup_printf (tr ("Unknown %s"), type_to_subtitle (type));
                   add_device (page, fallback, type, type_to_subtitle (type), devpath,
                     0, 0, NULL, NULL);
                   g_free (fallback);
@@ -2835,7 +2838,7 @@ build_controller_test_layout_standard (HardwarePage *page)
 
   /* Hint */
   GtkWidget *hint = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Press any button on the controller"));
+    tr ("Press any button on the controller"));
   gtk_widget_add_css_class (hint, "dim-label");
   gtk_box_append (GTK_BOX (test_box), hint);
 
@@ -2919,7 +2922,7 @@ build_controller_test_layout_arcade (HardwarePage *page)
   gtk_box_append (GTK_BOX (test_box), mid_row);
 
   /* D-Pad (bottom, smaller and less prominent) */
-  GtkWidget *dpad_label = gtk_label_new ("D-Pad");
+  GtkWidget *dpad_label = gtk_label_new (tr ("D-Pad"));
   gtk_widget_add_css_class (dpad_label, "dim-label");
   gtk_widget_set_halign (dpad_label, GTK_ALIGN_START);
   gtk_box_append (GTK_BOX (test_box), dpad_label);
@@ -2968,7 +2971,7 @@ build_controller_test_layout_arcade (HardwarePage *page)
 
   /* Hint */
   GtkWidget *hint = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Press any button on the controller"));
+    tr ("Press any button on the controller"));
   gtk_widget_add_css_class (hint, "dim-label");
   gtk_box_append (GTK_BOX (test_box), hint);
 
@@ -3007,7 +3010,7 @@ build_controller_detail (HardwarePage *page)
   gtk_box_append (GTK_BOX (branding_text), page->controller_info_label);
 
   page->controller_website_btn = gtk_button_new_with_label (
-    g_dgettext (GETTEXT_PACKAGE, "Official Website"));
+    tr ("Official Website"));
   gtk_widget_set_valign (page->controller_website_btn, GTK_ALIGN_START);
   gtk_widget_set_margin_top (page->controller_website_btn, 4);
   gtk_widget_add_css_class (page->controller_website_btn, "text-button");
@@ -3042,10 +3045,10 @@ build_controller_detail (HardwarePage *page)
   /* --- Settings group --- */
   AdwPreferencesGroup *settings_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (settings_group,
-    g_dgettext (GETTEXT_PACKAGE, "Settings"));
+    tr ("Settings"));
 
   GtkWidget *settings_placeholder = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "No settings available yet."));
+    tr ("No settings available yet."));
   gtk_widget_add_css_class (settings_placeholder, "dim-label");
   gtk_widget_set_halign (settings_placeholder, GTK_ALIGN_START);
   gtk_widget_set_hexpand (settings_placeholder, TRUE);
@@ -3056,10 +3059,10 @@ build_controller_detail (HardwarePage *page)
   /* --- Specifications group --- */
   AdwPreferencesGroup *specs_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (specs_group,
-    g_dgettext (GETTEXT_PACKAGE, "Specifications"));
+    tr ("Specifications"));
 
   GtkWidget *specs_placeholder = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "No specification data available."));
+    tr ("No specification data available."));
   gtk_widget_add_css_class (specs_placeholder, "dim-label");
   gtk_widget_set_halign (specs_placeholder, GTK_ALIGN_START);
   gtk_widget_set_hexpand (specs_placeholder, TRUE);
@@ -3071,7 +3074,7 @@ build_controller_detail (HardwarePage *page)
   AdwPreferencesGroup *lighting_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   GtkWidget *lighting_header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
   GtkWidget *lighting_title = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Lighting Controls"));
+    tr ("Lighting Controls"));
   gtk_widget_add_css_class (lighting_title, "heading");
   gtk_widget_set_halign (lighting_title, GTK_ALIGN_START);
   gtk_widget_set_hexpand (lighting_title, TRUE);
@@ -3080,7 +3083,7 @@ build_controller_detail (HardwarePage *page)
   if (g_find_program_in_path ("openrgb"))
     {
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (lighting_header), openrgb_btn);
@@ -3090,7 +3093,7 @@ build_controller_detail (HardwarePage *page)
   adw_preferences_group_add (lighting_group, lighting_header);
 
   GtkWidget *lighting_status = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "The app couldn't find any light source to manage."));
+    tr ("The app couldn't find any light source to manage."));
   gtk_widget_set_halign (lighting_status, GTK_ALIGN_START);
   gtk_widget_set_hexpand (lighting_status, TRUE);
   gtk_label_set_wrap (GTK_LABEL (lighting_status), TRUE);
@@ -3102,10 +3105,10 @@ build_controller_detail (HardwarePage *page)
   /* --- Extra Buttons group --- */
   page->extra_buttons_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (page->extra_buttons_group,
-    g_dgettext (GETTEXT_PACKAGE, "Extra Buttons"));
+    tr ("Extra Buttons"));
 
   page->extra_buttons_none = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "No extra buttons detected. "
+    tr ("No extra buttons detected. "
       "This controller does not have programmable buttons."));
   gtk_widget_add_css_class (page->extra_buttons_none, "dim-label");
   gtk_widget_set_halign (page->extra_buttons_none, GTK_ALIGN_START);
@@ -3116,7 +3119,7 @@ build_controller_detail (HardwarePage *page)
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (settings_scroll), settings_content);
   adw_view_stack_add_titled_with_icon (ADW_VIEW_STACK (stack), settings_scroll, "settings",
-    g_dgettext (GETTEXT_PACKAGE, "Settings"), "emblem-system-symbolic");
+    tr ("Settings"), "emblem-system-symbolic");
 
   /* Test page */
   page->controller_test_stack = gtk_stack_new ();
@@ -3155,7 +3158,7 @@ build_controller_detail (HardwarePage *page)
 
   adw_view_stack_add_titled_with_icon (ADW_VIEW_STACK (stack),
     page->controller_test_stack, "test",
-    g_dgettext (GETTEXT_PACKAGE, "Test"), "joystick-symbolic");
+    tr ("Test"), "joystick-symbolic");
 
   gtk_box_append (GTK_BOX (page->controller_box), switcher);
   gtk_box_append (GTK_BOX (page->controller_box), stack);
@@ -3219,7 +3222,7 @@ on_perf_level_changed (GtkDropDown *dd, GParamSpec *pspec, gpointer user_data)
       if (ADW_IS_TOAST_OVERLAY (win))
         {
           AdwToast *toast = adw_toast_new (
-            g_dgettext (GETTEXT_PACKAGE, "Permission denied. Run as root."));
+            tr ("Permission denied. Run as root."));
           adw_toast_overlay_add_toast (ADW_TOAST_OVERLAY (win), toast);
         }
     }
@@ -3371,10 +3374,10 @@ update_lighting_section (GtkLabel *label)
 
   if (has_usb_aura)
     gtk_label_set_text (label,
-      g_dgettext (GETTEXT_PACKAGE, "ASUS Aura controller detected."));
+      tr ("ASUS Aura controller detected."));
   else
     gtk_label_set_text (label,
-      g_dgettext (GETTEXT_PACKAGE,
+      tr (
         "The app couldn't find any light source to manage."));
 }
 
@@ -3514,14 +3517,14 @@ run_smbus_pkexec (gboolean enable, char **out_error)
   int fd;
   char tmp[] = "/tmp/epi-smbus-XXXXXX";
   fd = g_mkstemp (tmp);
-  if (fd < 0) { *out_error = g_strdup ("Failed to create temp file"); return FALSE; }
+  if (fd < 0) { *out_error = g_strdup (tr ("Failed to create temp file")); return FALSE; }
 
   const char *script = enable ? smbus_enable_script : smbus_disable_script;
   gsize len = strlen (script);
   if (write (fd, script, len) != (ssize_t) len)
     {
       close (fd); unlink (tmp);
-      *out_error = g_strdup ("Failed to write temp script");
+      *out_error = g_strdup (tr ("Failed to write temp script"));
       return FALSE;
     }
   close (fd);
@@ -3537,7 +3540,7 @@ run_smbus_pkexec (gboolean enable, char **out_error)
   if (ok && exit_code == 0) return TRUE;
 
   *out_error = err ? g_strdup (err->message)
-                   : g_strdup_printf ("Script exited with code %d", exit_code);
+                   : g_strdup_printf (tr ("Script exited with code %d"), exit_code);
   if (err) g_error_free (err);
   return FALSE;
 }
@@ -3570,7 +3573,7 @@ refresh_smbus_status (HardwarePage *page)
     {
       gtk_widget_set_sensitive (GTK_WIDGET (page->mobo_smbus_toggle), FALSE);
       gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-        g_dgettext (GETTEXT_PACKAGE, "GRUB not detected"));
+        tr ("GRUB not detected"));
       return;
     }
 
@@ -3578,7 +3581,7 @@ refresh_smbus_status (HardwarePage *page)
     {
       gtk_widget_set_sensitive (GTK_WIDGET (page->mobo_smbus_toggle), FALSE);
       gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-        g_dgettext (GETTEXT_PACKAGE, "pkexec not available"));
+        tr ("pkexec not available"));
       return;
     }
 
@@ -3594,16 +3597,16 @@ refresh_smbus_status (HardwarePage *page)
 
   if (persistent && active_now)
     gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-      g_dgettext (GETTEXT_PACKAGE, "Active (current boot)"));
+      tr ("Active (current boot)"));
   else if (persistent && !active_now)
     gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-      g_dgettext (GETTEXT_PACKAGE, "Active (after reboot)"));
+      tr ("Active (after reboot)"));
   else if (!persistent && active_now)
     gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-      g_dgettext (GETTEXT_PACKAGE, "Active (temporary, will be lost on reboot)"));
+      tr ("Active (temporary, will be lost on reboot)"));
   else
     gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-      g_dgettext (GETTEXT_PACKAGE, "Inactive"));
+      tr ("Inactive"));
 }
 
 static void
@@ -3615,7 +3618,7 @@ on_smbus_toggled (GtkSwitch *sw, GParamSpec *pspec, gpointer user_data)
 
   gtk_widget_set_sensitive (GTK_WIDGET (sw), FALSE);
   gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc),
-    g_dgettext (GETTEXT_PACKAGE, "Applying..."));
+    tr ("Applying..."));
 
   char *error = NULL;
   gboolean ok = run_smbus_pkexec (enable, &error);
@@ -3627,7 +3630,7 @@ on_smbus_toggled (GtkSwitch *sw, GParamSpec *pspec, gpointer user_data)
       g_signal_handlers_unblock_by_func (sw, on_smbus_toggled, page);
       char buf[256];
       g_snprintf (buf, sizeof (buf), "%s: %s",
-        g_dgettext (GETTEXT_PACKAGE, "Error"), error ? error : "?");
+        tr ("Error"), error ? error : "?");
       gtk_label_set_text (GTK_LABEL (page->mobo_smbus_desc), buf);
     }
 
@@ -3680,13 +3683,13 @@ build_motherboard_detail (HardwarePage *page)
   /* ======= General Information ======= */
   AdwPreferencesGroup *gen_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (gen_group,
-    g_dgettext (GETTEXT_PACKAGE, "General Information"));
+    tr ("General Information"));
 
   page->mobo_vendor_label = gtk_label_new ("—");
   gtk_widget_set_halign (page->mobo_vendor_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_vendor_label, TRUE);
   AdwActionRow *vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vendor_row), g_dgettext (GETTEXT_PACKAGE, "Vendor"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vendor_row), tr ("Vendor"));
   adw_action_row_add_suffix (vendor_row, page->mobo_vendor_label);
   adw_preferences_group_add (gen_group, GTK_WIDGET (vendor_row));
 
@@ -3694,7 +3697,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_model_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_model_label, TRUE);
   AdwActionRow *model_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (model_row), g_dgettext (GETTEXT_PACKAGE, "Model"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (model_row), tr ("Model"));
   adw_action_row_add_suffix (model_row, page->mobo_model_label);
   adw_preferences_group_add (gen_group, GTK_WIDGET (model_row));
 
@@ -3702,7 +3705,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_revision_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_revision_label, TRUE);
   AdwActionRow *revision_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (revision_row), g_dgettext (GETTEXT_PACKAGE, "Revision"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (revision_row), tr ("Revision"));
   adw_action_row_add_suffix (revision_row, page->mobo_revision_label);
   adw_preferences_group_add (gen_group, GTK_WIDGET (revision_row));
 
@@ -3711,13 +3714,13 @@ build_motherboard_detail (HardwarePage *page)
   /* ======= BIOS Information ======= */
   AdwPreferencesGroup *bios_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (bios_group,
-    g_dgettext (GETTEXT_PACKAGE, "BIOS Information"));
+    tr ("BIOS Information"));
 
   page->mobo_bios_manufacturer_label = gtk_label_new ("—");
   gtk_widget_set_halign (page->mobo_bios_manufacturer_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_bios_manufacturer_label, TRUE);
   AdwActionRow *bios_mfg_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_mfg_row), g_dgettext (GETTEXT_PACKAGE, "Manufacturer"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_mfg_row), tr ("Manufacturer"));
   adw_action_row_add_suffix (bios_mfg_row, page->mobo_bios_manufacturer_label);
   adw_preferences_group_add (bios_group, GTK_WIDGET (bios_mfg_row));
 
@@ -3725,7 +3728,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_bios_detail_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_bios_detail_label, TRUE);
   AdwActionRow *bios_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_row), g_dgettext (GETTEXT_PACKAGE, "Version"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_row), tr ("Version"));
   adw_action_row_add_suffix (bios_row, page->mobo_bios_detail_label);
   adw_preferences_group_add (bios_group, GTK_WIDGET (bios_row));
 
@@ -3733,7 +3736,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_bios_date_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_bios_date_label, TRUE);
   AdwActionRow *bios_date_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_date_row), g_dgettext (GETTEXT_PACKAGE, "Date"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_date_row), tr ("Date"));
   adw_action_row_add_suffix (bios_date_row, page->mobo_bios_date_label);
   adw_preferences_group_add (bios_group, GTK_WIDGET (bios_date_row));
 
@@ -3741,7 +3744,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_bios_romsize_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_bios_romsize_label, TRUE);
   AdwActionRow *romsize_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (romsize_row), g_dgettext (GETTEXT_PACKAGE, "ROM Size"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (romsize_row), tr ("ROM Size"));
   adw_action_row_add_suffix (romsize_row, page->mobo_bios_romsize_label);
   adw_preferences_group_add (bios_group, GTK_WIDGET (romsize_row));
 
@@ -3750,7 +3753,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_hexpand (page->mobo_bios_efi_pk_label, TRUE);
   gtk_label_set_selectable (GTK_LABEL (page->mobo_bios_efi_pk_label), TRUE);
   AdwActionRow *efi_pk_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (efi_pk_row), g_dgettext (GETTEXT_PACKAGE, "EFI PK"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (efi_pk_row), tr ("EFI PK"));
   adw_action_row_add_suffix (efi_pk_row, page->mobo_bios_efi_pk_label);
   adw_preferences_group_add (bios_group, GTK_WIDGET (efi_pk_row));
 
@@ -3759,13 +3762,13 @@ build_motherboard_detail (HardwarePage *page)
   /* ======= Chipset ======= */
   AdwPreferencesGroup *chipset_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (chipset_group,
-    g_dgettext (GETTEXT_PACKAGE, "Chipset"));
+    tr ("Chipset"));
 
   page->mobo_chipset_vendor_label = gtk_label_new ("—");
   gtk_widget_set_halign (page->mobo_chipset_vendor_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_chipset_vendor_label, TRUE);
   AdwActionRow *cs_vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_vendor_row), g_dgettext (GETTEXT_PACKAGE, "Provider"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_vendor_row), tr ("Provider"));
   adw_action_row_add_suffix (cs_vendor_row, page->mobo_chipset_vendor_label);
   adw_preferences_group_add (chipset_group, GTK_WIDGET (cs_vendor_row));
 
@@ -3773,7 +3776,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_halign (page->mobo_chipset_model_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->mobo_chipset_model_label, TRUE);
   AdwActionRow *cs_model_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_model_row), g_dgettext (GETTEXT_PACKAGE, "Model"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_model_row), tr ("Model"));
   adw_action_row_add_suffix (cs_model_row, page->mobo_chipset_model_label);
   adw_preferences_group_add (chipset_group, GTK_WIDGET (cs_model_row));
 
@@ -3782,15 +3785,15 @@ build_motherboard_detail (HardwarePage *page)
   /* ===== Motherboard Management ===== */
   AdwPreferencesGroup *mgt_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (mgt_group,
-    g_dgettext (GETTEXT_PACKAGE, "Motherboard Management"));
+    tr ("Motherboard Management"));
 
   page->mobo_smbus_toggle = gtk_switch_new ();
   page->mobo_smbus_desc = gtk_label_new ("");
   gtk_widget_set_halign (page->mobo_smbus_desc, GTK_ALIGN_END);
   AdwActionRow *smbus_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (smbus_row), g_dgettext (GETTEXT_PACKAGE, "Unlock SMBus"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (smbus_row), tr ("Unlock SMBus"));
   adw_action_row_set_subtitle (smbus_row,
-    g_dgettext (GETTEXT_PACKAGE,
+    tr (
       "Unlocks the SMBus controller for direct memory access by software like OpenRGB."));
   gtk_widget_set_valign (page->mobo_smbus_toggle, GTK_ALIGN_CENTER);
   adw_action_row_add_suffix (smbus_row, page->mobo_smbus_desc);
@@ -3810,7 +3813,7 @@ build_motherboard_detail (HardwarePage *page)
   gtk_widget_set_margin_end (mobo_lighting_header, 8);
   gtk_widget_set_margin_top (mobo_lighting_header, 4);
   GtkWidget *mobo_lighting_title = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Lighting Controls"));
+    tr ("Lighting Controls"));
   gtk_widget_add_css_class (mobo_lighting_title, "heading");
   gtk_widget_set_halign (mobo_lighting_title, GTK_ALIGN_START);
   gtk_widget_set_hexpand (mobo_lighting_title, TRUE);
@@ -3819,7 +3822,7 @@ build_motherboard_detail (HardwarePage *page)
   if (g_find_program_in_path ("openrgb"))
     {
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (mobo_lighting_header), openrgb_btn);
@@ -3883,13 +3886,13 @@ build_rams_detail (HardwarePage *page)
   /* ====== Memory Usage Group ====== */
   AdwPreferencesGroup *usage_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
   adw_preferences_group_set_title (usage_group,
-    g_dgettext (GETTEXT_PACKAGE, "Memory Usage"));
+    tr ("Memory Usage"));
 
   page->ram_total_label = gtk_label_new ("—");
   gtk_widget_set_halign (page->ram_total_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->ram_total_label, TRUE);
   AdwActionRow *total_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (total_row), g_dgettext (GETTEXT_PACKAGE, "Total Memory"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (total_row), tr ("Total Memory"));
   adw_action_row_add_suffix (total_row, page->ram_total_label);
   adw_preferences_group_add (usage_group, GTK_WIDGET (total_row));
 
@@ -3897,7 +3900,7 @@ build_rams_detail (HardwarePage *page)
   gtk_widget_set_halign (page->ram_used_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->ram_used_label, TRUE);
   AdwActionRow *used_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (used_row), g_dgettext (GETTEXT_PACKAGE, "Usage"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (used_row), tr ("Usage"));
   adw_action_row_add_suffix (used_row, page->ram_used_label);
   adw_preferences_group_add (usage_group, GTK_WIDGET (used_row));
 
@@ -3905,7 +3908,7 @@ build_rams_detail (HardwarePage *page)
   gtk_widget_set_halign (page->ram_tech_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->ram_tech_label, TRUE);
   AdwActionRow *tech_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (tech_row), g_dgettext (GETTEXT_PACKAGE, "Technology"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (tech_row), tr ("Technology"));
   adw_action_row_add_suffix (tech_row, page->ram_tech_label);
   adw_preferences_group_add (usage_group, GTK_WIDGET (tech_row));
 
@@ -3913,7 +3916,7 @@ build_rams_detail (HardwarePage *page)
   gtk_widget_set_halign (page->ram_freq_label, GTK_ALIGN_END);
   gtk_widget_set_hexpand (page->ram_freq_label, TRUE);
   AdwActionRow *freq_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (freq_row), g_dgettext (GETTEXT_PACKAGE, "RAM Frequency"));
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (freq_row), tr ("RAM Frequency"));
   adw_action_row_add_suffix (freq_row, page->ram_freq_label);
   adw_preferences_group_add (usage_group, GTK_WIDGET (freq_row));
 
@@ -3927,7 +3930,7 @@ build_rams_detail (HardwarePage *page)
   gtk_widget_set_margin_end (ram_lighting_header, 8);
   gtk_widget_set_margin_top (ram_lighting_header, 4);
   GtkWidget *ram_lighting_title = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Lighting Controls"));
+    tr ("Lighting Controls"));
   gtk_widget_add_css_class (ram_lighting_title, "heading");
   gtk_widget_set_halign (ram_lighting_title, GTK_ALIGN_START);
   gtk_widget_set_hexpand (ram_lighting_title, TRUE);
@@ -3936,7 +3939,7 @@ build_rams_detail (HardwarePage *page)
   if (g_find_program_in_path ("openrgb"))
     {
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (ram_lighting_header), openrgb_btn);
@@ -3980,7 +3983,7 @@ on_controller_website_clicked (GtkButton *btn, gpointer user_data)
   if (err)
     {
       g_error_free (err);
-      dashboard_show_toast ("Could not open URL");
+      dashboard_show_toast (tr ("Could not open URL"));
     }
 }
 
@@ -4259,7 +4262,7 @@ build_gpu_detail (HardwarePage *page)
       gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (dot),
         on_metric_dot_draw, GINT_TO_POINTER (i), NULL);
 
-      GtkWidget *lbl = gtk_label_new (metric_names[i]);
+      GtkWidget *lbl = gtk_label_new (tr (metric_names[i]));
       gtk_widget_set_halign (lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (lbl, TRUE);
       gtk_widget_add_css_class (lbl, "dim-label");
@@ -4282,7 +4285,7 @@ build_gpu_detail (HardwarePage *page)
     {
       GtkWidget *lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "lighting_header"));
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (lighting_header), openrgb_btn);
@@ -4299,10 +4302,10 @@ build_gpu_detail (HardwarePage *page)
   {
     page->perf_level_dropdown = gtk_drop_down_new (
       G_LIST_MODEL (gtk_string_list_new (
-        (const char *[]){ "Auto", "Low", "High", "Manual", NULL })), NULL);
+        (const char *[]){ tr ("Auto"), tr ("Low"), tr ("High"), tr ("Manual"), NULL })), NULL);
     AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), g_dgettext (GETTEXT_PACKAGE, "Performance Mode"));
-    adw_action_row_set_subtitle (row, g_dgettext (GETTEXT_PACKAGE,
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), tr ("Performance Mode"));
+    adw_action_row_set_subtitle (row, tr (
       "Forces the GPU to a specific performance level: auto, low power, high performance, or manual."));
     adw_action_row_add_suffix (row, page->perf_level_dropdown);
     g_object_set_data (G_OBJECT (row), "power-id", "perf-level");
@@ -4313,10 +4316,10 @@ build_gpu_detail (HardwarePage *page)
   /* 2 - Power Profile Mode */
   page->power_profile_dd = gtk_drop_down_new (
     G_LIST_MODEL (gtk_string_list_new (
-      (const char *[]){ "Auto", "3D_FULL_SCREEN", "POWER_SAVING", "VIDEO", "VR", "COMPUTE", NULL })), NULL);
+      (const char *[]){ tr ("Auto"), tr ("3D_FULL_SCREEN"), tr ("POWER_SAVING"), tr ("VIDEO"), tr ("VR"), tr ("COMPUTE"), NULL })), NULL);
   AdwActionRow *pp_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (pp_row), g_dgettext (GETTEXT_PACKAGE, "Power Profile"));
-  adw_action_row_set_subtitle (pp_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (pp_row), tr ("Power Profile"));
+  adw_action_row_set_subtitle (pp_row, tr (
     "Selects the clock and power switching heuristic for the GPU."));
   adw_action_row_add_suffix (pp_row, page->power_profile_dd);
   g_object_set_data (G_OBJECT (pp_row), "power-id", "power-profile");
@@ -4336,8 +4339,8 @@ build_gpu_detail (HardwarePage *page)
     gtk_box_append (GTK_BOX (pl_hbox), page->power_limit_scale);
     gtk_box_append (GTK_BOX (pl_hbox), page->power_limit_spin);
     AdwActionRow *pl_row = ADW_ACTION_ROW (adw_action_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (pl_row), g_dgettext (GETTEXT_PACKAGE, "Power Limit (max)"));
-    adw_action_row_set_subtitle (pl_row, g_dgettext (GETTEXT_PACKAGE,
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (pl_row), tr ("Power Limit (max)"));
+    adw_action_row_set_subtitle (pl_row, tr (
       "Sets the maximum power consumption of the GPU in watts."));
     adw_action_row_add_suffix (pl_row, pl_hbox);
     g_object_set_data (G_OBJECT (pl_row), "power-id", "power-limit");
@@ -4356,14 +4359,14 @@ build_gpu_detail (HardwarePage *page)
   gtk_scale_set_draw_value (GTK_SCALE (page->frtc_scale), FALSE);
   page->frtc_opts = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   GtkWidget *frtc_cap_lbl = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "FPS Limit"));
+    tr ("FPS Limit"));
   gtk_box_append (GTK_BOX (page->frtc_opts), frtc_cap_lbl);
   gtk_box_append (GTK_BOX (page->frtc_opts), page->frtc_scale);
   gtk_box_append (GTK_BOX (page->frtc_opts), page->frtc_spin);
   gtk_widget_set_margin_start (page->frtc_opts, 16);
   AdwActionRow *frtc_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (frtc_row), g_dgettext (GETTEXT_PACKAGE, "Frame Rate Target Control"));
-  adw_action_row_set_subtitle (frtc_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (frtc_row), tr ("Frame Rate Target Control"));
+  adw_action_row_set_subtitle (frtc_row, tr (
     "Sets a maximum frame rate cap for all 3D applications via MangoHud."));
   adw_action_row_add_suffix (frtc_row, page->frtc_switch);
   g_object_set_data (G_OBJECT (frtc_row), "power-id", "frtc");
@@ -4387,21 +4390,21 @@ build_gpu_detail (HardwarePage *page)
   gtk_widget_set_size_request (page->chill_max_spin, 100, -1);
   page->chill_opts = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);
   GtkWidget *min_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  GtkWidget *min_lbl = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Min FPS"));
+  GtkWidget *min_lbl = gtk_label_new (tr ("Min FPS"));
   gtk_box_append (GTK_BOX (min_row), min_lbl);
   gtk_box_append (GTK_BOX (min_row), page->chill_min_scale);
   gtk_box_append (GTK_BOX (min_row), page->chill_min_spin);
   gtk_box_append (GTK_BOX (page->chill_opts), min_row);
   GtkWidget *max_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  GtkWidget *max_lbl = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Max FPS"));
+  GtkWidget *max_lbl = gtk_label_new (tr ("Max FPS"));
   gtk_box_append (GTK_BOX (max_row), max_lbl);
   gtk_box_append (GTK_BOX (max_row), page->chill_max_scale);
   gtk_box_append (GTK_BOX (max_row), page->chill_max_spin);
   gtk_box_append (GTK_BOX (page->chill_opts), max_row);
   gtk_widget_set_margin_start (page->chill_opts, 16);
   AdwActionRow *chill_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (chill_row), g_dgettext (GETTEXT_PACKAGE, "Radeon Chill"));
-  adw_action_row_set_subtitle (chill_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (chill_row), tr ("Radeon Chill"));
+  adw_action_row_set_subtitle (chill_row, tr (
     "Dynamically regulates your game's frame rate based on your movements."));
   adw_action_row_add_suffix (chill_row, page->chill_switch);
   g_object_set_data (G_OBJECT (chill_row), "power-id", "chill");
@@ -4412,8 +4415,8 @@ build_gpu_detail (HardwarePage *page)
   page->anti_lag_switch = gtk_switch_new ();
   gtk_widget_set_valign (page->anti_lag_switch, GTK_ALIGN_CENTER);
   AdwActionRow *al_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (al_row), g_dgettext (GETTEXT_PACKAGE, "Radeon Anti-Lag"));
-  adw_action_row_set_subtitle (al_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (al_row), tr ("Radeon Anti-Lag"));
+  adw_action_row_set_subtitle (al_row, tr (
     "Reduces input lag by pacing GPU frames."));
   adw_action_row_add_suffix (al_row, page->anti_lag_switch);
   g_object_set_data (G_OBJECT (al_row), "power-id", "anti-lag");
@@ -4428,13 +4431,13 @@ build_gpu_detail (HardwarePage *page)
   page->vrs_dd = gtk_drop_down_new (G_LIST_MODEL (vrs_model), NULL);
   page->vrs_opts = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   GtkWidget *vrs_rate_lbl = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Shading Rate"));
+    tr ("Shading Rate"));
   gtk_box_append (GTK_BOX (page->vrs_opts), vrs_rate_lbl);
   gtk_box_append (GTK_BOX (page->vrs_opts), page->vrs_dd);
   gtk_widget_set_margin_start (page->vrs_opts, 16);
   AdwActionRow *vrs_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vrs_row), g_dgettext (GETTEXT_PACKAGE, "Variable Rate Shading"));
-  adw_action_row_set_subtitle (vrs_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vrs_row), tr ("Variable Rate Shading"));
+  adw_action_row_set_subtitle (vrs_row, tr (
     "Reduces shading rate to boost performance (RDNA2+ GPU required)."));
   adw_action_row_add_suffix (vrs_row, page->vrs_switch);
   g_object_set_data (G_OBJECT (vrs_row), "power-id", "vrs");
@@ -4447,8 +4450,8 @@ build_gpu_detail (HardwarePage *page)
   page->fan_scale = gtk_scale_new_with_range (GTK_ORIENTATION_HORIZONTAL, 0, 255, 1);
   gtk_widget_set_size_request (page->fan_scale, 200, -1);
   AdwActionRow *fan_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (fan_row), g_dgettext (GETTEXT_PACKAGE, "Fan Control"));
-  adw_action_row_set_subtitle (fan_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (fan_row), tr ("Fan Control"));
+  adw_action_row_set_subtitle (fan_row, tr (
     "Enables manual fan speed control (PWM). Toggle on to set speed."));
   adw_action_row_add_suffix (fan_row, page->fan_switch);
   g_object_set_data (G_OBJECT (fan_row), "power-id", "fan");
@@ -4465,14 +4468,14 @@ build_gpu_detail (HardwarePage *page)
   page->zero_rpm_temp_spin = gtk_spin_button_new_with_range (30, 90, 1);
   gtk_widget_set_size_request (page->zero_rpm_temp_spin, 100, -1);
   page->zero_rpm_opts = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  GtkWidget *zr_temp_lbl = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Stop Temp"));
+  GtkWidget *zr_temp_lbl = gtk_label_new (tr ("Stop Temp"));
   gtk_box_append (GTK_BOX (page->zero_rpm_opts), zr_temp_lbl);
   gtk_box_append (GTK_BOX (page->zero_rpm_opts), page->zero_rpm_temp_scale);
   gtk_box_append (GTK_BOX (page->zero_rpm_opts), page->zero_rpm_temp_spin);
   gtk_widget_set_margin_start (page->zero_rpm_opts, 16);
   AdwActionRow *zr_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (zr_row), g_dgettext (GETTEXT_PACKAGE, "Zero RPM Fan"));
-  adw_action_row_set_subtitle (zr_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (zr_row), tr ("Zero RPM Fan"));
+  adw_action_row_set_subtitle (zr_row, tr (
     "Allows the GPU fan to stop completely when below the temperature threshold."));
   adw_action_row_add_suffix (zr_row, page->zero_rpm_switch);
   g_object_set_data (G_OBJECT (zr_row), "power-id", "zero-rpm");
@@ -4490,8 +4493,8 @@ build_gpu_detail (HardwarePage *page)
   gtk_box_append (GTK_BOX (np_hbox), page->nvidia_power_scale);
   gtk_box_append (GTK_BOX (np_hbox), page->nvidia_power_spin);
   AdwActionRow *np_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (np_row), g_dgettext (GETTEXT_PACKAGE, "NVIDIA Power Limit"));
-  adw_action_row_set_subtitle (np_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (np_row), tr ("NVIDIA Power Limit"));
+  adw_action_row_set_subtitle (np_row, tr (
     "Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi)."));
   adw_action_row_add_suffix (np_row, np_hbox);
   g_object_set_data (G_OBJECT (np_row), "power-id", "nvidia-power");
@@ -4505,8 +4508,8 @@ build_gpu_detail (HardwarePage *page)
     GTK_ORIENTATION_HORIZONTAL, 0, 100, 1);
   gtk_widget_set_size_request (page->nvidia_fan_scale, 200, -1);
   AdwActionRow *nf_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (nf_row), g_dgettext (GETTEXT_PACKAGE, "NVIDIA Fan Speed"));
-  adw_action_row_set_subtitle (nf_row, g_dgettext (GETTEXT_PACKAGE,
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (nf_row), tr ("NVIDIA Fan Speed"));
+  adw_action_row_set_subtitle (nf_row, tr (
     "Controls NVIDIA GPU fan speed. Requires CoolBits enabled in nvidia-settings."));
   adw_action_row_add_suffix (nf_row, page->nvidia_fan_switch);
   g_object_set_data (G_OBJECT (nf_row), "power-id", "nvidia-fan");
@@ -4738,7 +4741,7 @@ monitor_poll_cb (gpointer user_data)
       if (!nv_ok && page->monitor_notice)
         {
           gtk_label_set_text (GTK_LABEL (page->monitor_notice),
-            g_dgettext (GETTEXT_PACKAGE,
+            tr (
               "nvidia-smi could not provide real-time data for this GPU."));
           gtk_widget_set_visible (page->monitor_notice, TRUE);
         }
@@ -4750,7 +4753,7 @@ monitor_poll_cb (gpointer user_data)
       if (page->monitor_notice)
         {
           gtk_label_set_text (GTK_LABEL (page->monitor_notice),
-            g_dgettext (GETTEXT_PACKAGE,
+            tr (
               "Real-time monitoring requires nvidia-smi, which was not found on "
               "this system. Install the NVIDIA driver tools to enable live GPU "
               "metrics."));
@@ -5520,7 +5523,7 @@ update_extra_buttons_section (HardwarePage *page)
           adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), btns[i].label);
           char subtitle[128];
           g_snprintf (subtitle, sizeof (subtitle), "%s (code 0x%x)",
-            g_dgettext (GETTEXT_PACKAGE, "Detected"), btns[i].code);
+            tr ("Detected"), btns[i].code);
           adw_action_row_set_subtitle (ADW_ACTION_ROW (row), subtitle);
           adw_preferences_group_add (page->extra_buttons_group,
             GTK_WIDGET (row));
@@ -5583,7 +5586,7 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
 
       /* BIOS info */
       char *bios_str = g_strdup_printf ("%s %s",
-        g_dgettext (GETTEXT_PACKAGE, "BIOS Version:"),
+        tr ("BIOS Version:"),
         page->mobo_bios_version);
       gtk_label_set_text (GTK_LABEL (page->mobo_bios_label), bios_str);
       g_free (bios_str);
@@ -5688,7 +5691,7 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
         {
           char vram_str[64];
           double gb = page->gpu->vram_total / (1024.0 * 1024.0 * 1024.0);
-          g_snprintf (vram_str, sizeof (vram_str), "VRAM: %.1f GB", gb);
+          g_snprintf (vram_str, sizeof (vram_str), tr ("VRAM: %.1f GB"), gb);
           gtk_label_set_text (GTK_LABEL (page->gpu_vram_label), vram_str);
 
           /* If VRAM came from GPU_INDEX.md, show info icon with tooltip */
@@ -5704,7 +5707,7 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
               gtk_widget_set_margin_start (info_icon, 4);
               gtk_widget_add_css_class (info_icon, "dim-label");
               gtk_widget_set_tooltip_text (GTK_WIDGET (info_icon),
-                "This information may be inaccurate or outdated");
+                tr ("This information may be inaccurate or outdated"));
               gtk_box_append (GTK_BOX (vram_row_box), info_icon);
               g_object_set_data (G_OBJECT (page->gpu_vram_label), "index-info-icon", info_icon);
             }
@@ -5722,7 +5725,7 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
         {
           char date_str[64];
           g_snprintf (date_str, sizeof (date_str),
-            g_dgettext (GETTEXT_PACKAGE, "Release: %s"),
+            tr ("Release: %s"),
             page->gpu->gpu_release_date);
           gtk_label_set_text (GTK_LABEL (page->gpu_release_label), date_str);
         }
@@ -5739,10 +5742,10 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
         char driver_str[128];
         if (g_strcmp0 (page->gpu->kernel_driver, "xe") == 0)
           g_snprintf (driver_str, sizeof (driver_str), "%s",
-            g_dgettext (GETTEXT_PACKAGE, "Intel Open Graphics Driver (Xe)"));
+            tr ("Intel Open Graphics Driver (Xe)"));
         else if (g_strcmp0 (page->gpu->kernel_driver, "amdgpu") == 0)
           g_snprintf (driver_str, sizeof (driver_str), "%s",
-            g_dgettext (GETTEXT_PACKAGE, "AMD Open Graphics Driver (amdgpu)"));
+            tr ("AMD Open Graphics Driver (amdgpu)"));
         else if (page->gpu->kernel_driver && page->gpu->driver_info)
           g_snprintf (driver_str, sizeof (driver_str), "%s (%s)",
             page->gpu->kernel_driver, page->gpu->driver_info);
@@ -5791,7 +5794,7 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
                 gtk_widget_set_margin_start (info_icon, 4);
                 gtk_widget_add_css_class (info_icon, "dim-label");
                 gtk_widget_set_tooltip_text (GTK_WIDGET (info_icon),
-                  g_dgettext (GETTEXT_PACKAGE,
+                  tr (
                     "This information may be inaccurate or outdated"));
                 adw_action_row_add_suffix (ADW_ACTION_ROW (page->gpu_vram_specs_row),
                   info_icon);
@@ -5808,8 +5811,8 @@ on_device_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_data)
       {
         adw_action_row_set_subtitle (ADW_ACTION_ROW (page->gpu_resizable_bar_row),
           page->gpu->resizable_bar ?
-            g_dgettext (GETTEXT_PACKAGE, "Yes") :
-            g_dgettext (GETTEXT_PACKAGE, "No"));
+            tr ("Yes") :
+            tr ("No"));
       }
       {
         adw_action_row_set_subtitle (ADW_ACTION_ROW (page->gpu_deviceid_row),
@@ -6052,7 +6055,7 @@ hardware_page_new (void)
   gtk_widget_set_margin_top (header_box, 8);
   gtk_widget_set_margin_bottom (header_box, 8);
 
-  GtkWidget *header = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Devices"));
+  GtkWidget *header = gtk_label_new (tr ("Devices"));
   gtk_widget_add_css_class (header, "heading");
   gtk_widget_set_hexpand (header, TRUE);
   gtk_widget_set_halign (header, GTK_ALIGN_START);
@@ -6106,7 +6109,7 @@ hardware_page_new (void)
   /* Default page */
   GtkWidget *default_page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   GtkWidget *default_label = gtk_label_new (
-    g_dgettext (GETTEXT_PACKAGE, "Select a device to view details"));
+    tr ("Select a device to view details"));
   gtk_widget_set_halign (default_label, GTK_ALIGN_CENTER);
   gtk_widget_set_valign (default_label, GTK_ALIGN_CENTER);
   gtk_widget_set_hexpand (default_label, TRUE);

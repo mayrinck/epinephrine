@@ -1,7 +1,11 @@
 #include "page-cpu.h"
 #include "page-dashboard.h"
+#include "epi-privilege.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
+
+#define tr(x) epi_i18n_get (x)
 
 static void
 on_cpu_save (GtkButton *btn, CpuPage *page)
@@ -18,17 +22,12 @@ on_cpu_save (GtkButton *btn, CpuPage *page)
 
   if (governor && page->n_cores > 0)
     {
-      for (int i = 0; i < page->n_cores; i++)
-        {
-          char *path = g_strdup_printf ("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor", i);
-          FILE *f = fopen (path, "w");
-          if (f)
-            {
-              fprintf (f, "%s", governor);
-              fclose (f);
-            }
-          g_free (path);
-        }
+      char *cmd = g_strdup_printf (
+        "for d in /sys/devices/system/cpu/cpu*/cpufreq; do "
+        "printf '%%s' '%s' > \"$d/scaling_governor\" 2>/dev/null; done",
+        governor);
+      epi_privilege_exec_async (cmd);
+      g_free (cmd);
     }
 
   int min_freq = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->min_freq_spin));
@@ -36,27 +35,25 @@ on_cpu_save (GtkButton *btn, CpuPage *page)
 
   if (min_freq > 0 && page->n_cores > 0)
     {
-      for (int i = 0; i < page->n_cores; i++)
-        {
-          char *path = g_strdup_printf ("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_min_freq", i);
-          FILE *f = fopen (path, "w");
-          if (f) { fprintf (f, "%d", min_freq); fclose (f); }
-          g_free (path);
-        }
+      char *cmd = g_strdup_printf (
+        "for d in /sys/devices/system/cpu/cpu*/cpufreq; do "
+        "printf '%%d' %d > \"$d/scaling_min_freq\" 2>/dev/null; done",
+        min_freq);
+      epi_privilege_exec_async (cmd);
+      g_free (cmd);
     }
 
   if (max_freq > 0 && page->n_cores > 0)
     {
-      for (int i = 0; i < page->n_cores; i++)
-        {
-          char *path = g_strdup_printf ("/sys/devices/system/cpu/cpu%d/cpufreq/scaling_max_freq", i);
-          FILE *f = fopen (path, "w");
-          if (f) { fprintf (f, "%d", max_freq); fclose (f); }
-          g_free (path);
-        }
+      char *cmd = g_strdup_printf (
+        "for d in /sys/devices/system/cpu/cpu*/cpufreq; do "
+        "printf '%%d' %d > \"$d/scaling_max_freq\" 2>/dev/null; done",
+        max_freq);
+      epi_privilege_exec_async (cmd);
+      g_free (cmd);
     }
 
-  dashboard_show_toast ("CPU settings applied");
+  dashboard_show_toast (tr("CPU settings applied"));
 }
 
 static void
@@ -87,9 +84,9 @@ refresh_cpu_info (CpuPage *page)
           long khz = atol (buf);
           char freq_str[64];
           if (khz >= 1000000)
-            g_snprintf (freq_str, sizeof (freq_str), "%.2f GHz", khz / 1000000.0);
+            g_snprintf (freq_str, sizeof (freq_str), tr("%.2f GHz"), khz / 1000000.0);
           else
-            g_snprintf (freq_str, sizeof (freq_str), "%.0f MHz", khz / 1000.0);
+            g_snprintf (freq_str, sizeof (freq_str), tr("%.0f MHz"), khz / 1000.0);
           gtk_label_set_text (GTK_LABEL (page->cur_freq_label), freq_str);
         }
       fclose (f);
@@ -144,7 +141,7 @@ on_cpu_openrgb_clicked (GtkButton *btn, CpuPage *page)
     NULL, NULL, NULL, &err);
   if (err)
     {
-      dashboard_show_toast ("OpenRGB not installed. Install it from openrgb.org");
+      dashboard_show_toast (tr("OpenRGB not installed. Install it from openrgb.org"));
       g_error_free (err);
     }
 }
@@ -170,13 +167,13 @@ cpu_page_new (void)
   /* Lighting Controls */
   page->lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-lighting-status"));
   gtk_label_set_text (GTK_LABEL (page->lighting_status),
-    g_dgettext (GETTEXT_PACKAGE, "The app couldn't find any light source to manage."));
+    tr("The app couldn't find any light source to manage."));
 
   GtkWidget *cpu_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-lighting-header"));
   if (g_find_program_in_path ("openrgb"))
     {
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+        tr("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (cpu_lighting_header), openrgb_btn);

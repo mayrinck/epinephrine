@@ -1,5 +1,7 @@
 #include "page-settings.h"
 
+#include "../epi-i18n.h"
+#include "../window.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -179,6 +181,9 @@ static const char *BREEZE_CSS =
   "  font-size: 2.5em;"
   "  font-weight: bold;"
   "  color: #3da2f0;"
+  "}"
+  ".gaming-score-footer {"
+  "  font-size: 12px;"
   "}";
 
 static void
@@ -742,6 +747,8 @@ on_language_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
   (void) page;
   int lang = (int) adw_combo_row_get_selected (row);
   settings_save_language (lang);
+  epi_i18n_set_language (lang);
+  epinephrine_retranslate ();
 }
 
 static void

@@ -1,7 +1,11 @@
 #include "page-games.h"
 #include "page-dashboard.h"
 
+#include "../epi-i18n.h"
+
 #include <string.h>
+
+#define tr(x) epi_i18n_get (x)
 
 static void on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, DashboardPage *page);
 static void on_add_game_clicked (GtkButton *btn, DashboardPage *page);
@@ -89,8 +93,8 @@ create_game_card_grid (DashboardPage *page, int idx)
   g_free (time_str);
 
   const char *btn_label = (page->running_game_idx == idx)
-    ? g_dgettext (GETTEXT_PACKAGE, "Running...")
-    : g_dgettext (GETTEXT_PACKAGE, "Play");
+    ? tr ("Running...")
+    : tr ("Play");
   GtkWidget *launch_btn = gtk_button_new_with_label (btn_label);
   gtk_widget_add_css_class (launch_btn, "suggested-action");
   if (page->running_game_idx == idx)
@@ -258,7 +262,7 @@ source_factory_bind (GtkListItemFactory *factory, GtkListItem *item, gpointer us
       "icons/launchers/lutris.png", "icons/launchers/bottles.png", NULL };
   static const char *sys_icons[] =
     { "media-optical-symbolic", NULL, NULL, NULL, NULL, "application-x-executable-symbolic" };
-  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? names[pos] : "?");
+  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? tr (names[pos]) : "?");
   if (pos < 6 && launcher_pngs[pos])
     {
       char *path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launcher_pngs[pos]);
@@ -275,7 +279,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
 {
   (void) btn;
   AdwDialog *dialog = adw_dialog_new ();
-  adw_dialog_set_title (dialog, g_dgettext (GETTEXT_PACKAGE, "Add Game"));
+  adw_dialog_set_title (dialog, tr ("Add Game"));
   adw_dialog_set_content_width (dialog, 500);
   adw_dialog_set_content_height (dialog, 500);
 
@@ -286,7 +290,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_widget_set_margin_bottom (box, 16);
 
   /* Name */
-  GtkWidget *name_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Game Name"));
+  GtkWidget *name_label = gtk_label_new (tr ("Game Name"));
   gtk_widget_set_halign (name_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (name_label, "dim-label");
   gtk_box_append (GTK_BOX (box), name_label);
@@ -295,11 +299,11 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_box_append (GTK_BOX (box), name_entry);
 
   /* Source */
-  GtkWidget *source_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Source / Platform"));
+  GtkWidget *source_label = gtk_label_new (tr ("Source / Platform"));
   gtk_widget_set_halign (source_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (source_label, "dim-label");
   gtk_box_append (GTK_BOX (box), source_label);
-  const char *sources[] = { "Local", "Steam", "Heroic", "Lutris", "Bottles", "Other", NULL };
+  const char *sources[] = { tr ("Local"), tr ("Steam"), tr ("Heroic"), tr ("Lutris"), tr ("Bottles"), tr ("Other"), NULL };
   GtkStringList *source_list = gtk_string_list_new (sources);
   GtkDropDown *source_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (source_list), NULL));
   g_object_unref (source_list);
@@ -314,7 +318,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_box_append (GTK_BOX (box), GTK_WIDGET (source_drop));
 
   /* Command */
-  GtkWidget *cmd_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Launch Command"));
+  GtkWidget *cmd_label = gtk_label_new (tr ("Launch Command"));
   gtk_widget_set_halign (cmd_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (cmd_label, "dim-label");
   gtk_box_append (GTK_BOX (box), cmd_label);
@@ -330,7 +334,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_box_append (GTK_BOX (box), cmd_hbox);
 
   /* Icon */
-  GtkWidget *icon_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Icon (name or path)"));
+  GtkWidget *icon_label = gtk_label_new (tr ("Icon (name or path)"));
   gtk_widget_set_halign (icon_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (icon_label, "dim-label");
   gtk_box_append (GTK_BOX (box), icon_label);
@@ -347,7 +351,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_box_append (GTK_BOX (box), icon_hbox);
 
   /* Workdir */
-  GtkWidget *workdir_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Working Directory"));
+  GtkWidget *workdir_label = gtk_label_new (tr ("Working Directory"));
   gtk_widget_set_halign (workdir_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (workdir_label, "dim-label");
   gtk_box_append (GTK_BOX (box), workdir_label);
@@ -375,18 +379,18 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   gtk_widget_set_margin_bottom (sep, 8);
   gtk_box_append (GTK_BOX (box), sep);
 
-  GtkWidget *tweaks_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Tweaks"));
+  GtkWidget *tweaks_label = gtk_label_new (tr ("Tweaks"));
   gtk_widget_set_halign (tweaks_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (tweaks_label, "heading");
   gtk_box_append (GTK_BOX (box), tweaks_label);
 
-  GtkWidget *startup_label = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Startup commands"));
+  GtkWidget *startup_label = gtk_label_new (tr ("Startup commands"));
   gtk_widget_set_halign (startup_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (startup_label, "dim-label");
   gtk_box_append (GTK_BOX (box), startup_label);
   GtkWidget *startup_entry = gtk_entry_new ();
   gtk_entry_set_placeholder_text (GTK_ENTRY (startup_entry),
-    g_dgettext (GETTEXT_PACKAGE, "e.g. gamemoderun %command%"));
+    tr ("e.g. gamemoderun %command%"));
   gtk_widget_set_hexpand (startup_entry, TRUE);
   gtk_box_append (GTK_BOX (box), startup_entry);
 
@@ -396,7 +400,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
       GtkWidget *gamemode_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
       gtk_widget_set_margin_top (gamemode_row, 4);
       GtkWidget *gamemode_lbl = gtk_label_new (
-        g_dgettext (GETTEXT_PACKAGE, "Enable Feral GameMode"));
+        tr ("Enable Feral GameMode"));
       gtk_widget_set_halign (gamemode_lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (gamemode_lbl, TRUE);
       gtk_box_append (GTK_BOX (gamemode_row), gamemode_lbl);
@@ -412,7 +416,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
       GtkWidget *mangohud_row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
       gtk_widget_set_margin_top (mangohud_row, 4);
       GtkWidget *mangohud_lbl = gtk_label_new (
-        g_dgettext (GETTEXT_PACKAGE, "Enable MangoHud"));
+        tr ("Enable MangoHud"));
       gtk_widget_set_halign (mangohud_lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (mangohud_lbl, TRUE);
       gtk_box_append (GTK_BOX (mangohud_row), mangohud_lbl);
@@ -426,10 +430,10 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   GtkWidget *btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
   gtk_widget_set_halign (btn_box, GTK_ALIGN_END);
   gtk_widget_set_margin_top (btn_box, 8);
-  GtkWidget *cancel_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Cancel"));
+  GtkWidget *cancel_btn = gtk_button_new_with_label (tr ("Cancel"));
   g_signal_connect_swapped (cancel_btn, "clicked", G_CALLBACK (adw_dialog_close), dialog);
   gtk_box_append (GTK_BOX (btn_box), cancel_btn);
-  GtkWidget *add_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Add"));
+  GtkWidget *add_btn = gtk_button_new_with_label (tr ("Add"));
   gtk_widget_add_css_class (add_btn, "suggested-action");
   gtk_box_append (GTK_BOX (btn_box), add_btn);
   gtk_box_append (GTK_BOX (box), btn_box);
@@ -461,10 +465,11 @@ on_import_steam (GSimpleAction *action, GVariant *parameter, gpointer user_data)
   int count = import_steam_games (page);
   char *msg = NULL;
   if (count > 0)
-    msg = g_strdup (g_dngettext (GETTEXT_PACKAGE,
-      "Imported %d game from Steam", "Imported %d games from Steam", count));
+    msg = g_strdup (count > 1
+      ? tr ("Imported %d games from Steam")
+      : tr ("Imported %d game from Steam"));
   else
-    msg = g_strdup (g_dgettext (GETTEXT_PACKAGE, "No Steam games found"));
+    msg = g_strdup (tr ("No Steam games found"));
   dashboard_show_toast (msg);
   g_free (msg);
   on_import_done (page);
@@ -478,10 +483,11 @@ on_import_heroic (GSimpleAction *action, GVariant *parameter, gpointer user_data
   int count = import_heroic_games (page);
   char *msg = NULL;
   if (count > 0)
-    msg = g_strdup (g_dngettext (GETTEXT_PACKAGE,
-      "Imported %d game from Heroic", "Imported %d games from Heroic", count));
+    msg = g_strdup (count > 1
+      ? tr ("Imported %d games from Heroic")
+      : tr ("Imported %d game from Heroic"));
   else
-    msg = g_strdup (g_dgettext (GETTEXT_PACKAGE, "No Heroic games found"));
+    msg = g_strdup (tr ("No Heroic games found"));
   dashboard_show_toast (msg);
   g_free (msg);
   on_import_done (page);
@@ -495,10 +501,11 @@ on_import_lutris (GSimpleAction *action, GVariant *parameter, gpointer user_data
   int count = import_lutris_games (page);
   char *msg = NULL;
   if (count > 0)
-    msg = g_strdup (g_dngettext (GETTEXT_PACKAGE,
-      "Imported %d game from Lutris", "Imported %d games from Lutris", count));
+    msg = g_strdup (count > 1
+      ? tr ("Imported %d games from Lutris")
+      : tr ("Imported %d game from Lutris"));
   else
-    msg = g_strdup (g_dgettext (GETTEXT_PACKAGE, "No Lutris games found"));
+    msg = g_strdup (tr ("No Lutris games found"));
   dashboard_show_toast (msg);
   g_free (msg);
   on_import_done (page);
@@ -512,10 +519,11 @@ on_import_bottles (GSimpleAction *action, GVariant *parameter, gpointer user_dat
   int count = import_bottles_games (page);
   char *msg = NULL;
   if (count > 0)
-    msg = g_strdup (g_dngettext (GETTEXT_PACKAGE,
-      "Imported %d game from Bottles", "Imported %d games from Bottles", count));
+    msg = g_strdup (count > 1
+      ? tr ("Imported %d games from Bottles")
+      : tr ("Imported %d game from Bottles"));
   else
-    msg = g_strdup (g_dgettext (GETTEXT_PACKAGE, "No Bottles games found"));
+    msg = g_strdup (tr ("No Bottles games found"));
   dashboard_show_toast (msg);
   g_free (msg);
   on_import_done (page);
@@ -545,12 +553,12 @@ games_page_new (DashboardPage *dash_page)
   gtk_widget_set_margin_bottom (page_box, 16);
 
   /* Title */
-  GtkWidget *title = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Games"));
+  GtkWidget *title = gtk_label_new (tr ("Games"));
   gtk_widget_set_halign (title, GTK_ALIGN_START);
   gtk_widget_add_css_class (title, "title-1");
   gtk_box_append (GTK_BOX (page_box), title);
 
-  GtkWidget *subtitle = gtk_label_new (g_dgettext (GETTEXT_PACKAGE, "Your game library"));
+  GtkWidget *subtitle = gtk_label_new (tr ("Your game library"));
   gtk_widget_set_halign (subtitle, GTK_ALIGN_START);
   gtk_widget_set_opacity (subtitle, 0.7);
   gtk_box_append (GTK_BOX (page_box), subtitle);
@@ -564,28 +572,28 @@ games_page_new (DashboardPage *dash_page)
 
   /* Import menu */
   GMenu *import_menu = g_menu_new ();
-  GMenuItem *steam_item = g_menu_item_new ("Steam", "import-steam");
+  GMenuItem *steam_item = g_menu_item_new (tr ("Steam"), "import-steam");
   g_menu_append_item (import_menu, steam_item);
   g_object_unref (steam_item);
-  GMenuItem *heroic_item = g_menu_item_new ("Heroic", "import-heroic");
+  GMenuItem *heroic_item = g_menu_item_new (tr ("Heroic"), "import-heroic");
   g_menu_append_item (import_menu, heroic_item);
   g_object_unref (heroic_item);
-  GMenuItem *lutris_item = g_menu_item_new ("Lutris", "import-lutris");
+  GMenuItem *lutris_item = g_menu_item_new (tr ("Lutris"), "import-lutris");
   g_menu_append_item (import_menu, lutris_item);
   g_object_unref (lutris_item);
-  GMenuItem *bottles_item = g_menu_item_new ("Bottles", "import-bottles");
+  GMenuItem *bottles_item = g_menu_item_new (tr ("Bottles"), "import-bottles");
   g_menu_append_item (import_menu, bottles_item);
   g_object_unref (bottles_item);
 
   GtkWidget *import_btn = gtk_menu_button_new ();
-  gtk_menu_button_set_label (GTK_MENU_BUTTON (import_btn), g_dgettext (GETTEXT_PACKAGE, "Import Games"));
+  gtk_menu_button_set_label (GTK_MENU_BUTTON (import_btn), tr ("Import Games"));
   gtk_menu_button_set_menu_model (GTK_MENU_BUTTON (import_btn), G_MENU_MODEL (import_menu));
   g_object_unref (import_menu);
   gtk_widget_add_css_class (import_btn, "flat");
   gtk_widget_add_css_class (import_btn, "accent-btn");
   gtk_box_append (GTK_BOX (header), import_btn);
 
-  GtkWidget *add_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Add Game"));
+  GtkWidget *add_btn = gtk_button_new_with_label (tr ("Add Game"));
   gtk_widget_add_css_class (add_btn, "suggested-action");
   g_signal_connect (add_btn, "clicked", G_CALLBACK (on_add_game_clicked), dash_page);
   gtk_box_append (GTK_BOX (header), add_btn);
@@ -625,7 +633,7 @@ games_page_new (DashboardPage *dash_page)
 
   GtkWidget *empty_label = gtk_label_new (NULL);
   gtk_label_set_markup (GTK_LABEL (empty_label),
-    g_dgettext (GETTEXT_PACKAGE, "There are no registered games...\nYet."));
+    tr ("There are no registered games...\nYet."));
   gtk_widget_set_halign (empty_label, GTK_ALIGN_CENTER);
   gtk_widget_set_opacity (empty_label, 0.5);
   gtk_widget_set_margin_top (empty_label, 8);
@@ -635,8 +643,8 @@ games_page_new (DashboardPage *dash_page)
   GtkWidget *stack = gtk_stack_new ();
   gtk_stack_set_transition_type (GTK_STACK (stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
   gtk_stack_set_transition_duration (GTK_STACK (stack), 200);
-  gtk_stack_add_titled (GTK_STACK (stack), scroll, "grid", "Grid");
-  gtk_stack_add_titled (GTK_STACK (stack), empty_box, "empty", "Empty");
+  gtk_stack_add_titled (GTK_STACK (stack), scroll, "grid", tr ("Grid"));
+  gtk_stack_add_titled (GTK_STACK (stack), empty_box, "empty", tr ("Empty"));
   gtk_widget_set_vexpand (stack, TRUE);
   gtk_widget_set_hexpand (stack, TRUE);
   dash_page->games_stack = GTK_STACK (stack);

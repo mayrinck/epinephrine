@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "page-keyboard.h"
 #include "page-dashboard.h"
+#include "epi-privilege.h"
 
 #include <string.h>
 #include <sys/stat.h>
@@ -9,11 +10,82 @@
 #include <fcntl.h>
 #include <linux/input.h>
 #include <linux/hidraw.h>
+#include "../epi-i18n.h"
 
 /* With -std=c17 the _IOC macro may not be available from kernel headers. */
 #ifndef _IOC
 #include <asm-generic/ioctl.h>
 #endif
+
+#define tr(x) epi_i18n_get (x)
+
+/* ---- Admin session helpers ---- */
+
+static char *
+epi_hidraw_program (void)
+{
+  char linkbuf[4096];
+  ssize_t n = readlink ("/proc/self/exe", linkbuf, sizeof (linkbuf) - 1);
+  if (n > 0)
+    {
+      linkbuf[n] = '\0';
+      char *slash = strrchr (linkbuf, '/');
+      if (slash)
+        {
+          *slash = '\0';
+          char *cand = g_build_filename (linkbuf, "epi-hidraw", NULL);
+          if (g_file_test (cand, G_FILE_TEST_IS_EXECUTABLE))
+            return cand;
+          g_free (cand);
+        }
+    }
+  return g_strdup ("epi-hidraw");
+}
+
+/* Run epi-hidraw through the persistent admin session; returns TRUE and
+   (optionally) the captured stdout on success. */
+static gboolean
+run_epi_hidraw (const char *dev, const char *op, const char *arg, char **out)
+{
+  char *prog = epi_hidraw_program ();
+  char *cmd;
+  if (arg)
+    cmd = g_strdup_printf ("'%s' '%s' %s %s 2>/dev/null", prog, dev, op, arg);
+  else
+    cmd = g_strdup_printf ("'%s' '%s' %s", prog, dev, op);
+  g_free (prog);
+
+  int exit_code = -1;
+  char *stdout = NULL;
+  GError *err = NULL;
+  gboolean ok = epi_privilege_exec_sync (cmd, &exit_code, &stdout, &err);
+  g_free (cmd);
+  g_clear_error (&err);
+
+  if (!ok || exit_code != 0 || !stdout)
+    {
+      g_free (stdout);
+      return FALSE;
+    }
+
+  if (out)
+    {
+      g_strstrip (stdout);
+      *out = stdout;
+    }
+  else
+    g_free (stdout);
+  return TRUE;
+}
+
+static char *
+bytes_to_hex (const unsigned char *data, size_t len)
+{
+  GString *s = g_string_new (NULL);
+  for (size_t i = 0; i < len; i++)
+    g_string_append_printf (s, "%02x", data[i]);
+  return g_string_free (s, FALSE);
+}
 
 /* ---- Config helpers ---- */
 
@@ -179,27 +251,27 @@ find_keyboard_usb_info (char **out_name, char **out_vendor,
           if (speed_val == 1.5)
             {
               g_free (speed_str);
-              speed_str = g_strdup ("1.5 Mb/s (Low Speed)");
+              speed_str = g_strdup (tr ("1.5 Mb/s (Low Speed)"));
             }
           else if (speed_val == 12.0)
             {
               g_free (speed_str);
-              speed_str = g_strdup ("12 Mb/s (Full Speed)");
+              speed_str = g_strdup (tr ("12 Mb/s (Full Speed)"));
             }
           else if (speed_val >= 480.0 && speed_val < 5000.0)
             {
               g_free (speed_str);
-              speed_str = g_strdup_printf ("%.0f Mb/s (High Speed)", speed_val);
+              speed_str = g_strdup_printf (tr ("%.0f Mb/s (High Speed)"), speed_val);
             }
           else if (speed_val >= 5000.0)
             {
               g_free (speed_str);
-              speed_str = g_strdup_printf ("%.0f Mb/s (Super Speed)", speed_val);
+              speed_str = g_strdup_printf (tr ("%.0f Mb/s (Super Speed)"), speed_val);
             }
           else
             {
               g_free (speed_str);
-              speed_str = g_strdup_printf ("%.1f Mb/s", speed_val);
+              speed_str = g_strdup_printf (tr ("%.1f Mb/s"), speed_val);
             }
           if (out_speed) *out_speed = speed_str;
           else g_free (speed_str);
@@ -256,11 +328,9 @@ static void
 apply_kb_led (const char *setting, gboolean enable)
 {
   const char *op = enable ? "+" : "-";
-  char *arg = g_strdup_printf ("%s%s", op, setting);
-  g_spawn_sync (NULL,
-    (char *[]){ "setleds", arg, NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, NULL, NULL);
-  g_free (arg);
+  char *cmd = g_strdup_printf ("setleds %s%s 2>/dev/null", op, setting);
+  epi_privilege_exec_async (cmd);
+  g_free (cmd);
 }
 
 /* ---- hidraw backlight control ---- */
@@ -438,18 +508,7 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
   char *hidraw_path = find_keyboard_hidraw ();
   if (!hidraw_path)
     {
-      dashboard_show_toast ("Could not find keyboard hidraw device");
-      return;
-    }
-
-  int fd = open (hidraw_path, O_RDWR);
-  g_free (hidraw_path);
-  if (fd < 0)
-    {
-      if (errno == EACCES)
-        dashboard_show_toast ("Permission denied. Try: sudo chmod 666 /dev/hidraw*");
-      else
-        dashboard_show_toast ("Failed to access keyboard hidraw");
+      dashboard_show_toast (tr ("Could not find keyboard hidraw device"));
       return;
     }
 
@@ -472,39 +531,62 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
   else         { patterns = off_patterns; n_patterns = G_N_ELEMENTS (off_patterns); }
 
   gboolean ok = FALSE;
-  for (size_t i = 0; i < n_patterns; i++)
+
+  /* 1) Try directly (works when the user already has device access) */
+  int fd = open (hidraw_path, O_RDWR);
+  if (fd >= 0)
     {
-      if (ioctl (fd, HIDIOCSFEATURE (3), patterns[i]) >= 0)
+      for (size_t i = 0; i < n_patterns; i++)
         {
-          ok = TRUE;
-          break;
+          if (ioctl (fd, HIDIOCSFEATURE (3), patterns[i]) >= 0)
+            {
+              ok = TRUE;
+              break;
+            }
+        }
+
+      if (!ok)
+        {
+          static const unsigned char raw_on[] = {0x03, 0x01};
+          static const unsigned char raw_off[] = {0x03, 0x00};
+          const unsigned char *raw = want_on ? raw_on : raw_off;
+          size_t raw_len = sizeof (raw_on);
+          if (write (fd, raw, raw_len) == (ssize_t) raw_len)
+            ok = TRUE;
+        }
+      close (fd);
+    }
+
+  /* 2) Otherwise retry through the persistent admin session */
+  if (!ok)
+    {
+      for (size_t i = 0; i < n_patterns && !ok; i++)
+        {
+          char *hex = bytes_to_hex (patterns[i], 3);
+          ok = run_epi_hidraw (hidraw_path, "set-feature", hex, NULL);
+          g_free (hex);
+        }
+
+      if (!ok)
+        {
+          static const unsigned char raw_on[] = {0x03, 0x01};
+          static const unsigned char raw_off[] = {0x03, 0x00};
+          const unsigned char *raw = want_on ? raw_on : raw_off;
+          size_t raw_len = sizeof (raw_on);
+          char *hex = bytes_to_hex (raw, raw_len);
+          ok = run_epi_hidraw (hidraw_path, "write", hex, NULL);
+          g_free (hex);
         }
     }
 
-  if (!ok)
-    {
-      if (want_on)
-        {
-          static const unsigned char raw_on[] = {0x03, 0x01};
-          if (write (fd, raw_on, sizeof (raw_on)) >= 0)
-            ok = TRUE;
-        }
-      else
-        {
-          static const unsigned char raw_off[] = {0x03, 0x00};
-          if (write (fd, raw_off, sizeof (raw_off)) >= 0)
-            ok = TRUE;
-        }
-    }
+  g_free (hidraw_path);
 
   if (ok)
     dashboard_show_toast (want_on
-      ? "Keyboard illumination enabled (experimental)"
-      : "Keyboard illumination disabled (experimental)");
+      ? tr ("Keyboard illumination enabled (experimental)")
+      : tr ("Keyboard illumination disabled (experimental)"));
   else
-    dashboard_show_toast ("No compatible HID report found for backlight");
-
-  close (fd);
+    dashboard_show_toast (tr ("No compatible HID report found for backlight"));
 }
 
 static void
@@ -519,7 +601,7 @@ on_openrgb_clicked (GtkButton *btn, KeyboardPage *page)
     NULL, NULL, NULL, &err);
   if (err)
     {
-      dashboard_show_toast ("OpenRGB not installed. Install it from openrgb.org");
+      dashboard_show_toast (tr ("OpenRGB not installed. Install it from openrgb.org"));
       g_error_free (err);
     }
 }
@@ -532,20 +614,24 @@ on_keyboard_save (GtkButton *btn, KeyboardPage *page)
   int rate = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->repeat_rate_spin));
   int delay = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->repeat_delay_spin));
 
-  GError *err = NULL;
   char rate_str[16], delay_str[16];
   g_snprintf (rate_str, sizeof (rate_str), "%d", rate);
   g_snprintf (delay_str, sizeof (delay_str), "%d", delay);
-  g_spawn_sync (NULL,
-    (char *[]){ "kbdrate", "-r", rate_str, "-d", delay_str, NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, NULL, &err);
-  if (err)
-    {
-      dashboard_show_toast ("Failed to set keyboard rate: kbdrate may not be installed");
-      g_error_free (err);
-    }
+  char *cmd = g_strdup_printf ("kbdrate -r %s -d %s", rate_str, delay_str);
+  int exit_code = -1;
+  GError *err = NULL;
+  gboolean ok = epi_privilege_exec_sync (cmd, &exit_code, NULL, &err);
+  g_free (cmd);
+  if (ok && exit_code == 0)
+    dashboard_show_toast (tr ("Keyboard settings applied"));
   else
-    dashboard_show_toast ("Keyboard settings applied");
+    {
+      if (err && err->message)
+        dashboard_show_toast (err->message);
+      else
+        dashboard_show_toast (tr ("Failed to set keyboard rate: kbdrate may not be installed"));
+    }
+  g_clear_error (&err);
 }
 
 static void
@@ -636,7 +722,7 @@ keyboard_page_new (void)
   GtkWidget *kb_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "kb-lighting-header"));
   if (g_find_program_in_path ("openrgb"))
     {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (g_dgettext (GETTEXT_PACKAGE, "Edit on OpenRGB"));
+      GtkWidget *openrgb_btn = gtk_button_new_with_label (tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
       gtk_box_append (GTK_BOX (kb_lighting_header), openrgb_btn);

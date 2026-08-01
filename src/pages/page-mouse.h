@@ -29,6 +29,7 @@ typedef struct
 
   /* G300s detection */
   int         hidraw_fd;
+  char       *hidraw_path;   /* set when direct access failed but admin session works */
   gboolean    g300_detected;
   gboolean    ratbagd_warned;
 

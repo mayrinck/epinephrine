@@ -60,5 +60,7 @@
     <file>../database/GPU_INDEX.md</file>
     <file>../database/JOY_INDEX.md</file>
     <file>../database/MICE_INDEX.md</file>
+    <file>../lang/pt_BR.md</file>
+    <file>../lang/en_US.md</file>
   </gresource>
 </gresources>

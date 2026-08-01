@@ -1,6 +1,8 @@
 #include "application.h"
 #include "window.h"
 #include "pages/page-settings.h"
+#include "epi-privilege.h"
+#include "epi-i18n.h"
 
 #include <fontconfig/fontconfig.h>
 
@@ -164,6 +166,47 @@ static const char *EPI_BASE_CSS =
   "  font-weight: bold;\n"
   "  color: @accent_color;\n"
   "}\n"
+  ".gaming-score-tier {\n"
+  "  font-size: 12px;\n"
+  "  font-weight: bold;\n"
+  "  padding: 2px;\n"
+  "  border-radius: 4px;\n"
+  "  border: 1px solid transparent;\n"
+  "}\n"
+  ".gaming-score-tier.tier-ruim {\n"
+  "  color: #e01b24;\n"
+  "  border-color: #e01b24;\n"
+  "  background-color: rgba(224, 27, 36, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-regular {\n"
+  "  color: #ff7800;\n"
+  "  border-color: #ff7800;\n"
+  "  background-color: rgba(255, 120, 0, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-boa {\n"
+  "  color: #f5c211;\n"
+  "  border-color: #f5c211;\n"
+  "  background-color: rgba(245, 194, 17, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-muito-boa {\n"
+  "  color: #73d216;\n"
+  "  border-color: #73d216;\n"
+  "  background-color: rgba(115, 210, 22, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-ideal {\n"
+  "  color: #2ec27e;\n"
+  "  border-color: #2ec27e;\n"
+  "  background-color: rgba(46, 194, 126, 0.10);\n"
+  "}\n"
+  ".score-bar-low progress {\n"
+  "  background-color: #e01b24;\n"
+  "}\n"
+  ".score-bar-mid progress {\n"
+  "  background-color: #ff8c00;\n"
+  "}\n"
+  ".score-bar-good progress {\n"
+  "  background-color: #2ec27e;\n"
+  "}\n"
   ".status-icon-ok {\n"
   "  color: #2ec27e;\n"
   "}\n"
@@ -215,8 +258,32 @@ epinephrine_application_activate (GApplication *app)
 {
   EpinephrineApplication *epi_app = EPINEPHRINE_APPLICATION (app);
 
+  /* Apply saved language preference before building the UI so every widget
+     is created already translated. */
+  int lang = settings_load_language ();
+  epi_i18n_set_language (lang);
+
   GtkWindow *win = epinephrine_window_new (epi_app);
   gtk_window_present (win);
+
+  /* Request the persistent admin session once, at startup. All features
+     that need root consume this single session for the app lifetime. */
+  static gboolean admin_notified = FALSE;
+  if (!epi_privilege_is_available () && !admin_notified)
+    {
+      GError *perr = NULL;
+      if (!epi_privilege_init (&perr))
+        {
+          admin_notified = TRUE;
+          char *msg = g_strdup_printf (
+            "%s\n%s",
+            epi_i18n_get ("Administrator session is unavailable. Features that need admin access won't work."),
+            perr && perr->message ? perr->message : "");
+          epinephrine_show_toast (msg);
+          g_free (msg);
+          g_clear_error (&perr);
+        }
+    }
 
   GdkDisplay *display = gtk_widget_get_display (GTK_WIDGET (win));
 
@@ -251,13 +318,6 @@ epinephrine_application_activate (GApplication *app)
   /* Apply saved tema */
   TemaChoice tema_saved = settings_load_tema ();
   settings_apply_tema (tema_saved);
-
-  /* Apply language preference */
-  int lang = settings_load_language ();
-  if (lang == 1)
-    g_setenv ("LANGUAGE", "pt_BR", TRUE);
-  else if (lang == 2)
-    g_setenv ("LANGUAGE", "en_US", TRUE);
 }
 
 static void

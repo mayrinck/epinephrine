@@ -3,16 +3,41 @@
 static GSubprocess *helper = NULL;
 static GOutputStream *helper_stdin = NULL;
 static GDataInputStream *helper_stdout = NULL;
+static gboolean init_attempted = FALSE;
+static char *last_error = NULL;
+
+gboolean
+epi_privilege_is_available (void)
+{
+  return helper != NULL;
+}
+
+const char *
+epi_privilege_get_error (void)
+{
+  return last_error;
+}
 
 gboolean
 epi_privilege_init (GError **error)
 {
   if (helper) return TRUE;
 
+  /* The admin session is only requested once, at application start.
+     A cancelled/denied prompt is never retried during the session. */
+  if (init_attempted)
+    {
+      if (error && last_error)
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", last_error);
+      return FALSE;
+    }
+  init_attempted = TRUE;
+
   if (!g_find_program_in_path ("pkexec"))
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-        "pkexec is not installed");
+      last_error = g_strdup ("pkexec is not installed");
+      if (error)
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "%s", last_error);
       return FALSE;
     }
 
@@ -28,7 +53,14 @@ epi_privilege_init (GError **error)
     "done",
     NULL);
 
-  if (!helper) return FALSE;
+  if (!helper)
+    {
+      if (error && *error)
+        last_error = g_strdup ((*error)->message);
+      else
+        last_error = g_strdup ("pkexec failed to start");
+      return FALSE;
+    }
 
   helper_stdin = g_subprocess_get_stdin_pipe (helper);
   GInputStream *in = g_subprocess_get_stdout_pipe (helper);
@@ -126,12 +158,8 @@ epi_privilege_exec_async (const char *cmd)
 void
 epi_privilege_reset (void)
 {
-  epi_privilege_shutdown ();
-}
-
-void
-epi_privilege_shutdown (void)
-{
+  /* Tear the helper down but keep init_attempted set: the admin session
+     is requested only once per application run. */
   if (helper)
     {
       if (helper_stdin)
@@ -146,4 +174,12 @@ epi_privilege_shutdown (void)
   if (helper_stdin) { g_object_unref (helper_stdin); helper_stdin = NULL; }
   if (helper_stdout) { g_object_unref (helper_stdout); helper_stdout = NULL; }
   if (helper) { g_object_unref (helper); helper = NULL; }
+}
+
+void
+epi_privilege_shutdown (void)
+{
+  epi_privilege_reset ();
+  init_attempted = FALSE;
+  g_clear_pointer (&last_error, g_free);
 }

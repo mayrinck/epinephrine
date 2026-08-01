@@ -1,4 +1,5 @@
 #include "window.h"
+#include "epi-i18n.h"
 #include "pages/page-dashboard.h"
 #include "pages/page-games.h"
 #include "pages/page-gamescope.h"
@@ -47,6 +48,13 @@ dashboard_navigate_to_games (void)
     adw_view_stack_set_visible_child_name (g_epi->view_stack, "games");
 }
 
+void
+epinephrine_retranslate (void)
+{
+  if (g_epi)
+    epi_i18n_apply_widgets (GTK_WIDGET (g_epi->win));
+}
+
 GtkWindow *
 epinephrine_window_new (EpinephrineApplication *app)
 {
@@ -68,7 +76,7 @@ epinephrine_window_new (EpinephrineApplication *app)
   /* Overview tab */
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->dash_page->box, "dashboard",
-    g_dgettext (GETTEXT_PACKAGE, "Overview"), "computer-symbolic");
+    epi_i18n_get ("Overview"), "computer-symbolic");
 
   /* Games tab */
   epi->games_page = games_page_new (epi->dash_page);
@@ -76,24 +84,26 @@ epinephrine_window_new (EpinephrineApplication *app)
   games_page_register_actions (G_ACTION_MAP (epi->win), epi->dash_page);
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->games_page, "games",
-    g_dgettext (GETTEXT_PACKAGE, "Game Library"), "input-gaming-symbolic");
+    epi_i18n_get ("Game Library"), "input-gaming-symbolic");
 
   /* Hardware tab */
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->hw_page->box, "hardware",
-    g_dgettext (GETTEXT_PACKAGE, "Hardware Control"), "chip-symbolic");
+    epi_i18n_get ("Hardware Control"), "chip-symbolic");
 
   /* utilities tab */
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->util_page->box, "utilities",
-    g_dgettext (GETTEXT_PACKAGE, "Utilities"), "pocket-knife-symbolic");
+    epi_i18n_get ("Utilities"), "pocket-knife-symbolic");
 
   /* Settings tab */
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->settings_page->box, "settings",
-    g_dgettext (GETTEXT_PACKAGE, "Settings"), "emblem-system-symbolic");
+    epi_i18n_get ("Settings"), "emblem-system-symbolic");
 
   adw_view_stack_set_visible_child_name (epi->view_stack, "dashboard");
+
+  epi_i18n_apply_widgets (GTK_WIDGET (epi->win));
 
   g_object_unref (builder);
 

@@ -69,7 +69,17 @@ typedef struct
 
   GtkWidget *gaming_score_box;
   GtkWidget *gaming_score_label;
+  GtkWidget *gaming_score_tier;
   GtkWidget *gaming_score_spinner;
+  GtkWidget *gaming_score_details_btn;
+  GtkWidget *gaming_score_details;
+  GtkWidget *gaming_score_footer;
+
+  /* Per-component score bars (details view) */
+  GtkWidget *gaming_score_cpu_bar;
+  GtkWidget *gaming_score_gpu_bar;
+  GtkWidget *gaming_score_ram_bar;
+  GtkWidget *gaming_score_monitor_bar;
 } DashboardPage;
 
 DashboardPage *dashboard_page_new (void);

@@ -2,9 +2,12 @@
 #include "command-builder.h"
 #include "page-dashboard.h"
 #include "epi-privilege.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
 #include <fcntl.h>
+
+#define tr(x) epi_i18n_get (x)
 
 static const char *SCALER_VALUES[] = { "auto", "integer", "fit", "fill", "stretch" };
 static const char *FILTER_VALUES[] = { "linear", "nearest", "fsr", "nis", "pixel" };
@@ -162,7 +165,7 @@ on_restore_defaults_clicked (GtkButton *button, GamescopePage *page)
   gtk_editable_set_text (GTK_EDITABLE (page->reshade_effect), "");
   adw_spin_row_set_value (page->reshade_technique_idx, 0);
 
-  dashboard_show_toast ("Defaults restored (not saved)");
+  dashboard_show_toast (tr("Defaults restored (not saved)"));
   update_command (page);
 }
 
@@ -175,58 +178,46 @@ on_save_defaults_clicked (GtkButton *button, GamescopePage *page)
   command_builder_build (settings, &command);
   free_settings (settings);
 
-  g_mkdir_with_parents ("/etc/gamescope", 0755);
-
-  GError *err = NULL;
-  if (g_file_set_contents ("/etc/gamescope/epinephrine.conf", command, -1, &err))
+  /* /etc/gamescope is root-owned: write through the admin session */
+  char tmp_path[] = "/tmp/gamescope-conf-XXXXXX";
+  int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd < 0)
     {
-      dashboard_show_toast ("Saved to /etc/gamescope/epinephrine.conf");
+      dashboard_show_toast (tr("Failed to create temp file for elevation"));
+      g_free (command);
+      return;
+    }
+
+  FILE *f = fdopen (fd, "w");
+  if (f)
+    {
+      fputs (command, f);
+      fclose (f);
+    }
+  else
+    close (fd);
+
+  char *install_cmd = g_strdup_printf (
+    "mkdir -p /etc/gamescope && install -D -m 644 '%s' /etc/gamescope/epinephrine.conf", tmp_path);
+  int exit_code = -1;
+  GError *err2 = NULL;
+  if (epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err2))
+    {
+      if (exit_code == 0)
+        dashboard_show_toast (tr("Saved to /etc/gamescope/epinephrine.conf (elevated)"));
+      else
+        dashboard_show_toast (tr("Failed to save (permission denied)"));
     }
   else
     {
-      /* Try with pkexec */
-      g_clear_error (&err);
-
-      char tmp_path[] = "/tmp/gamescope-conf-XXXXXX";
-      int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-      if (fd < 0)
-        {
-          dashboard_show_toast ("Failed to create temp file for elevation");
-          g_free (command);
-          return;
-        }
-
-      FILE *f = fdopen (fd, "w");
-      if (f)
-        {
-          fputs (command, f);
-          fclose (f);
-        }
+      if (err2)
+        dashboard_show_toast (err2->message);
       else
-        close (fd);
-
-      char *install_cmd = g_strdup_printf (
-        "install -D -m 644 '%s' /etc/gamescope/epinephrine.conf", tmp_path);
-      int exit_code = -1;
-      GError *err2 = NULL;
-      if (epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err2))
-        {
-          if (exit_code == 0)
-            dashboard_show_toast ("Saved to /etc/gamescope/epinephrine.conf (elevated)");
-          else
-            dashboard_show_toast ("Failed to save (permission denied)");
-        }
-      else
-        {
-          if (err2)
-            dashboard_show_toast (err2->message);
-          else
-            dashboard_show_toast ("Failed to launch pkexec");
-          g_clear_error (&err2);
-        }
-      g_free (install_cmd);
-      unlink (tmp_path);
+        dashboard_show_toast (tr("Failed to launch pkexec"));
+      g_clear_error (&err2);
     }
+  g_free (install_cmd);
+  unlink (tmp_path);
 
   g_free (command);
 }
@@ -240,7 +231,7 @@ on_copy_clicked (GtkButton *button, GamescopePage *page)
   GdkClipboard *clipboard = gdk_display_get_clipboard (display);
   gdk_clipboard_set_text (clipboard, text);
 
-  dashboard_show_toast ("Command copied to clipboard");
+  dashboard_show_toast (tr("Command copied to clipboard"));
 }
 
 static void
