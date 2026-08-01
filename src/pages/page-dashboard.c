@@ -2045,6 +2045,8 @@ gather_all (void)
   else     g_strlcpy (r->gpu, "N/A", sizeof (r->gpu));
 
   tmp = RUN_SH_STATIC ("cat /sys/class/drm/*/device/mem_info_vram_total 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1/1024/1024}'");
+  if (!tmp)
+    tmp = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1}')");
   if (tmp) { g_strlcpy (r->vram, tmp, sizeof (r->vram)); g_free (tmp); }
   else     g_strlcpy (r->vram, "N/A", sizeof (r->vram));
 
@@ -2160,6 +2162,18 @@ gather_all (void)
         r->gpu_vram_gb = kb / 1024.0f / 1024.0f;
         g_free (vram_kb);
       }
+    /* NVIDIA drivers don't expose mem_info_vram_total; fall back to
+       nvidia-smi (memory.total is reported in MiB). */
+    if (r->gpu_vram_gb < 0.5f)
+      {
+        char *nv = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1");
+        if (nv)
+          {
+            float mib = (float) atof (nv);
+            if (mib > 0) r->gpu_vram_gb = mib / 1024.0f;
+            g_free (nv);
+          }
+      }
     if (r->gpu_vram_gb < 0.5f) r->gpu_vram_gb = 0;
   }
   {
@@ -2273,17 +2287,21 @@ gather_all (void)
             g_free (dim);
           }
       }
-    /* Final fallback */
+    /* Final fallback: assume 1080p but don't invalidate the whole score,
+       so systems where resolution can't be detected (e.g. Wayland without
+       xrandr/kscreen-doctor) still get a partial score. */
     if (r->monitor_w < 100 || r->monitor_h < 100)
       {
         r->monitor_w = 1920;
         r->monitor_h = 1080;
-        r->score_valid = FALSE;
       }
   }
 
-  /* Validate that we have enough data to calculate a score */
-  if (r->cpu_cores < 1 || r->gpu_vram_gb < 0.5f || r->ram_gb < 1)
+  /* Validate that we have enough core data to calculate a score.
+     VRAM and monitor resolution are optional: the GPU and monitor
+     sub-scores degrade gracefully when they are unknown (e.g. NVIDIA
+     drivers that don't expose mem_info_vram_total). */
+  if (r->cpu_cores < 1 || r->ram_gb < 1)
     r->score_valid = FALSE;
 
   /* Detect storage devices */
