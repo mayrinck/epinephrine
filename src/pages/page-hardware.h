@@ -132,6 +132,7 @@ typedef struct
   guint monitor_timer_id;
   GtkWidget *monitor_panel;
   GtkWidget *monitor_graph;
+  GtkWidget *monitor_notice;
   GtkWidget *monitor_labels[8];
   GtkWidget *monitor_values[8];
   gboolean monitor_avail[8];

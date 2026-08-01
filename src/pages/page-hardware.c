@@ -673,14 +673,12 @@ nvidia_smi_available (void)
 static gboolean
 nvidia_smi_query (float vals[8], gboolean ok[8], int gpu_index)
 {
-  char index_str[16];
-  g_snprintf (index_str, sizeof (index_str), "%d", gpu_index);
   char *out = NULL;
   g_spawn_sync (NULL,
     (char *[]){ "nvidia-smi", "--query-gpu=index,temperature.gpu,utilization.gpu,"
       "clocks.current.graphics,clocks.current.memory,memory.used,"
       "power.draw,fan.speed", "--format=csv,noheader,nounits", NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
+    NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &out, NULL, NULL, NULL);
   if (!out || out[0] == '\0')
     {
       g_free (out);
@@ -691,39 +689,42 @@ nvidia_smi_query (float vals[8], gboolean ok[8], int gpu_index)
   char **lines = g_strsplit (out, "\n", -1);
   g_free (out);
 
-  for (int i = 0; lines[i]; i++)
+  for (int i = 0; lines[i] && !found; i++)
     {
       g_strstrip (lines[i]);
       if (lines[i][0] == '\0') continue;
 
+      /* Robust CSV parsing: split on commas and read each field with
+         g_ascii_strtod, so the format doesn't depend on sscanf matching.
+         Tolerates "N/A"/"[N/A]", missing/extra spaces and trailing "\r". */
       int idx = -1;
       float data[7] = { 0 };
-      if (sscanf (lines[i], "%d, %f, %f, %f, %f, %f, %f, %f",
-            &idx, &data[0], &data[1], &data[2], &data[3],
-            &data[4], &data[5], &data[6]) >= 6)
+      gboolean have[7] = { FALSE };
+
+      char **tok = g_strsplit_set (lines[i], ",", -1);
+      if (tok[0] && sscanf (tok[0], "%d", &idx) == 1 && idx == gpu_index)
         {
-          if (idx == gpu_index)
+          for (int t = 1; t <= 7 && tok[t]; t++)
             {
-              vals[0] = data[0];      /* Temp (°C) */
-              ok[0] = data[0] > 0;
-              vals[1] = data[1];      /* GPU Usage (%) */
-              ok[1] = TRUE;
-              vals[2] = data[2];      /* Core Clock (MHz) */
-              ok[2] = data[2] > 0;
-              vals[3] = data[3];      /* Mem Clock (MHz) */
-              ok[3] = data[3] > 0;
-              vals[4] = data[4] / 1024.0f; /* VRAM (MiB → GB) */
-              ok[4] = data[4] > 0;
-              vals[5] = data[5];      /* Power (W) */
-              ok[5] = data[5] > 0;
-              vals[6] = 0;            /* Voltage — not available via nvidia-smi */
-              ok[6] = FALSE;
-              vals[7] = data[6];      /* Fan Speed (%) */
-              ok[7] = data[6] > 0;
-              found = TRUE;
-              break;
+              g_strstrip (tok[t]);
+              if (tok[t][0] == '\0' || strstr (tok[t], "N/A"))
+                continue;
+              char *end = NULL;
+              double v = g_ascii_strtod (tok[t], &end);
+              if (end != tok[t])
+                { data[t - 1] = (float) v; have[t - 1] = TRUE; }
             }
+          vals[0] = data[0]; ok[0] = have[0] && data[0] > 0;   /* Temp (°C) */
+          vals[1] = data[1]; ok[1] = have[1];                   /* GPU Usage (%) */
+          vals[2] = data[2]; ok[2] = have[2] && data[2] > 0;   /* Core Clock (MHz) */
+          vals[3] = data[3]; ok[3] = have[3] && data[3] > 0;   /* Mem Clock (MHz) */
+          vals[4] = data[4] / 1024.0f; ok[4] = have[4] && data[4] > 0; /* VRAM (MiB→GB) */
+          vals[5] = data[5]; ok[5] = have[5] && data[5] > 0;   /* Power (W) */
+          vals[6] = 0; ok[6] = FALSE;                           /* Voltage */
+          vals[7] = data[6]; ok[7] = have[6] && data[6] > 0;   /* Fan Speed (%) */
+          found = TRUE;
         }
+      g_strfreev (tok);
     }
 
   g_strfreev (lines);
@@ -749,12 +750,28 @@ nvidia_smi_read (const char *field, int gpu_index)
   g_spawn_sync (NULL,
     (char *[]){ "nvidia-smi", "--query-gpu", (char *)field, "--format=csv,noheader,nounits",
       "-i", index_str, NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
+    NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &out, NULL, NULL, NULL);
   if (!out) return -1;
   g_strstrip (out);
   double val = atof (out);
   g_free (out);
   return val;
+}
+
+/* Extract the "BB:DD.F" suffix from a PCI bus ID such as
+   "0000:01:00.0" (sysfs) or "00000000:01:00.0" (nvidia-smi),
+   so both formats can be compared reliably. */
+static const char *
+bus_id_suffix (const char *bus_id)
+{
+  if (!bus_id || !bus_id[0]) return NULL;
+  const char *s = strrchr (bus_id, ':');
+  if (!s || s == bus_id) return NULL;
+  const char *prev = s - 1;
+  while (prev > bus_id && *prev != ':')
+    prev--;
+  if (*prev != ':') return NULL;
+  return prev;
 }
 
 static void
@@ -936,6 +953,30 @@ detect_gpu_info (HardwarePage *page)
     }
   else if (!page->gpu->kernel_driver)
     page->gpu->kernel_driver = g_strdup ("unknown");
+
+  /* The real-time monitor and management features act on the card selected
+     by find_gpu_sysfs(), so the vendor must match the driver actually bound
+     to that card. This prevents hybrid setups (e.g. AMD iGPU + NVIDIA dGPU)
+     from mislabelling the GPU when vulkaninfo lists another device first. */
+  if (page->gpu->kernel_driver)
+    {
+      if (g_strcmp0 (page->gpu->kernel_driver, "nvidia") == 0)
+        {
+          g_free (page->gpu->vendor);
+          page->gpu->vendor = g_strdup ("NVIDIA");
+        }
+      else if (g_strcmp0 (page->gpu->kernel_driver, "amdgpu") == 0)
+        {
+          g_free (page->gpu->vendor);
+          page->gpu->vendor = g_strdup ("AMD");
+        }
+      else if (g_strcmp0 (page->gpu->kernel_driver, "xe") == 0
+               || g_strcmp0 (page->gpu->kernel_driver, "i915") == 0)
+        {
+          g_free (page->gpu->vendor);
+          page->gpu->vendor = g_strdup ("Intel");
+        }
+    }
 
   if (page->gpu->sysfs_path)
     {
@@ -1214,29 +1255,30 @@ detect_gpu_info (HardwarePage *page)
   if (g_strcmp0 (page->gpu->vendor, "NVIDIA") == 0 && nvidia_smi_available ())
     {
       page->gpu->has_nvidia_smi = TRUE;
-      /* Find our NVIDIA GPU index (try to match by vendor ID or PCI bus) */
+      /* Find our NVIDIA GPU index (try to match by PCI bus) */
       if (page->gpu->sysfs_path)
         {
           char *pci_addr = strrchr (page->gpu->sysfs_path, '/');
           if (pci_addr)
             {
               pci_addr++;
-              /* Replace / with : for nvidia-smi format */
-              char smi_addr[64];
-              g_snprintf (smi_addr, sizeof (smi_addr), "0000:%s", pci_addr);
-              /* Try bus ID match - get all GPU indices and bus IDs, then match */
+              const char *sysfs_suffix = bus_id_suffix (pci_addr);
+              /* Get all GPU indices and bus IDs, then match by bus ID.
+                 nvidia-smi formats the bus ID as "00000000:01:00.0" while
+                 sysfs uses "0000:01:00.0", so we compare only the
+                 "BB:DD.F" suffix of both. */
               char *nvidia_out = NULL;
               g_spawn_sync (NULL,
                 (char *[]){ "nvidia-smi", "--query-gpu=index,pci.bus_id",
                   "--format=csv,noheader", NULL },
-                NULL, G_SPAWN_DEFAULT, NULL, NULL, &nvidia_out, NULL, NULL, NULL);
+                NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &nvidia_out, NULL, NULL, NULL);
               if (nvidia_out)
                 {
                   char **lines = g_strsplit (nvidia_out, "\n", -1);
                   for (int li = 0; lines[li]; li++)
                     {
                       g_strstrip (lines[li]);
-                      if (g_str_has_prefix (lines[li], " "))
+                      if (lines[li][0] == '\0')
                         continue;
                       /* Format: "0, 00000000:01:00.0" */
                       int nv_idx = -1;
@@ -1244,7 +1286,9 @@ detect_gpu_info (HardwarePage *page)
                       if (sscanf (lines[li], "%d, %63[^,\n]", &nv_idx, nv_bus) >= 2)
                         {
                           g_strstrip (nv_bus);
-                          if (g_ascii_strcasecmp (nv_bus, smi_addr) == 0)
+                          const char *nv_suffix = bus_id_suffix (nv_bus);
+                          if (sysfs_suffix && nv_suffix &&
+                              g_ascii_strcasecmp (sysfs_suffix, nv_suffix) == 0)
                             {
                               page->gpu->nvidia_gpu_index = nv_idx;
                               break;
@@ -4170,6 +4214,15 @@ build_gpu_detail (HardwarePage *page)
   page->gpu_specs_btn = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_specs_btn"));
   page->monitor_panel = GTK_WIDGET (gtk_builder_get_object (builder, "monitor_panel"));
   page->monitor_graph = GTK_WIDGET (gtk_builder_get_object (builder, "monitor_graph"));
+
+  /* Notice shown when a live data source (e.g. nvidia-smi) is missing */
+  page->monitor_notice = gtk_label_new ("");
+  gtk_widget_add_css_class (page->monitor_notice, "dim-label");
+  gtk_widget_set_halign (page->monitor_notice, GTK_ALIGN_START);
+  gtk_label_set_wrap (GTK_LABEL (page->monitor_notice), TRUE);
+  gtk_label_set_max_width_chars (GTK_LABEL (page->monitor_notice), 60);
+  gtk_widget_set_visible (page->monitor_notice, FALSE);
+  gtk_box_prepend (GTK_BOX (page->monitor_panel), page->monitor_notice);
   page->gpu_specs_container = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_specs_container"));
   page->gpu_mgt_group = ADW_PREFERENCES_GROUP (gtk_builder_get_object (builder, "gpu_mgt_group"));
   page->gpu_lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_lighting_status"));
@@ -4679,7 +4732,30 @@ monitor_poll_cb (gpointer user_data)
   /* NVIDIA path: use nvidia-smi */
   if (page->gpu->has_nvidia_smi)
     {
-      nvidia_smi_query (vals, ok, page->gpu->nvidia_gpu_index);
+      gboolean nv_ok = nvidia_smi_query (vals, ok,
+        page->gpu->nvidia_gpu_index);
+      /* nvidia-smi is present but returned no usable data */
+      if (!nv_ok && page->monitor_notice)
+        {
+          gtk_label_set_text (GTK_LABEL (page->monitor_notice),
+            g_dgettext (GETTEXT_PACKAGE,
+              "nvidia-smi could not provide real-time data for this GPU."));
+          gtk_widget_set_visible (page->monitor_notice, TRUE);
+        }
+    }
+  else if (g_strcmp0 (page->gpu->vendor, "NVIDIA") == 0)
+    {
+      /* The proprietary NVIDIA driver exposes no hwmon/sysfs metrics;
+         nvidia-smi is required for live monitoring. */
+      if (page->monitor_notice)
+        {
+          gtk_label_set_text (GTK_LABEL (page->monitor_notice),
+            g_dgettext (GETTEXT_PACKAGE,
+              "Real-time monitoring requires nvidia-smi, which was not found on "
+              "this system. Install the NVIDIA driver tools to enable live GPU "
+              "metrics."));
+          gtk_widget_set_visible (page->monitor_notice, TRUE);
+        }
     }
   else if (g_strcmp0 (page->gpu->kernel_driver, "xe") == 0)
     {
@@ -4891,11 +4967,13 @@ monitor_poll_cb (gpointer user_data)
   /* Update labels every 800ms (every 8th call at 100ms interval) */
   if (page->monitor_history_count % 8 == 0)
     {
+      gboolean any_data = FALSE;
       for (int i = 0; i < 8; i++)
         {
           page->monitor_avail[i] = ok[i];
           if (ok[i])
             {
+              any_data = TRUE;
               char buf[32];
               const char *f = page->gpu->has_nvidia_smi ? nvidia_fmt8[i] : fmt8[i];
               g_snprintf (buf, sizeof (buf), f, vals[i]);
@@ -4904,6 +4982,8 @@ monitor_poll_cb (gpointer user_data)
           else
             gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), na[i]);
         }
+      if (any_data && page->monitor_notice)
+        gtk_widget_set_visible (page->monitor_notice, FALSE);
     }
 
   /* Store normalized values for graph */
