@@ -51,6 +51,7 @@ typedef struct
   GtkButton   *copy_button;
   GtkButton   *save_button;
   GtkButton   *restore_button;
+  GtkButton   *load_button;
 
   GtkWidget   *box;
 } GamescopePage;

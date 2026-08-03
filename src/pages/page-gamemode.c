@@ -251,42 +251,6 @@ tweak_extract_user_script (const char *raw)
   return g_strstrip (user_part);
 }
 
-/* ---- Section toggle ---- */
-
-static void
-on_section_toggle (GtkButton *btn, GtkWidget *content)
-{
-  if (!content || !GTK_IS_WIDGET (content)) return;
-  gboolean visible = gtk_widget_get_visible (content);
-  gtk_widget_set_visible (content, !visible);
-
-  GtkImage *arrow = GTK_IMAGE (g_object_get_data (G_OBJECT (btn), "arrow"));
-  if (visible)
-    {
-      gtk_widget_remove_css_class (GTK_WIDGET (btn), "collapsed");
-      gtk_image_set_from_icon_name (arrow, "go-down-symbolic");
-    }
-  else
-    {
-      gtk_widget_add_css_class (GTK_WIDGET (btn), "collapsed");
-      gtk_image_set_from_icon_name (arrow, "go-next-symbolic");
-    }
-}
-
-static void
-connect_section (GtkBuilder *builder, const char *toggle_id,
-                 const char *arrow_id, const char *content_id)
-{
-  GtkWidget *toggle = GTK_WIDGET (gtk_builder_get_object (builder, toggle_id));
-  GtkWidget *arrow  = GTK_WIDGET (gtk_builder_get_object (builder, arrow_id));
-  GtkWidget *content = GTK_WIDGET (gtk_builder_get_object (builder, content_id));
-
-  if (!toggle) return;
-
-  g_object_set_data (G_OBJECT (toggle), "arrow", arrow);
-  g_signal_connect (toggle, "clicked", G_CALLBACK (on_section_toggle), content);
-}
-
 /* ---- Save ---- */
 
 static void
@@ -645,13 +609,6 @@ gamemode_page_new (void)
     G_CALLBACK (on_save_clicked), page);
   g_signal_connect (page->reset_config_button, "clicked",
     G_CALLBACK (on_reset_clicked), page);
-
-  connect_section (builder, "gm-section-priority-toggle",  "gm-section-priority-arrow",  "gm-section-priority-content");
-  connect_section (builder, "gm-section-cpu-toggle",      "gm-section-cpu-arrow",      "gm-section-cpu-content");
-  connect_section (builder, "gm-section-scheduler-toggle",  "gm-section-scheduler-arrow", "gm-section-scheduler-content");
-  connect_section (builder, "gm-section-gpu-toggle",      "gm-section-gpu-arrow",      "gm-section-gpu-content");
-  connect_section (builder, "gm-section-scripts-toggle",  "gm-section-scripts-arrow",  "gm-section-scripts-content");
-  connect_section (builder, "gm-section-tweaks-toggle",  "gm-section-tweaks-arrow",   "gm-section-tweaks-content");
 
   load_config (page);
 

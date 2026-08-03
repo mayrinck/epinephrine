@@ -1112,46 +1112,6 @@ on_edit_confirm (GtkButton *btn, gpointer user_data)
   adw_dialog_close (dialog);
 }
 
-static void
-edit_source_factory_setup (GtkListItemFactory *factory, GtkListItem *item, gpointer user_data)
-{
-  (void) factory; (void) user_data;
-  GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  GtkWidget *img = gtk_image_new ();
-  gtk_image_set_pixel_size (GTK_IMAGE (img), 20);
-  GtkWidget *lbl = gtk_label_new (NULL);
-  gtk_widget_set_halign (lbl, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (box), img);
-  gtk_box_append (GTK_BOX (box), lbl);
-  gtk_list_item_set_child (item, box);
-}
-
-static void
-edit_source_factory_bind (GtkListItemFactory *factory, GtkListItem *item, gpointer user_data)
-{
-  (void) factory; (void) user_data;
-  guint pos = gtk_list_item_get_position (item);
-  GtkWidget *box = gtk_list_item_get_child (item);
-  GtkWidget *img = gtk_widget_get_first_child (box);
-  GtkWidget *lbl = gtk_widget_get_next_sibling (img);
-  static const char *names[] = { "Local", "Steam", "Heroic", "Lutris", "Bottles", "Other" };
-  static const char *launcher_pngs[] =
-    { NULL, "icons/launchers/steam.png", "icons/launchers/heroic.png",
-      "icons/launchers/lutris.png", "icons/launchers/bottles.png", NULL };
-  static const char *sys_icons[] =
-    { "media-optical-symbolic", NULL, NULL, NULL, NULL, "application-x-executable-symbolic" };
-  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? tr (names[pos]) : tr ("?"));
-  if (pos < 6 && launcher_pngs[pos])
-    {
-      char *path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launcher_pngs[pos]);
-      gtk_image_set_from_resource (GTK_IMAGE (img), path);
-      gtk_image_set_pixel_size (GTK_IMAGE (img), 24);
-      g_free (path);
-    }
-  else if (pos < 6 && sys_icons[pos])
-    gtk_image_set_from_icon_name (GTK_IMAGE (img), sys_icons[pos]);
-}
-
 void
 open_edit_dialog (DashboardPage *page, int idx)
 {
@@ -1233,13 +1193,6 @@ open_edit_dialog (DashboardPage *page, int idx)
   GtkStringList *source_list = gtk_string_list_new (sources);
   GtkDropDown *source_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (source_list), NULL));
   g_object_unref (source_list);
-  {
-    GtkListItemFactory *factory = gtk_signal_list_item_factory_new ();
-    g_signal_connect (factory, "setup", G_CALLBACK (edit_source_factory_setup), NULL);
-    g_signal_connect (factory, "bind", G_CALLBACK (edit_source_factory_bind), NULL);
-    gtk_drop_down_set_factory (source_drop, factory);
-    g_object_unref (factory);
-  }
   /* Map current source to index */
   static const char *source_keys[] = { "local", "steam", "heroic", "lutris", "bottles", "other" };
   guint src_sel = 0;
@@ -1515,7 +1468,25 @@ import_steam_games (DashboardPage *page)
   else
     g_free (local_sa);
 
-  /* 4. Scan each steamapps directory for appmanifest_*.acf files */
+  /* 4. Also check flatpak Steam path */
+  char *flatpak_sa = g_build_filename (home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam", "steamapps", NULL);
+  if (g_file_test (flatpak_sa, G_FILE_TEST_IS_DIR))
+    {
+      gboolean found_flatpak = FALSE;
+      for (guint i = 0; i < steamapps_dirs->len; i++)
+        {
+          if (g_strcmp0 (g_ptr_array_index (steamapps_dirs, i), flatpak_sa) == 0)
+            { found_flatpak = TRUE; break; }
+        }
+      if (!found_flatpak)
+        g_ptr_array_add (steamapps_dirs, flatpak_sa);
+      else
+        g_free (flatpak_sa);
+    }
+  else
+    g_free (flatpak_sa);
+
+  /* 5. Scan each steamapps directory for appmanifest_*.acf files */
   for (guint p = 0; p < steamapps_dirs->len; p++)
     {
       const char *sa_dir = g_ptr_array_index (steamapps_dirs, p);
@@ -1563,7 +1534,9 @@ import_steam_games (DashboardPage *page)
               /* Extract app ID from filename: appmanifest_<ID>.acf */
               const char *appid_start = entry + 12; /* skip "appmanifest_" */
               int appid_len = (int)(strlen (entry) - 12 - 4); /* - ".acf" */
-              char *launch_cmd = g_strdup_printf ("steam steam://rungameid/%.*s", appid_len, appid_start);
+              char *appid = g_strndup (appid_start, appid_len);
+              char *launch_cmd = g_strdup_printf ("steam steam://rungameid/%s", appid);
+              g_free (appid);
               char *icon_name = g_strdup_printf ("steam_icon_%.*s", appid_len, appid_start);
               add_game_entry (page, appname, launch_cmd, icon_name, "steam");
               count++;
@@ -1637,13 +1610,18 @@ import_bottles_games (DashboardPage *page)
                           char *prog_name = g_strstrip (lines[i] + 5);
                           if (prog_name[0])
                             {
+                              char *q_bottle = g_shell_quote (bottle_name);
+                              char *q_prog = g_shell_quote (prog_name);
                               char *launch_cmd = g_strdup_printf (
-                                "bottles-cli run -b \"%s\" -p \"%s\"", bottle_name, prog_name);
+                                "bottles-cli run -b %s -p %s", q_bottle, q_prog);
+                              g_free (q_bottle);
+                              g_free (q_prog);
                               add_game_entry (page, prog_name, launch_cmd,
                                 NULL, "bottles");
                               count++;
                               g_free (launch_cmd);
                             }
+                          break;
                         }
                     }
                   g_strfreev (lines);
@@ -1680,8 +1658,12 @@ import_bottles_games (DashboardPage *page)
                             }
                           if (prog_name && prog_name[0])
                             {
+                              char *q_bottle = g_shell_quote (bottle_name);
+                              char *q_prog = g_shell_quote (prog_name);
                               char *launch_cmd = g_strdup_printf (
-                                "bottles-cli run -b \"%s\" -p \"%s\"", bottle_name, prog_name);
+                                "bottles-cli run -b %s -p %s", q_bottle, q_prog);
+                              g_free (q_bottle);
+                              g_free (q_prog);
                               add_game_entry (page, prog_name, launch_cmd,
                                 NULL, "bottles");
                               count++;
@@ -1742,7 +1724,9 @@ import_heroic_games (DashboardPage *page)
 
       if (game_name)
         {
-          char *launch_cmd = g_strdup_printf ("heroic launch \"%s\"", game_name);
+          char *q_name = g_shell_quote (game_name);
+          char *launch_cmd = g_strdup_printf ("heroic launch %s", q_name);
+          g_free (q_name);
           add_game_entry (page, game_name, launch_cmd, "heroic-icon", "heroic");
           count++;
           g_free (launch_cmd);
@@ -1796,12 +1780,15 @@ import_lutris_games (DashboardPage *page)
                 }
             }
           g_strfreev (lines);
+          g_free (yml_content);
         }
 
       if (!game_name)
         game_name = g_strdup (entry);
 
-      char *launch_cmd = g_strdup_printf ("lutris -L \"%s\"", game_name);
+      char *q_name = g_shell_quote (game_name);
+      char *launch_cmd = g_strdup_printf ("lutris -L %s", q_name);
+      g_free (q_name);
       add_game_entry (page, game_name, launch_cmd, "lutris-icon", "lutris");
       count++;
       g_free (launch_cmd);
@@ -1882,10 +1869,6 @@ static GtkWidget *
 create_card (const char *title, AdwPreferencesGroup **out_group)
 {
   GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-  gtk_widget_set_margin_start (card, 12);
-  gtk_widget_set_margin_end (card, 12);
-  gtk_widget_set_margin_top (card, 12);
-  gtk_widget_set_margin_bottom (card, 12);
   gtk_widget_set_size_request (card, 400, 200);
   gtk_widget_add_css_class (card, "dashboard-card");
   gtk_widget_set_hexpand (card, TRUE);
@@ -2658,7 +2641,7 @@ gather_all (void)
                         || check_flatpak_app (RESOURCES[i].flatpak_id)
                         || check_snap_pkg (RESOURCES[i].pkg)
                         || check_linglong_app (RESOURCES[i].flatpak_id)
-                        || check_flatpak_binary (RESOURCES[i].flatpak_id)
+                        || check_flatpak_binary (RESOURCES[i].pkg)
                         || check_binary (RESOURCES[i].pkg)
                         || (RESOURCES[i].binary_name && check_binary (RESOURCES[i].binary_name))
                         || check_appimage (RESOURCES[i].appimage_name);
@@ -2751,48 +2734,45 @@ show_gaming_score (gpointer data)
           tier_class = "tier-ideal";
           tier_text = tr ("Ideal");
           tier_tooltip =
-            tr ("Hardware suporta a maioria dos títulos modernos em até 4K e "
-            "configuração gráfica alta. Não se preocupe, apenas jogue :)");
+            tr ("Hardware supports most modern titles at up to 4K with high "
+            "graphics settings. Don't worry, just play :)");
         }
       else if (sd->score >= 7.5f)
         {
           tier_class = "tier-muito-boa";
-          tier_text = tr ("Muito Boa");
+          tier_text = tr ("Very Good");
           tier_tooltip =
-            tr ("Hardware permitirá jogar em 1080p com alta qualidade gráfica ou "
-            "1440p com qualidade gráfica média. A maioria dos títulos "
-            "funcionará em 60FPS ou acima. Configurações podem melhorar a taxa "
-            "de quadros.");
+            tr ("Hardware will let you play at 1080p with high graphics quality or "
+            "1440p with medium graphics quality. Most titles will run at 60FPS or "
+            "above. Settings can improve the frame rate.");
         }
       else if (sd->score >= 5.5f)
         {
           tier_class = "tier-boa";
-          tier_text = tr ("Boa");
+          tier_text = tr ("Good");
           tier_tooltip =
-            tr ("Hardware permite jogar a maioria dos jogos em 1080p em 30/60FPS "
-            "com qualidade média ou alta, a depender do tipo de jogo. Alguns "
-            "títulos modernos também poderão ser jogados com qualidade gráfica "
-            "baixa ou com mods LowSpec.");
+            tr ("Hardware can run most games at 1080p in 30/60FPS with medium or "
+            "high quality, depending on the type of game. Some modern titles can "
+            "also be played with low graphics quality or with LowSpec mods.");
         }
       else if (sd->score >= 3.0f)
         {
           tier_class = "tier-regular";
-          tier_text = tr ("Regular");
+          tier_text = tr ("Fair");
           tier_tooltip =
-            tr ("Hardware um pouco defasado, mas ainda usável. Permite jogar "
-            "títulos indie, jogos leves, emulação em alta qualidade e jogos "
-            "antigos de PC em 1080p em 30FPS em média. Em alguns casos, também "
-            "jogos modernos, com configurações gráficas muito baixas ou mods "
-            "LowSpec.");
+            tr ("Hardware is a bit outdated, but still usable. It allows playing "
+            "indie titles, light games, high-quality emulation and old PC games "
+            "at 1080p averaging 30FPS. In some cases, also modern games, with "
+            "very low graphics settings or LowSpec mods.");
         }
       else
         {
           tier_class = "tier-ruim";
-          tier_text = tr ("Ruim");
+          tier_text = tr ("Poor");
           tier_tooltip =
-            tr ("Hardware muito defasado; Recomendado para jogos leves, indies "
-            "(preferencialmente 2D), emulação e jogos legados. Recomenda-se "
-            "jogar em 720p ou abaixo para maior aproveitamento.");
+            tr ("Hardware is very outdated; recommended for light games, indies "
+            "(preferably 2D), emulation and legacy games. It is recommended to "
+            "play at 720p or below for the best experience.");
         }
 
       gtk_widget_add_css_class (page->gaming_score_tier, tier_class);

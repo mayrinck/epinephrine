@@ -28,54 +28,10 @@
             <property name="margin-bottom">12</property>
 
             <child>
-              <object class="GtkBox">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">8</property>
-                <property name="margin-top">8</property>
-                <property name="margin-bottom">4</property>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label" translatable="yes">Recent Games</property>
-                    <property name="xalign">0</property>
-                    <property name="hexpand">True</property>
-                    <style>
-                      <class name="title-3"/>
-                    </style>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkButton" id="see-more-button">
-                    <property name="label" translatable="yes">Go to library</property>
-                    <style>
-                      <class name="flat"/>
-                      <class name="accent-btn"/>
-                    </style>
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <child>
-              <object class="GtkBox" id="recent-games-box">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">8</property>
-                <property name="homogeneous">False</property>
-              </object>
-            </child>
-
-            <child>
-              <object class="GtkSeparator">
-                <property name="orientation">horizontal</property>
-                <property name="margin-top">8</property>
-                <property name="margin-bottom">8</property>
-              </object>
-            </child>
-
-            <child>
               <object class="GtkBox" id="gaming-score-box">
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
-                <property name="margin-top">4</property>
+                <property name="margin-top">8</property>
                 <property name="margin-bottom">4</property>
                 <property name="visible">False</property>
                 <style>
@@ -229,7 +185,7 @@
                 </child>
                 <child>
                   <object class="GtkLabel" id="gaming-score-footer">
-                    <property name="label" translatable="yes">Esta pontuação é uma referência e não deve ser levada em conta sem a percepção do contexto de quais jogos serão jogados. Computadores mais modestos também podem funcionar para jogar diversos tipos de jogos, quando bem configurados :)</property>
+                    <property name="label" translatable="yes">This score is a reference and should not be taken without considering the context of which games will be played. More modest computers can also handle various types of games, when well configured :)</property>
                     <property name="wrap">True</property>
                     <property name="xalign">0</property>
                     <property name="opacity">0.6</property>
@@ -250,6 +206,50 @@
                     </style>
                   </object>
                 </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Recent Games</property>
+                    <property name="xalign">0</property>
+                    <property name="hexpand">True</property>
+                    <style>
+                      <class name="title-3"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="see-more-button">
+                    <property name="label" translatable="yes">Go to library</property>
+                    <style>
+                      <class name="flat"/>
+                      <class name="accent-btn"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkBox" id="recent-games-box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="homogeneous">False</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkSeparator">
+                <property name="orientation">horizontal</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
               </object>
             </child>
 

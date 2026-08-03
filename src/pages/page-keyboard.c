@@ -503,6 +503,7 @@ static void
 on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
 {
   (void) pspec;
+  (void) page;
   gboolean want_on = adw_switch_row_get_active (sw);
 
   char *hidraw_path = find_keyboard_hidraw ();
@@ -587,23 +588,6 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
       : tr ("Keyboard illumination disabled (experimental)"));
   else
     dashboard_show_toast (tr ("No compatible HID report found for backlight"));
-}
-
-static void
-on_openrgb_clicked (GtkButton *btn, KeyboardPage *page)
-{
-  (void) btn;
-  (void) page;
-
-  GError *err = NULL;
-  g_spawn_async (NULL, (char *[]){ "openrgb", NULL },
-    NULL, G_SPAWN_DEFAULT | G_SPAWN_SEARCH_PATH,
-    NULL, NULL, NULL, &err);
-  if (err)
-    {
-      dashboard_show_toast (tr ("OpenRGB not installed. Install it from openrgb.org"));
-      g_error_free (err);
-    }
 }
 
 static void
@@ -717,17 +701,6 @@ keyboard_page_new (void)
 
   /* Lighting Controls section */
   page->backlight_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-backlight-switch-row"));
-
-  /* Conditionally add OpenRGB button to lighting header */
-  GtkWidget *kb_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "kb-lighting-header"));
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (kb_lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (on_openrgb_clicked), page);
-    }
 
   /* Layout / save */
   page->layout_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-layout-label"));

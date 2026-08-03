@@ -68,26 +68,9 @@
               <object class="AdwPreferencesGroup">
                 <property name="title" translatable="yes">Appearance</property>
                 <child>
-                  <object class="AdwComboRow" id="theme-row">
-                    <property name="title" translatable="yes">Tema</property>
-                    <property name="subtitle" translatable="yes">Define o estilo visual da interface</property>
-                    <property name="icon-name">preferences-desktop-theme-symbolic</property>
-                    <property name="model">
-                      <object class="GtkStringList">
-                        <items>
-                          <item translatable="yes">Seguir sistema</item>
-                          <item translatable="yes">Libadwaita (GNOME)</item>
-                          <item translatable="yes">Breeze (KDE)</item>
-                        </items>
-                      </object>
-                    </property>
-                    <property name="selected">0</property>
-                  </object>
-                </child>
-                <child>
                   <object class="AdwComboRow" id="accent-color-row">
-                    <property name="title" translatable="yes">Cor</property>
-                    <property name="subtitle" translatable="yes">Escolhe a cor de destaque da interface</property>
+                    <property name="title" translatable="yes">Color</property>
+                    <property name="subtitle" translatable="yes">Chooses the interface accent color</property>
                     <property name="icon-name">preferences-color-symbolic</property>
                     <property name="model">
                       <object class="GtkStringList">
@@ -118,20 +101,10 @@
               <object class="AdwPreferencesGroup">
                 <property name="title" translatable="yes">Language</property>
                 <child>
-                  <object class="AdwComboRow" id="language-row">
+                  <object class="AdwActionRow" id="language-row">
                     <property name="title" translatable="yes">Application Language</property>
                     <property name="subtitle" translatable="yes">Choose the display language</property>
                     <property name="icon-name">preferences-desktop-locale-symbolic</property>
-                    <property name="model">
-                      <object class="GtkStringList">
-                        <items>
-                          <item translatable="yes">System</item>
-                          <item translatable="yes">Português</item>
-                          <item translatable="yes">English</item>
-                        </items>
-                      </object>
-                    </property>
-                    <property name="selected">0</property>
                   </object>
                 </child>
               </object>

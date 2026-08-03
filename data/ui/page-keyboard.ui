@@ -94,19 +94,19 @@
                 <property name="title" translatable="yes">Settings</property>
                 <child>
                   <object class="AdwSwitchRow" id="kb-numlock-row">
-                    <property name="title" translatable="yes">Ativar NumLock no Boot</property>
+                    <property name="title" translatable="yes">Enable NumLock at boot</property>
                     <property name="subtitle" translatable="yes">Enable NumLock when logging in.</property>
                   </object>
                 </child>
                 <child>
                   <object class="AdwSwitchRow" id="kb-capslock-row">
-                    <property name="title" translatable="yes">Ativar CapsLock no Boot</property>
+                    <property name="title" translatable="yes">Enable CapsLock at boot</property>
                     <property name="subtitle" translatable="yes">Enable CapsLock when logging in.</property>
                   </object>
                 </child>
                 <child>
                   <object class="AdwSwitchRow" id="kb-scrolllock-row">
-                    <property name="title" translatable="yes">Ativar ScrollLock no Boot</property>
+                    <property name="title" translatable="yes">Enable ScrollLock at boot</property>
                     <property name="subtitle" translatable="yes">Enable ScrollLock when logging in.</property>
                   </object>
                 </child>
@@ -199,36 +199,21 @@
             <child>
               <object class="AdwPreferencesGroup" id="kb-lighting-section">
                 <child>
-                  <object class="GtkBox" id="kb-lighting-header">
-                    <property name="orientation">horizontal</property>
-                    <property name="spacing">8</property>
-                    <property name="margin-start">8</property>
-                    <property name="margin-end">8</property>
-                    <property name="margin-top">4</property>
+                  <object class="AdwExpanderRow" id="kb-section-lighting-toggle">
+                    <property name="title" translatable="yes">Lighting Controls</property>
+                    <property name="subtitle" translatable="yes">Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards.</property>
                     <child>
-                      <object class="GtkLabel" id="kb-lighting-title">
-                        <property name="label" translatable="yes">Lighting Controls</property>
-                        <property name="halign">start</property>
-                        <property name="hexpand">True</property>
-                        <style>
-                          <class name="heading"/>
-                        </style>
+                      <object class="AdwSwitchRow" id="kb-backlight-switch-row">
+                        <property name="title" translatable="yes">Toggle Keyboard Illumination</property>
+                        <property name="subtitle" translatable="yes">Enable or disable keyboard backlight control.</property>
                       </object>
                     </child>
                   </object>
                 </child>
-                <child>
-                  <object class="AdwSwitchRow" id="kb-backlight-switch-row">
-                    <property name="title" translatable="yes">Toggle Keyboard Illumination</property>
-                    <property name="subtitle" translatable="yes">Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards.</property>
-                  </object>
-                </child>
               </object>
             </child>
-
           </object>
         </child>
-
       </object>
     </child>
 

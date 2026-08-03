@@ -8,17 +8,18 @@ msgid ""
 msgstr ""
 "Project-Id-Version: epinephrine\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-14 23:20-0300\n"
+"POT-Creation-Date: 2026-08-03 03:14-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: data/io.github.mayrinck.epinephrine.desktop.in:2
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:4 data/ui/window.ui:8
+#: data/ui/page-settings.ui:29 data/ui/page-settings.ui:119
 msgid "Epinephrine"
 msgstr ""
 
@@ -67,263 +68,635 @@ msgstr ""
 msgid "Hardware monitoring and control (coming soon)"
 msgstr ""
 
-#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:32
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:30
 msgid "gamescope"
 msgstr ""
 
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:31
+msgid "gamemode"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:32
+#: data/ui/page-cpu.ui:39
+msgid "performance"
+msgstr ""
+
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:33
-msgid "game"
+msgid "monitor"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:34
-msgid "compositor"
+msgid "joystick"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:35
-msgid "scaling"
+msgid "launcher"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:36
-msgid "steam"
+msgid "adrenalin"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:37
-msgid "optimization"
+msgid "game"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:38
-msgid "hardware"
+msgid "compositor"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:39
+msgid "scaling"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:40
+msgid "steam"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:41
+msgid "optimization"
 msgstr ""
 
 #: data/io.github.mayrinck.epinephrine.metainfo.xml.in:42
+msgid "hardware"
+msgstr ""
+
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:46
 msgid "The main window of Epinephrine"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:27
+#: data/ui/page-gamemode.ui:12
+msgid "GameMode Settings"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:13
+msgid ""
+"Configure Feral GameMode for optimal gaming performance. GameMode applies "
+"system-level optimizations when games are running."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:22
+msgid "Process Priority"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:23
+msgid "Defines the priority of the processes while gamemode is active."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:26
+msgid "Nice Value"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:27
+msgid "Process priority (-20 = highest, 19 = lowest). Default: 0"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:46
+msgid "I/O Priority"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:47
+msgid "Disk I/O scheduling class. Default: none"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:52
+msgid "None"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:53
+msgid "Realtime"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:54
+msgid "Best-effort"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:55
+msgid "Idle"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:72
+msgid "CPU Settings"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:73
+msgid "Configure the behavior of your CPU while gamemode is active."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:76
+msgid "CPU Governor"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:77
+msgid ""
+"CPU frequency scaling policy. Performance mode keeps max frequency. Default: "
+"performance"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:82 data/ui/page-gamemode.ui:224
+#: data/ui/page-mangohud.ui:281
+msgid "Performance"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:83 data/ui/page-gamemode.ui:225
+msgid "Powersave"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:84
+msgid "Schedutil"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:93
+msgid "CPU Min Frequency"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:94
+msgid "Minimum CPU frequency in kHz. 0 = no minimum. Default: 0"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:113
+msgid "CPU Max Frequency"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:114
+msgid "Maximum CPU frequency in kHz. 0 = no maximum. Default: 0"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:133
+msgid "CPU Performance Percentage"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:134
+msgid "CPU performance level (0-100). Higher = more aggressive. Default: 100"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:161
+msgid "Scheduler"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:162
+msgid "Define the scheduler behavior while gamemode is active."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:165
+msgid "Scheduler Priority"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:166
+msgid "Process scheduler priority (-20 to 19). Default: 0"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:185
+msgid "I/O Weight"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:186
+msgid ""
+"I/O scheduling weight (1-10000). Higher = more I/O priority. Default: 100"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:214
+msgid "GPU Settings"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:215
+msgid "Configure the behavior of the GPU while gamemode is active"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:218
+msgid "GPU Governor"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:219
+msgid "GPU frequency scaling policy. Default: performance"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:226
+msgid "Default"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:235
+msgid "Apply GPU Governor"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:236
+msgid "Enable GPU governor override when GameMode is active"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:250
+msgid "Tweaks"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:251
+msgid ""
+"System tweaks applied while GameMode is active. Changes are reverted when "
+"GameMode stops."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:254
+msgid "Disable animations"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:255
+msgid "System animations will not occur while gamemode is active"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:261
+msgid "Disable notifications"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:262
+msgid "System notification bubbles will not occur while gamemode is active"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:268
+msgid "Suspend compositor"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:269
+msgid ""
+"Suspend the desktop compositor to reduce input lag and eliminate forced "
+"vsync. Supported on KDE and GNOME."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:275
+msgid "Reduce swappiness"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:276
+msgid ""
+"Keep data in RAM longer by reducing the kernel's tendency to swap. Safer "
+"with 8 GB+ of RAM."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:282
+msgid "Disable NMI watchdog"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:283
+msgid ""
+"Disables periodic CPU interrupt monitoring. Most useful on older CPUs to "
+"reclaim a small amount of cycles."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:289
+msgid "Disable USB autosuspend"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:290
+msgid ""
+"Prevents USB devices from entering sleep during gameplay, reducing potential "
+"input micro-lags."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:296
+msgid "Increase timer frequency"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:297
+msgid ""
+"Raises kernel timer resolution from 250 Hz to 1000 Hz for more consistent "
+"frametimes."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:303
+msgid "Disable USB wakeup"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:304
+msgid ""
+"Prevents USB devices from waking the CPU, avoiding micro-interruptions "
+"during gameplay."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:310
+msgid "Reduce write cache"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:311
+msgid ""
+"Lowers kernel dirty page thresholds so writes happen more frequently, "
+"reducing I/O spikes."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:317
+msgid "Kill background indexers"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:318
+msgid ""
+"Terminates file indexers (baloo, tracker) that consume CPU and disk during "
+"gameplay."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:324
+msgid "Increase scheduler limit"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:325
+msgid ""
+"Allows real-time processes to use a larger CPU slice. Useful for audio/"
+"PipeWire and Wine."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:331
+msgid "Stop auto-updaters"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:332
+msgid ""
+"Disables packagekit and snapd during gameplay to prevent unexpected download/"
+"install spikes."
+msgstr ""
+
+#: data/ui/page-gamemode.ui:346
+msgid "Custom Scripts"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:347
+msgid "Scripts that will execute every time Gamemode turns on/off"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:350
+msgid "Startup Script"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:351
+msgid "Executed when GameMode activates, right before a game starts"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:355
+msgid "/path/to/start.sh"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:365
+msgid "Shutdown Script"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:366
+msgid "Executed when GameMode deactivates, after a game closes"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:370
+msgid "/path/to/end.sh"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:400 data/ui/page-gamescope.ui:547
+#: data/ui/page-mangohud.ui:319
+msgid "Restore Defaults"
+msgstr ""
+
+#: data/ui/page-gamemode.ui:424 data/ui/page-gamescope.ui:603
+#: data/ui/page-mangohud.ui:343
+msgid "Save Configuration"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:12
 msgid "Gamescope Manager"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:36
+#: data/ui/page-gamescope.ui:13
 msgid ""
 "Configure Gamescope parameters visually. Save your configuration as the "
 "system default or copy it to use with a specific game in Steam or other "
-"launchers."
+"launchers as startup command."
 msgstr ""
 
-#: data/ui/page-gamescope.ui:47
+#: data/ui/page-gamescope.ui:22
 msgid "Display"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:50
+#: data/ui/page-gamescope.ui:23
+msgid ""
+"Output resolution, game resolution, refresh rates and fullscreen options."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:26
 msgid "Output Width"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:51
+#: data/ui/page-gamescope.ui:27
 msgid "Leave 0 for default (1280)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:64
+#: data/ui/page-gamescope.ui:40
 msgid "Output Height"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:65
+#: data/ui/page-gamescope.ui:41
 msgid "Leave 0 for default (720)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:78
+#: data/ui/page-gamescope.ui:54
 msgid "Game Width"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:79 data/ui/page-gamescope.ui:93
+#: data/ui/page-gamescope.ui:55 data/ui/page-gamescope.ui:69
 msgid "Leave 0 to match output"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:92
+#: data/ui/page-gamescope.ui:68
 msgid "Game Height"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:106
+#: data/ui/page-gamescope.ui:82
 msgid "Refresh Rate"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:107
+#: data/ui/page-gamescope.ui:83
 msgid "FPS limit for vsync games (0 = unlimited)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:120
-msgid "Fullscreen"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:121
-msgid "Create a full-screen window"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:127
-msgid "Borderless"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:128
-msgid "Create a border-less window"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:134
-msgid "Display Index"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:135
-msgid "Force a specific display in nested mode"
-msgstr ""
-
-#: data/ui/page-gamescope.ui:148
+#: data/ui/page-gamescope.ui:96
 msgid "Unfocused Refresh"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:149
+#: data/ui/page-gamescope.ui:97
 msgid "FPS limit when unfocused (0 = unlimited)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:165
+#: data/ui/page-gamescope.ui:110
+msgid "Fullscreen"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:111
+msgid "Create a full-screen window"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:117
+msgid "Borderless"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:118
+msgid "Create a border-less window"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:124
+msgid "Display Index"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:125
+msgid "Force a specific display in nested mode"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:146
 msgid "Scaling"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:168
+#: data/ui/page-gamescope.ui:147
+msgid "Upscaling algorithm, filter type, sharpness and max scale factor."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:150
 msgid "Scaler"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:169
+#: data/ui/page-gamescope.ui:151
 msgid "Scaling algorithm"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:173 data/ui/page-gamescope.ui:358
+#: data/ui/page-gamescope.ui:155 data/ui/page-gamescope.ui:358
 msgid "Auto"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:174
+#: data/ui/page-gamescope.ui:156
 msgid "Integer"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:175
+#: data/ui/page-gamescope.ui:157
 msgid "Fit"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:176
+#: data/ui/page-gamescope.ui:158
 msgid "Fill"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:177
+#: data/ui/page-gamescope.ui:159
 msgid "Stretch"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:186
+#: data/ui/page-gamescope.ui:168
 msgid "Filter"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:187
+#: data/ui/page-gamescope.ui:169
 msgid "Upscaler filter type"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:191
+#: data/ui/page-gamescope.ui:173
 msgid "Linear"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:192
+#: data/ui/page-gamescope.ui:174
 msgid "Nearest"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:193
+#: data/ui/page-gamescope.ui:175
 msgid "FSR"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:194
+#: data/ui/page-gamescope.ui:176
 msgid "NIS"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:195
+#: data/ui/page-gamescope.ui:177
 msgid "Pixel"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:204
+#: data/ui/page-gamescope.ui:186
 msgid "Sharpness"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:205
+#: data/ui/page-gamescope.ui:187
 msgid "0 = sharpest, 20 = blurriest (default: 2)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:227
+#: data/ui/page-gamescope.ui:209
 msgid "Max Scale"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:228
+#: data/ui/page-gamescope.ui:210
 msgid "Maximum scale factor (0 = no limit)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:245
+#: data/ui/page-gamescope.ui:232
 msgid "Frame Rate"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:248
+#: data/ui/page-gamescope.ui:233
+msgid "Framerate limit for the compositor."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:236
 msgid "Framerate Limit"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:249 data/ui/page-gamescope.ui:473
+#: data/ui/page-gamescope.ui:237 data/ui/page-gamescope.ui:474
 msgid "0 = disabled"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:265
+#: data/ui/page-gamescope.ui:258
 msgid "HDR and Color"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:268
+#: data/ui/page-gamescope.ui:259
+msgid "HDR10 output, inverse tone mapping and SDR gamut settings."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:262
 msgid "HDR Enabled"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:269
+#: data/ui/page-gamescope.ui:263
 msgid "Enable HDR10 output"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:275
+#: data/ui/page-gamescope.ui:269
 msgid "SDR Content Nits"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:276
+#: data/ui/page-gamescope.ui:270
 msgid "Brightness of SDR in HDR mode (default: 400)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:289
+#: data/ui/page-gamescope.ui:283
 msgid "ITM Enabled"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:290
+#: data/ui/page-gamescope.ui:284
 msgid "SDR to HDR inverse tone mapping"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:296
+#: data/ui/page-gamescope.ui:290
 msgid "ITM SDR Nits"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:297
+#: data/ui/page-gamescope.ui:291
 msgid "SDR input luminance (default: 100)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:310
+#: data/ui/page-gamescope.ui:304
 msgid "ITM Target Nits"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:311
+#: data/ui/page-gamescope.ui:305
 msgid "Target luminance (default: 1000)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:324
+#: data/ui/page-gamescope.ui:318
 msgid "SDR Gamut Wideness"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:325
+#: data/ui/page-gamescope.ui:319
 msgid "0.0 = standard, 1.0 = max"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:350
+#: data/ui/page-gamescope.ui:349
 msgid "Advanced"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:350
+msgid "Backend, mouse, keyboard, cursor and MangoApp settings."
 msgstr ""
 
 #: data/ui/page-gamescope.ui:353
@@ -438,54 +811,765 @@ msgstr ""
 msgid "Connectors (ex: DP-1,HDMI-A-1)"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:458
+#: data/ui/page-gamescope.ui:459
 msgid "Immediate Flips"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:459
+#: data/ui/page-gamescope.ui:460
 msgid "May cause tearing"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:465
+#: data/ui/page-gamescope.ui:466
 msgid "Keep Alive"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:466
+#: data/ui/page-gamescope.ui:467
 msgid "Keep running after game exits"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:472
+#: data/ui/page-gamescope.ui:473
 msgid "Cursor Scale Height"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:489
+#: data/ui/page-gamescope.ui:495
 msgid "ReShade"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:492
+#: data/ui/page-gamescope.ui:496
+msgid "ReShade shader effect path and technique selection."
+msgstr ""
+
+#: data/ui/page-gamescope.ui:499
 msgid "Effect Path"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:493
+#: data/ui/page-gamescope.ui:500
 msgid "Path to a .fx shader file"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:505
+#: data/ui/page-gamescope.ui:513
 msgid "Technique Index"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:506
+#: data/ui/page-gamescope.ui:514
 msgid "Technique index from the effect"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:540
-msgid "Save as System Default"
+#: data/ui/page-gamescope.ui:558
+msgid "Load Saved"
 msgstr ""
 
-#: data/ui/page-gamescope.ui:599
+#: data/ui/page-gamescope.ui:571
+msgid "gamescope command will appear here"
+msgstr ""
+
+#: data/ui/page-gamescope.ui:576
 msgid "Copy"
 msgstr ""
 
-#: data/ui/page-placeholder.ui:30
-msgid "Este módulo será implementado em uma versão futura."
+#: data/ui/page-mangohud.ui:12
+msgid "MangoHud Configuration"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:13
+msgid "Configure the MangoHud overlay for your games."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:22
+msgid "Toggle Visibility"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:23
+msgid "Choose which stats to display on the overlay."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:26
+msgid "FPS Counter"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:27
+msgid "Display frames per second"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:33
+msgid "Frame Timing"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:34
+msgid "Show frame time graph"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:40
+msgid "CPU Stats"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:41
+msgid "Show CPU usage per core"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:47
+msgid "CPU Temperature"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:48
+msgid "Show CPU temperature reading"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:54
+msgid "GPU Stats"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:55
+msgid "Show GPU usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:61
+msgid "GPU Temperature"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:62
+msgid "Show GPU temperature reading"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:68
+msgid "VRAM Usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:69
+msgid "Show video memory usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:75
+msgid "RAM Usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:76
+msgid "Show system memory usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:82
+msgid "Process Memory"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:83
+msgid "Show per-process memory usage"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:89
+msgid "I/O Stats"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:90
+msgid "Show disk read/write stats"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:96
+msgid "Power Draw"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:97
+msgid "Show GPU power consumption"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:103
+msgid "Engine Version"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:104
+msgid "Show game engine version"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:110
+msgid "Vulkan Driver"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:111
+msgid "Show Vulkan driver information"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:117
+msgid "Wine Info"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:118
+msgid "Show Wine/Proton version"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:124
+msgid "Frame Time Histogram"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:125
+msgid "Show frame time distribution"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:139
+msgid "Position and Layout"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:140
+msgid "HUD position, offset, font size and table columns."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:143
+msgid "Position"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:144
+msgid "HUD position on screen"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:148
+msgid "Top-Left"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:149
+msgid "Top-Right"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:150
+msgid "Bottom-Left"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:151
+msgid "Bottom-Right"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:152
+msgid "Top-Center"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:153
+msgid "Bottom-Center"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:154
+msgid "Middle-Left"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:155
+msgid "Middle-Right"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:164
+msgid "Offset X"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:165
+msgid "Horizontal offset in pixels"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:178
+msgid "Offset Y"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:179
+msgid "Vertical offset in pixels"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:192
+msgid "Font Size"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:193
+msgid "Text size in points"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:206
+msgid "Table Columns"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:207
+msgid "Number of columns in table mode"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:228 data/ui/page-settings.ui:69
+msgid "Appearance"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:229
+msgid "Background opacity and transparency settings."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:232
+msgid "Background Opacity"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:233
+msgid "Background transparency (0 = transparent, 100 = solid)"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:254
+msgid "Custom Text"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:255
+msgid "Custom text labels displayed on the overlay."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:258
+msgid "Center Text"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:263
+msgid "Left Text"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:268
+msgid "Right Text"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:282
+msgid "FPS limit and performance tuning."
+msgstr ""
+
+#: data/ui/page-mangohud.ui:285
+msgid "FPS Limit"
+msgstr ""
+
+#: data/ui/page-mangohud.ui:286
+msgid "Limit the frame rate (0 = unlimited)"
+msgstr ""
+
+#: data/ui/page-cpu.ui:22
+msgid "CPU Control"
+msgstr ""
+
+#: data/ui/page-cpu.ui:23
+msgid "Manage CPU governor, frequency scaling, and performance tuning."
+msgstr ""
+
+#: data/ui/page-cpu.ui:29
+msgid "CPU Frequency Governor"
+msgstr ""
+
+#: data/ui/page-cpu.ui:32
+msgid "Scaling Governor"
+msgstr ""
+
+#: data/ui/page-cpu.ui:33
+msgid ""
+"Controls how the CPU scales its frequency. 'performance' runs at max, "
+"'powersave' at min, 'ondemand' ramps up on demand."
+msgstr ""
+
+#: data/ui/page-cpu.ui:40
+msgid "powersave"
+msgstr ""
+
+#: data/ui/page-cpu.ui:41
+msgid "ondemand"
+msgstr ""
+
+#: data/ui/page-cpu.ui:42
+msgid "conservative"
+msgstr ""
+
+#: data/ui/page-cpu.ui:43
+msgid "schedutil"
+msgstr ""
+
+#: data/ui/page-cpu.ui:44
+msgid "userspace"
+msgstr ""
+
+#: data/ui/page-cpu.ui:54
+msgid "Current Governor"
+msgstr ""
+
+#: data/ui/page-cpu.ui:68
+msgid "Frequency Limits"
+msgstr ""
+
+#: data/ui/page-cpu.ui:71
+msgid "Minimum Frequency"
+msgstr ""
+
+#: data/ui/page-cpu.ui:72
+msgid ""
+"Lowest CPU frequency in kHz. Requires userspace governor for per-core "
+"control."
+msgstr ""
+
+#: data/ui/page-cpu.ui:89
+msgid "Maximum Frequency"
+msgstr ""
+
+#: data/ui/page-cpu.ui:90
+msgid "Highest CPU frequency in kHz. (e.g. 2200000 = 2.2 GHz)"
+msgstr ""
+
+#: data/ui/page-cpu.ui:107
+msgid "Current Frequency"
+msgstr ""
+
+#: data/ui/page-cpu.ui:121
+msgid "CPU Information"
+msgstr ""
+
+#: data/ui/page-cpu.ui:124
+msgid "Logical Cores"
+msgstr ""
+
+#: data/ui/page-cpu.ui:135
+msgid "Architecture"
+msgstr ""
+
+#: data/ui/page-cpu.ui:159 data/ui/page-keyboard.ui:210
+#: data/ui/page-mouse.ui:139 data/ui/page-hardware.ui:210
+msgid "Lighting Controls"
+msgstr ""
+
+#: data/ui/page-cpu.ui:194
+msgid "Save CPU Configuration"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:22
+msgid "Keyboard Settings"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:23
+msgid ""
+"Configure keyboard layout, repeat rate, delay, and other input settings."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:29
+msgid "Information"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:32
+msgid "Name"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:44 data/ui/page-hardware.ui:138
+msgid "Vendor"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:56
+msgid "Speed"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:67
+msgid "Driver"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:79
+msgid "Chipset"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:94
+msgid "Settings"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:97
+msgid "Enable NumLock at boot"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:98
+msgid "Enable NumLock when logging in."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:103
+msgid "Enable CapsLock at boot"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:104
+msgid "Enable CapsLock when logging in."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:109
+msgid "Enable ScrollLock at boot"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:110
+msgid "Enable ScrollLock when logging in."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:115
+msgid "Repeat Rate"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:116
+msgid "Characters per second when holding a key (via kbdrate)."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:117
+msgid ""
+"Controls how many times per second a key press is registered while holding "
+"it down. Higher values make key repeat faster."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:137
+msgid "cps"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:147
+msgid "Repeat Delay"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:148
+msgid "Delay in milliseconds before key repeat starts."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:149
+msgid ""
+"How long a key must be held before it starts repeating. Lower values trigger "
+"repeat sooner."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:169
+msgid "ms"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:183
+msgid "Layout"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:186
+msgid "Current Layout"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:221
+msgid "Toggle Keyboard Illumination"
+msgstr ""
+
+#: data/ui/page-keyboard.ui:222
+msgid ""
+"Experimental: attempts to control keyboard backlight via HID feature "
+"reports. May not work on all keyboards."
+msgstr ""
+
+#: data/ui/page-keyboard.ui:241
+msgid "Apply Keyboard Settings"
+msgstr ""
+
+#: data/ui/page-mouse.ui:33
+msgid "Mouse"
+msgstr ""
+
+#: data/ui/page-mouse.ui:41
+msgid "Official Website"
+msgstr ""
+
+#: data/ui/page-mouse.ui:56
+msgid "Device Info"
+msgstr ""
+
+#: data/ui/page-mouse.ui:59
+msgid "Resolution (DPI)"
+msgstr ""
+
+#: data/ui/page-mouse.ui:76
+msgid "Acceleration and Speed"
+msgstr ""
+
+#: data/ui/page-mouse.ui:77
+msgid "Configure mouse acceleration, speed, and button mapping via libinput."
+msgstr ""
+
+#: data/ui/page-mouse.ui:80
+msgid "Pointer Speed"
+msgstr ""
+
+#: data/ui/page-mouse.ui:81
+msgid "Mouse cursor speed. Range -1 (slowest) to 1 (fastest). 0 = default."
+msgstr ""
+
+#: data/ui/page-mouse.ui:101
+msgid "Acceleration Profile"
+msgstr ""
+
+#: data/ui/page-mouse.ui:102
+msgid "'flat' = no acceleration, 'adaptive' = standard, 'none' = raw."
+msgstr ""
+
+#: data/ui/page-mouse.ui:108
+msgid "none"
+msgstr ""
+
+#: data/ui/page-mouse.ui:109
+msgid "flat"
+msgstr ""
+
+#: data/ui/page-mouse.ui:110
+msgid "adaptive"
+msgstr ""
+
+#: data/ui/page-mouse.ui:120
+msgid "Natural Scrolling"
+msgstr ""
+
+#: data/ui/page-mouse.ui:121
+msgid "Reverse scroll direction (content follows fingers)."
+msgstr ""
+
+#: data/ui/page-mouse.ui:179
+msgid "Apply Mouse Settings"
+msgstr ""
+
+#: data/ui/page-mouse.ui:187
+msgid "Save to Hardware"
+msgstr ""
+
+#: data/ui/page-settings.ui:38
+msgid "Version: 0.1.0"
+msgstr ""
+
+#: data/ui/page-settings.ui:72
+msgid "Color"
+msgstr ""
+
+#: data/ui/page-settings.ui:73
+msgid "Chooses the interface accent color"
+msgstr ""
+
+#: data/ui/page-settings.ui:78
+msgid "Follow GPU brand"
+msgstr ""
+
+#: data/ui/page-settings.ui:79
+msgid "AMD Red"
+msgstr ""
+
+#: data/ui/page-settings.ui:80
+msgid "Intel Blue"
+msgstr ""
+
+#: data/ui/page-settings.ui:81
+msgid "NVIDIA Green"
+msgstr ""
+
+#: data/ui/page-settings.ui:82
+msgid "TUX Orange"
+msgstr ""
+
+#: data/ui/page-settings.ui:91
+msgid "Apply theme to entire interface"
+msgstr ""
+
+#: data/ui/page-settings.ui:92
+msgid "Applies a color palette based on the chosen accent color"
+msgstr ""
+
+#: data/ui/page-settings.ui:102
+msgid "Language"
+msgstr ""
+
+#: data/ui/page-settings.ui:105
+msgid "Application Language"
+msgstr ""
+
+#: data/ui/page-settings.ui:106
+msgid "Choose the display language"
+msgstr ""
+
+#: data/ui/page-settings.ui:115
+msgid "About"
+msgstr ""
+
+#: data/ui/page-settings.ui:118
+msgid "Application Name"
+msgstr ""
+
+#: data/ui/page-settings.ui:125
+msgid "Version"
+msgstr ""
+
+#: data/ui/page-settings.ui:126
+msgid "0.1.0"
+msgstr ""
+
+#: data/ui/page-settings.ui:132
+msgid "Toolkit"
+msgstr ""
+
+#: data/ui/page-settings.ui:139
+msgid "License"
+msgstr ""
+
+#: data/ui/page-settings.ui:140
+msgid "GNU General Public License v3.0"
+msgstr ""
+
+#: data/ui/page-hardware.ui:80
+msgid "Official Page"
+msgstr ""
+
+#: data/ui/page-hardware.ui:95 data/ui/page-dashboard.ui:172
+msgid "Monitor"
+msgstr ""
+
+#: data/ui/page-hardware.ui:127
+msgid "GPU Management"
+msgstr ""
+
+#: data/ui/page-hardware.ui:134
+msgid "Specs, Drivers and Features"
+msgstr ""
+
+#: data/ui/page-hardware.ui:144
+msgid "Software Driver"
+msgstr ""
+
+#: data/ui/page-hardware.ui:150
+msgid "Mesa Version"
+msgstr ""
+
+#: data/ui/page-hardware.ui:156
+msgid "OpenGL"
+msgstr ""
+
+#: data/ui/page-hardware.ui:162
+msgid "Vulkan"
+msgstr ""
+
+#: data/ui/page-hardware.ui:168
+msgid "VRAM"
+msgstr ""
+
+#: data/ui/page-hardware.ui:174
+msgid "Resizable BAR"
+msgstr ""
+
+#: data/ui/page-hardware.ui:180
+msgid "Device ID"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:51
+msgid "Gaming Score"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:60
+msgid "Check how your PC performs with modern gaming"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:118
+msgid "CPU"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:136
+msgid "GPU"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:154
+msgid "RAM"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:188
+msgid ""
+"This score is a reference and should not be taken without considering the "
+"context of which games will be played. More modest computers can also handle "
+"various types of games, when well configured :)"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:200
+msgid "Details"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:220
+msgid "Recent Games"
+msgstr ""
+
+#: data/ui/page-dashboard.ui:230
+msgid "Go to library"
 msgstr ""

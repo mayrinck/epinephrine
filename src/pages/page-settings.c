@@ -18,173 +18,7 @@ static const char *ACCENT_COLORS[] = {
 
 static GtkCssProvider *g_accent_provider = NULL;
 static GtkCssProvider *g_theme_provider = NULL;
-static GtkCssProvider *g_tema_provider = NULL;
 static char *g_config_dir = NULL;
-
-static const char *BREEZE_CSS =
-  "* {"
-  "  -GtkDialog-action-area-border: 5;"
-  "  -GtkDialog-button-spacing: 6;"
-  "  -GtkDialog-content-area-spacing: 6;"
-  "}"
-  "button {"
-  "  border-radius: 4px;"
-  "  padding: 4px 12px;"
-  "  border: 1px solid rgba(0,0,0,0.15);"
-  "  background-image: linear-gradient(to bottom, #fcfcfc, #eaeaea);"
-  "  color: #31363b;"
-  "  font-weight: normal;"
-  "}"
-  "button:hover {"
-  "  background-image: linear-gradient(to bottom, #ffffff, #f4f4f4);"
-  "}"
-  "button:active {"
-  "  background-image: linear-gradient(to bottom, #d6d6d6, #c8c8c8);"
-  "}"
-  "button.suggested-action {"
-  "  background-image: linear-gradient(to bottom, #63b1f5, #3da2f0);"
-  "  color: #ffffff;"
-  "  border-color: #2980d1;"
-  "}"
-  "button.suggested-action:hover {"
-  "  background-image: linear-gradient(to bottom, #77baf7, #4dabf2);"
-  "}"
-  "button.suggested-action:active {"
-  "  background-image: linear-gradient(to bottom, #3da2f0, #2990e0);"
-  "}"
-  "button.destructive-action {"
-  "  background-image: linear-gradient(to bottom, #e57373, #e53935);"
-  "  color: #ffffff;"
-  "  border-color: #c62828;"
-  "}"
-  "entry {"
-  "  border-radius: 4px;"
-  "  border: 1px solid rgba(0,0,0,0.15);"
-  "  padding: 4px 8px;"
-  "  background-color: #ffffff;"
-  "  color: #31363b;"
-  "}"
-  "entry:focus {"
-  "  border-color: #3da2f0;"
-  "  box-shadow: 0 0 3px 1px rgba(61,162,240,0.4);"
-  "}"
-  "scrollbar {"
-  "  background-color: rgba(0,0,0,0.05);"
-  "  border: none;"
-  "}"
-  "scrollbar slider {"
-  "  background-color: rgba(0,0,0,0.25);"
-  "  border-radius: 4px;"
-  "  min-width: 8px;"
-  "  min-height: 8px;"
-  "}"
-  "scrollbar slider:hover {"
-  "  background-color: rgba(0,0,0,0.35);"
-  "}"
-  "headerbar {"
-  "  background-image: linear-gradient(to bottom, #f5f6f7, #e3e5e8);"
-  "  border-bottom: 1px solid rgba(0,0,0,0.12);"
-  "  padding: 4px 8px;"
-  "}"
-  "window, .background {"
-  "  background-color: #eff0f1;"
-  "  color: #31363b;"
-  "}"
-  "row {"
-  "  background-color: #ffffff;"
-  "  border-radius: 4px;"
-  "  border: 1px solid rgba(0,0,0,0.08);"
-  "  padding: 6px 12px;"
-  "}"
-  "row:hover {"
-  "  background-color: #f5f5f5;"
-  "}"
-  "label {"
-  "  color: #31363b;"
-  "}"
-  ".dim-label {"
-  "  opacity: 0.65;"
-  "}"
-  ".heading {"
-  "  font-weight: bold;"
-  "  font-size: 1.15em;"
-  "}"
-  "switch {"
-  "  background-color: rgba(0,0,0,0.15);"
-  "  border-radius: 10px;"
-  "}"
-  "switch:checked {"
-  "  background-color: #3da2f0;"
-  "}"
-  "dropdown {"
-  "  border-radius: 4px;"
-  "  border: 1px solid rgba(0,0,0,0.15);"
-  "  background-image: linear-gradient(to bottom, #fcfcfc, #eaeaea);"
-  "}"
-  ".dashboard-card {"
-  "  background-color: #ffffff;"
-  "  border-radius: 8px;"
-  "  border: 1px solid rgba(0,0,0,0.10);"
-  "  padding: 4px;"
-  "}"
-  ".game-shortcut {"
-  "  background-color: #ffffff;"
-  "  border-radius: 8px;"
-  "  border: 1px solid rgba(0,0,0,0.10);"
-  "  padding: 16px;"
-  "}"
-  ".game-shortcut:hover {"
-  "  background-color: #f5f5f5;"
-  "  border-color: #3da2f0;"
-  "}"
-  ".gaming-score-card {"
-  "  background-color: #ffffff;"
-  "  border-radius: 8px;"
-  "  border: 1px solid rgba(0,0,0,0.10);"
-  "  padding: 20px 24px;"
-  "}"
-  "flowboxchild {"
-  "  border: none;"
-  "  box-shadow: none;"
-  "  background: none;"
-  "}"
-  ".status-ok { color: #27ae60; }"
-  ".status-warn { color: #f39c12; }"
-  ".ctrl-indicator {"
-  "  border-radius: 20px;"
-  "  background: none;"
-  "  border: 2px solid rgba(0,0,0,0.15);"
-  "}"
-  ".ctrl-indicator-active {"
-  "  background-color: #3da2f0;"
-  "  border-color: #3da2f0;"
-  "  box-shadow: 0 0 12px 4px rgba(61,162,240,0.5);"
-  "}"
-  ".ctrl-label {"
-  "  font-size: 12px;"
-  "  font-weight: bold;"
-  "  color: rgba(0,0,0,0.7);"
-  "}"
-  ".ctrl-indicator-active .ctrl-label {"
-  "  color: #ffffff;"
-  "}"
-  "adw-preferences-page {"
-  "  max-width: 65%;"
-  "}"
-  ".device-list-panel {"
-  "  min-width: 240px;"
-  "}"
-  ".accent-label {"
-  "  color: #3da2f0;"
-  "}"
-  ".gaming-score-value {"
-  "  font-size: 2.5em;"
-  "  font-weight: bold;"
-  "  color: #3da2f0;"
-  "}"
-  ".gaming-score-footer {"
-  "  font-size: 12px;"
-  "}";
 
 static void
 ensure_config_dir (void)
@@ -449,99 +283,47 @@ save_full_theme (gboolean enabled)
   g_free (path);
 }
 
-/* ---- Tema ---- */
-
-TemaChoice
-settings_load_tema (void)
-{
-  char *path = get_config_file_path ("tema");
-  char *contents = file_read_all (path);
-  g_free (path);
-
-  if (contents)
-    {
-      int val = atoi (contents);
-      g_free (contents);
-      if (val >= TEMA_SYSTEM && val <= TEMA_BREEZE)
-        return (TemaChoice) val;
-    }
-  return TEMA_SYSTEM;
-}
-
-void
-settings_save_tema (TemaChoice choice)
-{
-  char *path = get_config_file_path ("tema");
-  char *data = g_strdup_printf ("%d", (int) choice);
-  g_file_set_contents (path, data, -1, NULL);
-  g_free (data);
-  g_free (path);
-}
-
-void
-settings_apply_tema (TemaChoice choice)
-{
-  GdkDisplay *display = gdk_display_get_default ();
-  if (!display) return;
-
-  /* Remove previous tema provider */
-  if (g_tema_provider)
-    {
-      gtk_style_context_remove_provider_for_display (display,
-        GTK_STYLE_PROVIDER (g_tema_provider));
-      g_object_unref (g_tema_provider);
-      g_tema_provider = NULL;
-    }
-
-  AdwStyleManager *sm = adw_style_manager_get_default ();
-
-  switch (choice)
-    {
-    case TEMA_SYSTEM:
-      adw_style_manager_set_color_scheme (sm, ADW_COLOR_SCHEME_DEFAULT);
-      break;
-
-    case TEMA_LIBADWAITA:
-      adw_style_manager_set_color_scheme (sm, ADW_COLOR_SCHEME_PREFER_DARK);
-      break;
-
-    case TEMA_BREEZE:
-      adw_style_manager_set_color_scheme (sm, ADW_COLOR_SCHEME_FORCE_LIGHT);
-      g_tema_provider = gtk_css_provider_new ();
-      gtk_css_provider_load_from_string (g_tema_provider, BREEZE_CSS);
-      gtk_style_context_add_provider_for_display (display,
-        GTK_STYLE_PROVIDER (g_tema_provider),
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-      break;
-    }
-}
-
 /* ---- Language ---- */
 
-int
+char *
 settings_load_language (void)
 {
   char *path = get_config_file_path ("language");
   char *contents = file_read_all (path);
   g_free (path);
 
-  if (contents)
+  if (contents && contents[0])
     {
-      int val = atoi (contents);
+      /* Migrate legacy numeric values (0 = System, 1 = pt_BR, 2 = en_US) */
+      if (g_str_equal (contents, "0"))
+        {
+          g_free (contents);
+          return g_strdup ("system");
+        }
+      if (g_str_equal (contents, "1"))
+        {
+          g_free (contents);
+          return g_strdup ("pt_BR");
+        }
+      if (g_str_equal (contents, "2"))
+        {
+          g_free (contents);
+          return g_strdup ("en_US");
+        }
+      char *code = g_strdup (contents);
       g_free (contents);
-      if (val >= 0 && val <= 2)
-        return val;
+      return code;
     }
-  return 0;
+  g_free (contents);
+  return g_strdup ("system");
 }
 
 void
-settings_save_language (int lang)
+settings_save_language (const char *lang_code)
 {
   char *path = get_config_file_path ("language");
-  char *data = g_strdup_printf ("%d", lang);
-  g_file_set_contents (path, data, -1, NULL);
-  g_free (data);
+  g_file_set_contents (path,
+    lang_code && lang_code[0] ? lang_code : "system", -1, NULL);
   g_free (path);
 }
 
@@ -625,11 +407,18 @@ settings_apply_accent (AccentChoice choice)
 
   const char *fg = (choice == ACCENT_TUX) ? "#000000" : "#ffffff";
 
-  static char css[512];
+  static char css[1024];
   snprintf (css, sizeof (css),
     "@define-color accent_color %s;\n"
     "@define-color accent_bg_color %s;\n"
-    "@define-color accent_fg_color %s;\n",
+    "@define-color accent_fg_color %s;\n"
+    ".language-toggle-group > toggle:checked {\n"
+    "  background-color: var(--accent-bg-color);\n"
+    "  color: var(--accent-fg-color);\n"
+    "}\n"
+    ".language-flag {\n"
+    "  font-size: 18px;\n"
+    "}\n",
     ACCENT_COLORS[choice], ACCENT_COLORS[choice], fg);
 
   g_accent_provider = gtk_css_provider_new ();
@@ -741,24 +530,87 @@ on_theme_toggled (AdwSwitchRow *sw, GParamSpec *pspec, SettingsPage *page)
 }
 
 static void
-on_language_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
+on_language_changed (AdwToggleGroup *group, GParamSpec *pspec, SettingsPage *page)
 {
   (void) pspec;
   (void) page;
-  int lang = (int) adw_combo_row_get_selected (row);
-  settings_save_language (lang);
-  epi_i18n_set_language (lang);
+  if (epi_i18n_in_apply ())
+    return;
+
+  guint sel = adw_toggle_group_get_active (group);
+  int count = 0;
+  EpiLanguage *langs = epi_i18n_list_languages (&count);
+
+  const char *code = "system";
+  if (sel > 0 && sel <= (guint) count)
+    code = langs[sel - 1].code;
+
+  epi_i18n_free_languages (langs, count);
+
+  settings_save_language (code);
+  epi_i18n_set_language (code);
   epinephrine_retranslate ();
 }
 
-static void
-on_theme_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
+/* ---- Language toggle group ---- */
+
+static const char *
+flag_emoji_for_code (const char *code)
 {
-  (void) pspec;
-  (void) page;
-  TemaChoice choice = (TemaChoice) adw_combo_row_get_selected (row);
-  settings_save_tema (choice);
-  settings_apply_tema (choice);
+  if (g_strcmp0 (code, "pt_BR") == 0)
+    return "\xf0\x9f\x87\xa7\xf0\x9f\x87\xb7";  /* 🇧🇷 */
+  if (g_strcmp0 (code, "en_US") == 0)
+    return "\xf0\x9f\x87\xba\xf0\x9f\x87\xb8";  /* 🇺🇸 */
+  return "\xf0\x9f\x8f\xb3\xef\xb8\x8f";        /* 🏳️  (white flag) */
+}
+
+static guint
+language_index_for_code (const char *code)
+{
+  if (!code || g_strcmp0 (code, "system") == 0)
+    return 0;
+
+  int count = 0;
+  EpiLanguage *langs = epi_i18n_list_languages (&count);
+  guint index = 0;
+  for (int i = 0; i < count; i++)
+    if (g_strcmp0 (langs[i].code, code) == 0)
+      index = (guint) i + 1;
+  epi_i18n_free_languages (langs, count);
+  return index;
+}
+
+static void
+language_group_rebuild (SettingsPage *page)
+{
+  guint selected = adw_toggle_group_get_active (page->language_group);
+
+  AdwToggle *sys_toggle = adw_toggle_new ();
+  adw_toggle_set_name (sys_toggle, "system");
+  GtkWidget *sys_label = gtk_label_new (flag_emoji_for_code (NULL));
+  gtk_widget_add_css_class (sys_label, "language-flag");
+  adw_toggle_set_child (sys_toggle, sys_label);
+  adw_toggle_set_tooltip (sys_toggle, epi_i18n_get ("System"));
+  adw_toggle_group_add (page->language_group, sys_toggle);
+
+  int count = 0;
+  EpiLanguage *langs = epi_i18n_list_languages (&count);
+  for (int i = 0; i < count; i++)
+    {
+      AdwToggle *toggle = adw_toggle_new ();
+      adw_toggle_set_name (toggle, langs[i].code);
+      GtkWidget *flag = gtk_label_new (flag_emoji_for_code (langs[i].code));
+      gtk_widget_add_css_class (flag, "language-flag");
+      adw_toggle_set_child (toggle, flag);
+      adw_toggle_set_tooltip (toggle, langs[i].native_name);
+      adw_toggle_group_add (page->language_group, toggle);
+    }
+  epi_i18n_free_languages (langs, count);
+
+  guint n = adw_toggle_group_get_n_toggles (page->language_group);
+  if (selected >= n)
+    selected = 0;
+  adw_toggle_group_set_active (page->language_group, selected);
 }
 
 SettingsPage *
@@ -774,27 +626,32 @@ settings_page_new (void)
   page->brand_version  = GTK_WIDGET (gtk_builder_get_object (builder, "brand-version"));
   page->accent_combo   = ADW_COMBO_ROW (gtk_builder_get_object (builder, "accent-color-row"));
   page->apply_theme_row = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "apply-theme-row"));
-  page->language_combo = ADW_COMBO_ROW (gtk_builder_get_object (builder, "language-row"));
-  page->theme_combo    = ADW_COMBO_ROW (gtk_builder_get_object (builder, "theme-row"));
+  page->language_row   = ADW_ACTION_ROW (gtk_builder_get_object (builder, "language-row"));
+
+  page->language_group = ADW_TOGGLE_GROUP (adw_toggle_group_new ());
+  adw_toggle_group_set_homogeneous (page->language_group, TRUE);
+  gtk_widget_add_css_class (GTK_WIDGET (page->language_group),
+    "language-toggle-group");
+  adw_action_row_add_suffix (page->language_row, GTK_WIDGET (page->language_group));
 
   AccentChoice saved = settings_load_accent ();
   gboolean theme_saved = settings_load_full_theme ();
-  int lang_saved = settings_load_language ();
-  TemaChoice tema_saved = settings_load_tema ();
+  char *lang_saved = settings_load_language ();
 
   g_signal_connect (page->accent_combo, "notify::selected",
     G_CALLBACK (on_accent_changed), page);
   g_signal_connect (page->apply_theme_row, "notify::active",
     G_CALLBACK (on_theme_toggled), page);
-  g_signal_connect (page->language_combo, "notify::selected",
+  g_signal_connect (page->language_group, "notify::active",
     G_CALLBACK (on_language_changed), page);
-  g_signal_connect (page->theme_combo, "notify::selected",
-    G_CALLBACK (on_theme_changed), page);
 
   adw_combo_row_set_selected (page->accent_combo, saved);
   adw_switch_row_set_active (page->apply_theme_row, theme_saved);
-  adw_combo_row_set_selected (page->language_combo, lang_saved);
-  adw_combo_row_set_selected (page->theme_combo, tema_saved);
+
+  language_group_rebuild (page);
+  adw_toggle_group_set_active (page->language_group,
+    language_index_for_code (lang_saved));
+  g_free (lang_saved);
 
   settings_update_brand_icon (page, resolve_accent (saved));
 

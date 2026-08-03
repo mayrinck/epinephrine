@@ -519,8 +519,10 @@ g300_feature_get (const char *path, int fd, uint8_t id, uint8_t *buf, size_t len
       g_snprintf (id_hex, sizeof (id_hex), "%02x", id);
       char len_str[16];
       g_snprintf (len_str, sizeof (len_str), "%zu", len);
+      char arg[24];
+      g_snprintf (arg, sizeof (arg), "%s %s", id_hex, len_str);
       char *out = NULL;
-      if (run_epi_hidraw (path, "get-feature", id_hex, &out))
+      if (run_epi_hidraw (path, "get-feature", arg, &out))
         {
           int n = hex_to_bytes (out, buf, len);
           g_free (out);

@@ -44,7 +44,7 @@ static const char *EPI_BASE_CSS =
   "  background-color: rgba(255, 255, 255, 0.06);\n"
   "  border-radius: 12px;\n"
   "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
-  "  padding: 4px;\n"
+  "  padding: 12px;\n"
   "}\n"
   ".dashboard-card .header {\n"
   "  font-size: 1.1em;\n"
@@ -56,9 +56,39 @@ static const char *EPI_BASE_CSS =
   "  background: none;\n"
   "  padding: 6px;\n"
   "}\n"
-  ".games-flowbox flowboxchild {\n"
+  ".games-grid {\n"
   "  padding: 0;\n"
   "  margin: 0;\n"
+  "}\n"
+  ".game-card {\n"
+  "  background-color: rgba(255, 255, 255, 0.06);\n"
+  "  border-radius: 12px;\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
+  "  padding: 16px;\n"
+  "  min-width: 180px;\n"
+  "  transition: all 200ms ease;\n"
+  "}\n"
+  ".game-card:hover {\n"
+  "  background-color: rgba(255, 255, 255, 0.10);\n"
+  "  border-color: alpha(@accent_color, 0.3);\n"
+  "}\n"
+  ".game-card .game-icon {\n"
+  "  font-size: 32px;\n"
+  "  margin-bottom: 8px;\n"
+  "}\n"
+  ".game-card .game-name {\n"
+  "  font-weight: bold;\n"
+  "  margin-bottom: 4px;\n"
+  "}\n"
+  ".game-card .game-stats {\n"
+  "  font-size: 0.85em;\n"
+  "  opacity: 0.7;\n"
+  "}\n"
+  ".game-card .play-now-btn {\n"
+  "  border-radius: 8px;\n"
+  "  padding: 4px 12px;\n"
+  "  font-size: 0.85em;\n"
+  "  margin-top: 8px;\n"
   "}\n"
   ".game-shortcut {\n"
   "  background-color: rgba(255, 255, 255, 0.06);\n"
@@ -71,12 +101,6 @@ static const char *EPI_BASE_CSS =
   "  background-color: rgba(255, 255, 255, 0.10);\n"
   "  border-color: alpha(@accent_color, 0.3);\n"
   "}\n"
-  ".play-now-btn {\n"
-  "  border-radius: 8px;\n"
-  "  padding: 4px 12px;\n"
-  "  font-size: 0.85em;\n"
-  "  font-weight: bold;\n"
-  "}\n"
   ".game-shortcut .game-icon {\n"
   "  font-size: 32px;\n"
   "  margin-bottom: 8px;\n"
@@ -88,6 +112,32 @@ static const char *EPI_BASE_CSS =
   ".game-shortcut .game-stats {\n"
   "  font-size: 0.85em;\n"
   "  opacity: 0.7;\n"
+  "}\n"
+  ".game-search-bar {\n"
+  "  min-width: 280px;\n"
+  "  border-radius: 8px;\n"
+  "  background-color: rgba(255, 255, 255, 0.06);\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
+  "  padding: 4px 8px;\n"
+  "}\n"
+  ".game-search-bar:focus-within {\n"
+  "  border-color: alpha(@accent_color, 0.5);\n"
+  "  box-shadow: 0 0 8px 2px alpha(@accent_color, 0.2);\n"
+  "}\n"
+  ".import-launcher-row {\n"
+  "  padding: 12px;\n"
+  "  border-radius: 8px;\n"
+  "  background-color: rgba(255, 255, 255, 0.04);\n"
+  "  margin-bottom: 4px;\n"
+  "}\n"
+  ".import-launcher-row:hover {\n"
+  "  background-color: rgba(255, 255, 255, 0.08);\n"
+  "}\n"
+  ".import-launcher-row.detected {\n"
+  "  border-left: 3px solid alpha(@accent_color, 0.8);\n"
+  "}\n"
+  ".import-launcher-row.not-detected {\n"
+  "  opacity: 0.5;\n"
   "}\n"
   ".section-header {\n"
   "  border-radius: 8px;\n"
@@ -110,7 +160,7 @@ static const char *EPI_BASE_CSS =
   "  background-color: alpha(@accent_color, 0.15);\n"
   "  border-color: alpha(@accent_color, 0.4);\n"
   "}\n"
-  ".game-running .play-btn {\n"
+  ".game-running .play-now-btn {\n"
   "  background-color: alpha(@destructive_color, 0.8);\n"
   "  color: white;\n"
   "}\n"
@@ -248,9 +298,6 @@ epinephrine_application_startup (GApplication *app)
                                         (const FcChar8 *)font_path))
         g_warning ("Fontconfig failed to register %s", font_path);
     }
-
-  TemaChoice tema_saved = settings_load_tema ();
-  settings_apply_tema (tema_saved);
 }
 
 static void
@@ -260,8 +307,9 @@ epinephrine_application_activate (GApplication *app)
 
   /* Apply saved language preference before building the UI so every widget
      is created already translated. */
-  int lang = settings_load_language ();
+  char *lang = settings_load_language ();
   epi_i18n_set_language (lang);
+  g_free (lang);
 
   GtkWindow *win = epinephrine_window_new (epi_app);
   gtk_window_present (win);
@@ -314,10 +362,6 @@ epinephrine_application_activate (GApplication *app)
   settings_apply_accent (saved);
   gboolean theme_on = settings_load_full_theme ();
   settings_apply_full_theme (saved, theme_on);
-
-  /* Apply saved tema */
-  TemaChoice tema_saved = settings_load_tema ();
-  settings_apply_tema (tema_saved);
 }
 
 static void

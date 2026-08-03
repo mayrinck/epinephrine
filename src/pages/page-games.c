@@ -25,15 +25,26 @@ get_source_icon (const char *source)
   return NULL;
 }
 
+static const char *
+get_source_label (const char *source)
+{
+  if (!source) return NULL;
+  if (g_strcmp0 (source, "steam") == 0) return "Steam";
+  if (g_strcmp0 (source, "heroic") == 0) return "Heroic";
+  if (g_strcmp0 (source, "lutris") == 0) return "Lutris";
+  if (g_strcmp0 (source, "bottles") == 0) return "Bottles";
+  if (g_strcmp0 (source, "local") == 0) return "Local";
+  return "Other";
+}
+
 static GtkWidget *
 create_game_card_grid (DashboardPage *page, int idx)
 {
-  GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
-  gtk_widget_set_halign (card, GTK_ALIGN_FILL);
+  GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  gtk_widget_set_halign (card, GTK_ALIGN_CENTER);
   gtk_widget_set_valign (card, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (card, TRUE);
-  gtk_widget_set_size_request (card, -1, -1);
-  gtk_widget_add_css_class (card, "game-shortcut");
+  gtk_widget_set_size_request (card, 180, -1);
+  gtk_widget_add_css_class (card, "game-card");
   g_object_set_data (G_OBJECT (card), "game-idx", GINT_TO_POINTER (idx + 1));
 
   if (page->running_game_idx == idx)
@@ -43,7 +54,7 @@ create_game_card_grid (DashboardPage *page, int idx)
   const char *icon_name = page->games[idx].icon;
   if (!icon_name || icon_name[0] == '\0')
     icon_name = "input-gaming-symbolic";
-  GtkWidget *icon = create_game_icon_widget (icon_name, 48);
+  GtkWidget *icon = create_game_icon_widget (icon_name, 32);
   gtk_widget_add_css_class (icon, "game-icon");
 
   GtkWidget *overlay = gtk_overlay_new ();
@@ -68,12 +79,14 @@ create_game_card_grid (DashboardPage *page, int idx)
   gtk_widget_add_controller (overlay, GTK_EVENT_CONTROLLER (icon_click));
   gtk_box_append (GTK_BOX (card), overlay);
 
+  /* Game name */
   GtkWidget *name = gtk_label_new (
     page->games[idx].name && page->games[idx].name[0]
     ? page->games[idx].name : "?");
   gtk_widget_add_css_class (name, "game-name");
   gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
-  gtk_label_set_max_width_chars (GTK_LABEL (name), 15);
+  gtk_label_set_max_width_chars (GTK_LABEL (name), 18);
+  gtk_label_set_xalign (GTK_LABEL (name), 0.0f);
 
   GtkGesture *name_click = gtk_gesture_click_new ();
   gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (name_click), GDK_BUTTON_PRIMARY);
@@ -81,9 +94,22 @@ create_game_card_grid (DashboardPage *page, int idx)
   gtk_widget_add_controller (name, GTK_EVENT_CONTROLLER (name_click));
   gtk_box_append (GTK_BOX (card), name);
 
+  /* Time ago + source label */
   char *time_str = format_time_ago (page->games[idx].last_played);
-  GtkWidget *stats_label = gtk_label_new (time_str);
+  const char *src_label = get_source_label (page->games[idx].source);
+  char *stats_text = NULL;
+  if (src_label && time_str && time_str[0])
+    stats_text = g_strdup_printf ("%s \u2022 %s", src_label, time_str);
+  else if (time_str && time_str[0])
+    stats_text = g_strdup (time_str);
+  else if (src_label)
+    stats_text = g_strdup (src_label);
+  else
+    stats_text = g_strdup ("");
+  GtkWidget *stats_label = gtk_label_new (stats_text);
   gtk_widget_add_css_class (stats_label, "game-stats");
+  gtk_label_set_xalign (GTK_LABEL (stats_label), 0.0f);
+  g_free (stats_text);
 
   GtkGesture *stats_click = gtk_gesture_click_new ();
   gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (stats_click), GDK_BUTTON_PRIMARY);
@@ -92,15 +118,16 @@ create_game_card_grid (DashboardPage *page, int idx)
   gtk_box_append (GTK_BOX (card), stats_label);
   g_free (time_str);
 
+  /* Play Now button */
   const char *btn_label = (page->running_game_idx == idx)
     ? tr ("Running...")
-    : tr ("Play");
+    : tr ("Play Now");
   GtkWidget *launch_btn = gtk_button_new_with_label (btn_label);
+  gtk_widget_add_css_class (launch_btn, "play-now-btn");
   gtk_widget_add_css_class (launch_btn, "suggested-action");
   if (page->running_game_idx == idx)
     {
       gtk_widget_set_sensitive (launch_btn, FALSE);
-      gtk_widget_add_css_class (launch_btn, "play-btn");
     }
   g_object_set_data (G_OBJECT (launch_btn), "game-idx", GINT_TO_POINTER (idx + 1));
   g_signal_connect (launch_btn, "clicked", G_CALLBACK (on_game_launch_clicked), page);
@@ -136,17 +163,79 @@ on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, Dash
   open_edit_dialog (page, idx);
 }
 
+/* ---- Search / Filter ---- */
+
+static char *g_search_text = NULL;
+static guint g_search_timer_id = 0;
+
+static gboolean
+on_search_timeout (gpointer user_data)
+{
+  DashboardPage *page = (DashboardPage *) user_data;
+  g_search_timer_id = 0;
+  refresh_games_grid (page);
+  return G_SOURCE_REMOVE;
+}
+
+static void
+on_search_changed (GtkSearchEntry *entry, DashboardPage *page)
+{
+  const char *text = gtk_editable_get_text (GTK_EDITABLE (entry));
+  g_free (g_search_text);
+  g_search_text = (text && text[0]) ? g_strdup (text) : NULL;
+
+  if (g_search_timer_id > 0)
+    g_source_remove (g_search_timer_id);
+  g_search_timer_id = g_timeout_add (400, on_search_timeout, page);
+}
+
+static gboolean
+game_matches_search (DashboardPage *page, int idx)
+{
+  if (!g_search_text) return TRUE;
+
+  g_autofree char *search_lower = g_utf8_strdown (g_search_text, -1);
+
+  const char *name = page->games[idx].name;
+  if (name && name[0])
+    {
+      g_autofree char *name_lower = g_utf8_strdown (name, -1);
+      if (strstr (name_lower, search_lower)) return TRUE;
+    }
+
+  const char *source = page->games[idx].source;
+  if (source && source[0])
+    {
+      g_autofree char *source_lower = g_utf8_strdown (source, -1);
+      if (strstr (source_lower, search_lower)) return TRUE;
+    }
+
+  return FALSE;
+}
+
 void
 refresh_games_grid (DashboardPage *page)
 {
-  if (!page->games_grid || !GTK_IS_FLOW_BOX (page->games_grid)) return;
+  if (!page->games_grid || !GTK_IS_GRID (page->games_grid)) return;
 
-  gtk_flow_box_remove_all (page->games_grid);
+  /* Remove all children from grid */
+  GtkWidget *child;
+  while ((child = gtk_widget_get_first_child (page->games_grid)))
+    gtk_grid_remove (GTK_GRID (page->games_grid), child);
 
+  int col = 0;
+  int row = 0;
   for (int i = 0; i < page->n_games; i++)
     {
+      if (!game_matches_search (page, i)) continue;
       GtkWidget *card = create_game_card_grid (page, i);
-      gtk_flow_box_insert (page->games_grid, card, -1);
+      gtk_grid_attach (GTK_GRID (page->games_grid), card, col, row, 1, 1);
+      col++;
+      if (col >= 5)
+        {
+          col = 0;
+          row++;
+        }
     }
 
   if (page->games_stack)
@@ -163,6 +252,158 @@ on_import_done (DashboardPage *page)
   refresh_games_grid (page);
   refresh_recent_games (page);
 }
+
+/* ---- Import Dialog ---- */
+
+static void
+on_import_launcher_clicked (GtkButton *btn, gpointer user_data)
+{
+  DashboardPage *page = (DashboardPage *) user_data;
+  const char *launcher = g_object_get_data (G_OBJECT (btn), "launcher");
+  AdwDialog *dialog = g_object_get_data (G_OBJECT (btn), "dialog");
+
+  int count = 0;
+  if (g_ascii_strcasecmp (launcher, "steam") == 0)
+    count = import_steam_games (page);
+  else if (g_ascii_strcasecmp (launcher, "heroic") == 0)
+    count = import_heroic_games (page);
+  else if (g_ascii_strcasecmp (launcher, "lutris") == 0)
+    count = import_lutris_games (page);
+  else if (g_ascii_strcasecmp (launcher, "bottles") == 0)
+    count = import_bottles_games (page);
+
+  char *msg = NULL;
+  if (count > 0)
+    msg = g_strdup_printf (tr ("Imported %d game(s) from %s"), count, launcher);
+  else
+    msg = g_strdup_printf (tr ("No games found in %s"), launcher);
+  dashboard_show_toast (msg);
+  g_free (msg);
+
+  adw_dialog_close (dialog);
+  on_import_done (page);
+}
+
+static gboolean
+check_launcher_installed (const char *binary)
+{
+  if (!binary) return FALSE;
+  /* Check PATH */
+  g_autofree char *path = g_find_program_in_path (binary);
+  if (path) return TRUE;
+  /* Check flatpak user exports */
+  const char *home = g_get_home_dir ();
+  g_autofree char *flatpak_user = g_build_filename (home, ".local", "share", "flatpak", "exports", "bin", binary, NULL);
+  if (g_file_test (flatpak_user, G_FILE_TEST_IS_EXECUTABLE)) return TRUE;
+  /* Check flatpak system exports */
+  g_autofree char *flatpak_sys = g_build_filename ("/var/lib/flatpak/exports/bin", binary, NULL);
+  return g_file_test (flatpak_sys, G_FILE_TEST_IS_EXECUTABLE);
+}
+
+static gboolean
+check_launcher_config (const char *subpath)
+{
+  g_autofree char *full = g_build_filename (g_get_home_dir (), subpath, NULL);
+  return g_file_test (full, G_FILE_TEST_EXISTS);
+}
+
+static void
+on_import_games_clicked (GtkButton *btn, DashboardPage *page)
+{
+  (void) btn;
+  AdwDialog *dialog = adw_dialog_new ();
+  adw_dialog_set_title (dialog, tr ("Import Games"));
+  adw_dialog_set_content_width (dialog, 450);
+  adw_dialog_set_content_height (dialog, 400);
+
+  GtkWidget *box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_margin_start (box, 24);
+  gtk_widget_set_margin_end (box, 24);
+  gtk_widget_set_margin_top (box, 16);
+  gtk_widget_set_margin_bottom (box, 16);
+
+  GtkWidget *desc = gtk_label_new (tr ("Select a launcher to import games from:"));
+  gtk_widget_set_halign (desc, GTK_ALIGN_START);
+  gtk_widget_add_css_class (desc, "dim-label");
+  gtk_box_append (GTK_BOX (box), desc);
+
+  /* Launcher entries */
+  struct {
+    const char *name;
+    const char *binary;
+    const char *config_subpath;
+    const char *icon;
+  } launchers[] = {
+    { "Steam",   "steam",   ".steam/steam",   "icons/launchers/steam.png" },
+    { "Heroic",  "heroic",  ".config/heroic", "icons/launchers/heroic.png" },
+    { "Lutris",  "lutris",  ".local/share/lutris", "icons/launchers/lutris.png" },
+    { "Bottles", "bottles", ".local/share/bottles", "icons/launchers/bottles.png" },
+  };
+
+  for (int i = 0; i < 4; i++)
+    {
+      gboolean installed = check_launcher_installed (launchers[i].binary)
+                        || check_launcher_config (launchers[i].config_subpath);
+
+      GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+      gtk_widget_add_css_class (row, "import-launcher-row");
+      gtk_widget_add_css_class (row, installed ? "detected" : "not-detected");
+
+      /* Icon */
+      GtkWidget *icon_img = gtk_image_new ();
+      gtk_image_set_pixel_size (GTK_IMAGE (icon_img), 32);
+      char *icon_path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launchers[i].icon);
+      gtk_image_set_from_resource (GTK_IMAGE (icon_img), icon_path);
+      g_free (icon_path);
+      gtk_box_append (GTK_BOX (row), icon_img);
+
+      /* Name + status */
+      GtkWidget *info_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+      GtkWidget *name_label = gtk_label_new (launchers[i].name);
+      gtk_widget_set_halign (name_label, GTK_ALIGN_START);
+      gtk_widget_add_css_class (name_label, "heading");
+      gtk_box_append (GTK_BOX (info_box), name_label);
+
+      const char *status = installed ? tr ("Detected") : tr ("Not found");
+      GtkWidget *status_label = gtk_label_new (status);
+      gtk_widget_set_halign (status_label, GTK_ALIGN_START);
+      gtk_widget_add_css_class (status_label, installed ? "dim-label" : "dim-label");
+      if (installed)
+        gtk_widget_add_css_class (status_label, "accent-label");
+      gtk_box_append (GTK_BOX (info_box), status_label);
+      gtk_box_append (GTK_BOX (row), info_box);
+
+      /* Spacer */
+      GtkWidget *spacer = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+      gtk_widget_set_hexpand (spacer, TRUE);
+      gtk_box_append (GTK_BOX (row), spacer);
+
+      /* Import button */
+      GtkWidget *import_btn = gtk_button_new_with_label (tr ("Import"));
+      gtk_widget_add_css_class (import_btn, "suggested-action");
+      gtk_widget_set_sensitive (import_btn, installed);
+      g_object_set_data_full (G_OBJECT (import_btn), "launcher", g_strdup (launchers[i].name), g_free);
+      g_object_set_data (G_OBJECT (import_btn), "dialog", dialog);
+      g_signal_connect (import_btn, "clicked", G_CALLBACK (on_import_launcher_clicked), page);
+      gtk_box_append (GTK_BOX (row), import_btn);
+
+      gtk_box_append (GTK_BOX (box), row);
+    }
+
+  /* Close button */
+  GtkWidget *btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_halign (btn_box, GTK_ALIGN_END);
+  gtk_widget_set_margin_top (btn_box, 12);
+  GtkWidget *close_btn = gtk_button_new_with_label (tr ("Close"));
+  g_signal_connect_swapped (close_btn, "clicked", G_CALLBACK (adw_dialog_close), dialog);
+  gtk_box_append (GTK_BOX (btn_box), close_btn);
+  gtk_box_append (GTK_BOX (box), btn_box);
+
+  adw_dialog_set_child (dialog, box);
+  adw_dialog_present (dialog, GTK_WIDGET (page->box));
+}
+
+/* ---- Add Game Dialog ---- */
 
 static void
 on_add_confirm (GtkButton *btn, gpointer user_data)
@@ -235,46 +476,6 @@ on_add_confirm (GtkButton *btn, gpointer user_data)
 }
 
 static void
-source_factory_setup (GtkListItemFactory *factory, GtkListItem *item, gpointer user_data)
-{
-  (void) factory; (void) user_data;
-  GtkWidget *box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  GtkWidget *img = gtk_image_new ();
-  gtk_image_set_pixel_size (GTK_IMAGE (img), 20);
-  GtkWidget *lbl = gtk_label_new (NULL);
-  gtk_widget_set_halign (lbl, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (box), img);
-  gtk_box_append (GTK_BOX (box), lbl);
-  gtk_list_item_set_child (item, box);
-}
-
-static void
-source_factory_bind (GtkListItemFactory *factory, GtkListItem *item, gpointer user_data)
-{
-  (void) factory; (void) user_data;
-  guint pos = gtk_list_item_get_position (item);
-  GtkWidget *box = gtk_list_item_get_child (item);
-  GtkWidget *img = gtk_widget_get_first_child (box);
-  GtkWidget *lbl = gtk_widget_get_next_sibling (img);
-  static const char *names[] = { "Local", "Steam", "Heroic", "Lutris", "Bottles", "Other" };
-  static const char *launcher_pngs[] =
-    { NULL, "icons/launchers/steam.png", "icons/launchers/heroic.png",
-      "icons/launchers/lutris.png", "icons/launchers/bottles.png", NULL };
-  static const char *sys_icons[] =
-    { "media-optical-symbolic", NULL, NULL, NULL, NULL, "application-x-executable-symbolic" };
-  gtk_label_set_text (GTK_LABEL (lbl), pos < 6 ? tr (names[pos]) : "?");
-  if (pos < 6 && launcher_pngs[pos])
-    {
-      char *path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launcher_pngs[pos]);
-      gtk_image_set_from_resource (GTK_IMAGE (img), path);
-      gtk_image_set_pixel_size (GTK_IMAGE (img), 24);
-      g_free (path);
-    }
-  else if (pos < 6 && sys_icons[pos])
-    gtk_image_set_from_icon_name (GTK_IMAGE (img), sys_icons[pos]);
-}
-
-static void
 on_add_game_clicked (GtkButton *btn, DashboardPage *page)
 {
   (void) btn;
@@ -307,13 +508,6 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   GtkStringList *source_list = gtk_string_list_new (sources);
   GtkDropDown *source_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (source_list), NULL));
   g_object_unref (source_list);
-  {
-    GtkListItemFactory *factory = gtk_signal_list_item_factory_new ();
-    g_signal_connect (factory, "setup", G_CALLBACK (source_factory_setup), NULL);
-    g_signal_connect (factory, "bind", G_CALLBACK (source_factory_bind), NULL);
-    gtk_drop_down_set_factory (source_drop, factory);
-    g_object_unref (factory);
-  }
   gtk_widget_set_hexpand (GTK_WIDGET (source_drop), TRUE);
   gtk_box_append (GTK_BOX (box), GTK_WIDGET (source_drop));
 
@@ -457,90 +651,10 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   adw_dialog_present (dialog, GTK_WIDGET (page->box));
 }
 
-static void
-on_import_steam (GSimpleAction *action, GVariant *parameter, gpointer user_data)
-{
-  (void) action; (void) parameter;
-  DashboardPage *page = (DashboardPage *) user_data;
-  int count = import_steam_games (page);
-  char *msg = NULL;
-  if (count > 0)
-    msg = g_strdup (count > 1
-      ? tr ("Imported %d games from Steam")
-      : tr ("Imported %d game from Steam"));
-  else
-    msg = g_strdup (tr ("No Steam games found"));
-  dashboard_show_toast (msg);
-  g_free (msg);
-  on_import_done (page);
-}
-
-static void
-on_import_heroic (GSimpleAction *action, GVariant *parameter, gpointer user_data)
-{
-  (void) action; (void) parameter;
-  DashboardPage *page = (DashboardPage *) user_data;
-  int count = import_heroic_games (page);
-  char *msg = NULL;
-  if (count > 0)
-    msg = g_strdup (count > 1
-      ? tr ("Imported %d games from Heroic")
-      : tr ("Imported %d game from Heroic"));
-  else
-    msg = g_strdup (tr ("No Heroic games found"));
-  dashboard_show_toast (msg);
-  g_free (msg);
-  on_import_done (page);
-}
-
-static void
-on_import_lutris (GSimpleAction *action, GVariant *parameter, gpointer user_data)
-{
-  (void) action; (void) parameter;
-  DashboardPage *page = (DashboardPage *) user_data;
-  int count = import_lutris_games (page);
-  char *msg = NULL;
-  if (count > 0)
-    msg = g_strdup (count > 1
-      ? tr ("Imported %d games from Lutris")
-      : tr ("Imported %d game from Lutris"));
-  else
-    msg = g_strdup (tr ("No Lutris games found"));
-  dashboard_show_toast (msg);
-  g_free (msg);
-  on_import_done (page);
-}
-
-static void
-on_import_bottles (GSimpleAction *action, GVariant *parameter, gpointer user_data)
-{
-  (void) action; (void) parameter;
-  DashboardPage *page = (DashboardPage *) user_data;
-  int count = import_bottles_games (page);
-  char *msg = NULL;
-  if (count > 0)
-    msg = g_strdup (count > 1
-      ? tr ("Imported %d games from Bottles")
-      : tr ("Imported %d game from Bottles"));
-  else
-    msg = g_strdup (tr ("No Bottles games found"));
-  dashboard_show_toast (msg);
-  g_free (msg);
-  on_import_done (page);
-}
-
-static GActionEntry games_entries[] = {
-  { "import-steam",   on_import_steam,   NULL, NULL, NULL, { 0 } },
-  { "import-heroic",  on_import_heroic,  NULL, NULL, NULL, { 0 } },
-  { "import-lutris",  on_import_lutris,  NULL, NULL, NULL, { 0 } },
-  { "import-bottles", on_import_bottles, NULL, NULL, NULL, { 0 } },
-};
-
 void
 games_page_register_actions (GActionMap *map, DashboardPage *dash_page)
 {
-  g_action_map_add_action_entries (map, games_entries,
-    G_N_ELEMENTS (games_entries), dash_page);
+  (void) map; (void) dash_page;
 }
 
 GtkWidget *
@@ -563,42 +677,34 @@ games_page_new (DashboardPage *dash_page)
   gtk_widget_set_opacity (subtitle, 0.7);
   gtk_box_append (GTK_BOX (page_box), subtitle);
 
-  /* Header bar with Import + Add */
-  GtkWidget *header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  gtk_widget_set_margin_top (header, 16);
-  gtk_widget_set_margin_bottom (header, 8);
-  gtk_widget_set_halign (header, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (header, TRUE);
+  /* Toolbar: search + import + add */
+  GtkWidget *toolbar = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
+  gtk_widget_set_margin_top (toolbar, 16);
+  gtk_widget_set_margin_bottom (toolbar, 8);
+  gtk_widget_set_hexpand (toolbar, TRUE);
 
-  /* Import menu */
-  GMenu *import_menu = g_menu_new ();
-  GMenuItem *steam_item = g_menu_item_new (tr ("Steam"), "import-steam");
-  g_menu_append_item (import_menu, steam_item);
-  g_object_unref (steam_item);
-  GMenuItem *heroic_item = g_menu_item_new (tr ("Heroic"), "import-heroic");
-  g_menu_append_item (import_menu, heroic_item);
-  g_object_unref (heroic_item);
-  GMenuItem *lutris_item = g_menu_item_new (tr ("Lutris"), "import-lutris");
-  g_menu_append_item (import_menu, lutris_item);
-  g_object_unref (lutris_item);
-  GMenuItem *bottles_item = g_menu_item_new (tr ("Bottles"), "import-bottles");
-  g_menu_append_item (import_menu, bottles_item);
-  g_object_unref (bottles_item);
+  /* Search entry */
+  GtkWidget *search_entry = gtk_search_entry_new ();
+  gtk_entry_set_placeholder_text (GTK_ENTRY (search_entry), tr ("Search games..."));
+  gtk_widget_add_css_class (search_entry, "game-search-bar");
+  gtk_widget_set_hexpand (search_entry, TRUE);
+  g_signal_connect (search_entry, "search-changed", G_CALLBACK (on_search_changed), dash_page);
+  gtk_box_append (GTK_BOX (toolbar), search_entry);
 
-  GtkWidget *import_btn = gtk_menu_button_new ();
-  gtk_menu_button_set_label (GTK_MENU_BUTTON (import_btn), tr ("Import Games"));
-  gtk_menu_button_set_menu_model (GTK_MENU_BUTTON (import_btn), G_MENU_MODEL (import_menu));
-  g_object_unref (import_menu);
+  /* Import button */
+  GtkWidget *import_btn = gtk_button_new_with_label (tr ("Import Games"));
   gtk_widget_add_css_class (import_btn, "flat");
   gtk_widget_add_css_class (import_btn, "accent-btn");
-  gtk_box_append (GTK_BOX (header), import_btn);
+  g_signal_connect (import_btn, "clicked", G_CALLBACK (on_import_games_clicked), dash_page);
+  gtk_box_append (GTK_BOX (toolbar), import_btn);
 
+  /* Add button */
   GtkWidget *add_btn = gtk_button_new_with_label (tr ("Add Game"));
   gtk_widget_add_css_class (add_btn, "suggested-action");
   g_signal_connect (add_btn, "clicked", G_CALLBACK (on_add_game_clicked), dash_page);
-  gtk_box_append (GTK_BOX (header), add_btn);
+  gtk_box_append (GTK_BOX (toolbar), add_btn);
 
-  gtk_box_append (GTK_BOX (page_box), header);
+  gtk_box_append (GTK_BOX (page_box), toolbar);
 
   /* Scrollable game grid */
   GtkWidget *scroll = gtk_scrolled_window_new ();
@@ -607,15 +713,13 @@ games_page_new (DashboardPage *dash_page)
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroll),
     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
-  GtkWidget *flow = gtk_flow_box_new ();
-  gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (flow), 24);
-  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (flow), 24);
-  gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (flow), GTK_SELECTION_NONE);
-  gtk_flow_box_set_min_children_per_line (GTK_FLOW_BOX (flow), 5);
-  gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (flow), 5);
+  GtkWidget *flow = gtk_grid_new ();
+  gtk_grid_set_column_spacing (GTK_GRID (flow), 12);
+  gtk_grid_set_row_spacing (GTK_GRID (flow), 12);
   gtk_widget_set_hexpand (flow, TRUE);
-  gtk_widget_add_css_class (flow, "games-flowbox");
-  dash_page->games_grid = GTK_FLOW_BOX (flow);
+  gtk_widget_set_valign (flow, GTK_ALIGN_START);
+  gtk_widget_add_css_class (flow, "games-grid");
+  dash_page->games_grid = flow;
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (scroll), flow);
 

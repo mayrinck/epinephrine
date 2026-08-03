@@ -33,7 +33,8 @@ epi_privilege_init (GError **error)
     }
   init_attempted = TRUE;
 
-  if (!g_find_program_in_path ("pkexec"))
+  char *pkexec_path = g_find_program_in_path ("pkexec");
+  if (!pkexec_path)
     {
       last_error = g_strdup ("pkexec is not installed");
       if (error)
@@ -41,17 +42,24 @@ epi_privilege_init (GError **error)
       return FALSE;
     }
 
+  /* Each sync command carries a random per-call tag.  The helper echoes the
+     exit code as "EXIT:<tag>:<code>" so that a command whose own output
+     contains "EXIT:..." can no longer spoof the result. */
   helper = g_subprocess_new (
     G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE,
     error,
-    "pkexec", "sh", "-c",
+    pkexec_path, "/bin/sh", "-c",
     "while IFS= read -r line; do "
       "case $line in "
+        "SYNC:*) __c=${line#SYNC:}; __t=${__c%% *}; __c=${__c#* }; "
+          "eval \"$__c\" 2>&1; echo \"EXIT:$__t:$?\"; ;; "
         "ASYNC:*) eval \"${line#ASYNC:}\" >/dev/null 2>&1 ;; "
-        "*) eval \"$line\" 2>&1; echo \"EXIT:$?\"; "
+        "exit) exit 0 ;; "
+        "*) : ;; "
       "esac; "
     "done",
     NULL);
+  g_free (pkexec_path);
 
   if (!helper)
     {
@@ -71,10 +79,12 @@ epi_privilege_init (GError **error)
 }
 
 static gboolean
-read_until_exit_marker (int *out_exit_code, char **out_stdout, GError **error)
+read_until_exit_marker (const char *tag, int *out_exit_code,
+                        char **out_stdout, GError **error)
 {
   GString *output = g_string_new ("");
   int exit_code = -1;
+  char *marker = g_strdup_printf ("EXIT:%s:", tag);
 
   while (TRUE)
     {
@@ -84,14 +94,15 @@ read_until_exit_marker (int *out_exit_code, char **out_stdout, GError **error)
         {
           if (error && *error) break;
           g_string_free (output, TRUE);
+          g_free (marker);
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
             "helper process died unexpectedly");
           return FALSE;
         }
 
-      if (g_str_has_prefix (line, "EXIT:"))
+      if (g_str_has_prefix (line, marker))
         {
-          exit_code = atoi (line + 5);
+          exit_code = atoi (line + strlen (marker));
           g_free (line);
           break;
         }
@@ -100,6 +111,8 @@ read_until_exit_marker (int *out_exit_code, char **out_stdout, GError **error)
       g_string_append_c (output, '\n');
       g_free (line);
     }
+
+  g_free (marker);
 
   if (out_stdout)
     *out_stdout = g_string_free (output, FALSE);
@@ -110,12 +123,15 @@ read_until_exit_marker (int *out_exit_code, char **out_stdout, GError **error)
   return TRUE;
 }
 
-gboolean
-epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
-                         char **out_stdout, GError **error)
+static gboolean
+privilege_send (const char *cmd, GError **error)
 {
-  if (!helper && !epi_privilege_init (error))
-    return FALSE;
+  if (strchr (cmd, '\n'))
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+        "privileged command must not contain newlines");
+      return FALSE;
+    }
 
   char *buf = g_strdup_printf ("%s\n", cmd);
   gboolean ok = g_output_stream_write_all (helper_stdin, buf, strlen (buf),
@@ -127,8 +143,29 @@ epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
       epi_privilege_reset ();
       return FALSE;
     }
+  return TRUE;
+}
 
-  return read_until_exit_marker (out_exit_code, out_stdout, error);
+gboolean
+epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
+                         char **out_stdout, GError **error)
+{
+  if (!helper && !epi_privilege_init (error))
+    return FALSE;
+
+  char *tag = g_strdup_printf ("%08lX", (unsigned long) g_random_int ());
+  char *buf = g_strdup_printf ("SYNC:%s %s", tag, cmd);
+  if (!privilege_send (buf, error))
+    {
+      g_free (tag);
+      g_free (buf);
+      return FALSE;
+    }
+  g_free (buf);
+
+  gboolean ok = read_until_exit_marker (tag, out_exit_code, out_stdout, error);
+  g_free (tag);
+  return ok;
 }
 
 gboolean
@@ -141,18 +178,10 @@ epi_privilege_exec_async (const char *cmd)
       return FALSE;
     }
 
-  char *buf = g_strdup_printf ("ASYNC:%s\n", cmd);
-  gboolean ok = g_output_stream_write_all (helper_stdin, buf, strlen (buf),
-    NULL, NULL, NULL);
+  char *buf = g_strdup_printf ("ASYNC:%s", cmd);
+  gboolean ok = privilege_send (buf, NULL);
   g_free (buf);
-
-  if (!ok)
-    {
-      epi_privilege_reset ();
-      return FALSE;
-    }
-
-  return TRUE;
+  return ok;
 }
 
 void

@@ -31,7 +31,7 @@ typedef struct
 
   GtkWidget *recent_box;
 
-  GtkFlowBox *games_grid;
+  GtkWidget *games_grid;
   GtkStack *games_stack;
 
   AdwActionRow *cpu_row;
