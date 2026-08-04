@@ -13,6 +13,16 @@
 
 #define tr(x) epi_i18n_get (x)
 
+/* ---- Row widget pointers for visibility filtering ----
+   AdwPreferencesGroup wraps children in an internal GtkBox, so iterating
+   gtk_widget_get_first_child() on the group never reaches the rows.
+   We store direct pointers to the row widgets during build and iterate
+   those during show. */
+
+#define MAX_GPU_MGT_ROWS 16
+static GtkWidget *gpu_mgt_rows[MAX_GPU_MGT_ROWS];
+static int n_gpu_mgt_rows = 0;
+
 /* ---- GPU config persistence ---- */
 
 static void
@@ -214,70 +224,6 @@ on_power_profile_changed (GtkDropDown *dd, GParamSpec *pspec, gpointer user_data
 }
 
 static void
-on_frtc_toggled (GtkSwitch *sw, GParamSpec *pspec, gpointer user_data)
-{
-  HardwarePage *page = user_data;
-  (void) sw;
-  (void) pspec;
-  gboolean active = gtk_switch_get_active (GTK_SWITCH (page->frtc_switch));
-  gtk_widget_set_visible (page->frtc_opts, active);
-  write_epinephrine_gpu_config ("frtc_enabled", active ? "true" : "false");
-  const char *home = g_get_home_dir ();
-  char *conf_path = g_build_filename (home, ".config", "MangoHud",
-    "MangoHud.conf", NULL);
-  if (active)
-    {
-      int fps = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->frtc_spin));
-      char fps_buf[16];
-      g_snprintf (fps_buf, sizeof (fps_buf), "%d", fps);
-      write_epinephrine_gpu_config ("frtc_fps", fps_buf);
-      char *content = g_strdup_printf ("fps_limit=%d\n", fps);
-      g_file_set_contents (conf_path, content, -1, NULL);
-      g_free (content);
-    }
-  else
-    {
-      /* Remove the fps_limit line from the config file */
-      char *content = NULL;
-      if (g_file_get_contents (conf_path, &content, NULL, NULL))
-        {
-          char **lines = g_strsplit (content, "\n", -1);
-          GString *new_content = g_string_new ("");
-          for (int i = 0; lines[i]; i++)
-            if (!g_str_has_prefix (lines[i], "fps_limit"))
-              {
-                g_string_append (new_content, lines[i]);
-                g_string_append_c (new_content, '\n');
-              }
-          g_file_set_contents (conf_path, new_content->str, -1, NULL);
-          g_string_free (new_content, TRUE);
-          g_strfreev (lines);
-        }
-      g_free (content);
-    }
-  g_free (conf_path);
-}
-
-static void
-on_frtc_fps_changed (GtkSpinButton *spin, gpointer user_data)
-{
-  HardwarePage *page = user_data;
-  (void) spin;
-  if (!gtk_switch_get_active (GTK_SWITCH (page->frtc_switch))) return;
-  int fps = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->frtc_spin));
-  char fps_buf[16];
-  g_snprintf (fps_buf, sizeof (fps_buf), "%d", fps);
-  write_epinephrine_gpu_config ("frtc_fps", fps_buf);
-  const char *home = g_get_home_dir ();
-  char *conf_path = g_build_filename (home, ".config", "MangoHud",
-    "MangoHud.conf", NULL);
-  char *content = g_strdup_printf ("fps_limit=%d\n", fps);
-  g_file_set_contents (conf_path, content, -1, NULL);
-  g_free (content);
-  g_free (conf_path);
-}
-
-static void
 on_power_limit_changed (GtkWidget *widget, gpointer user_data)
 {
   HardwarePage *page = user_data;
@@ -430,6 +376,129 @@ on_nvidia_fan_speed_changed (GtkRange *range, gpointer user_data)
   g_free (args);
 }
 
+/* ---- GPU management feature filter ----
+   Each management row is tagged with a power-id and resolved through this
+   table. A feature only shows when (1) its name-based vendor rule matches
+   (AMD/Radeon/RDNA => AMD only, NVIDIA/GeForce => NVIDIA only), (2) its
+   explicit vendor tag matches the GPU vendor, and (3) the card/driver is
+   actually capable of it. */
+
+typedef gboolean (*GpuFeatureCheck) (const GpuInfo *);
+
+typedef struct
+{
+  const char *id;
+  const char *name;
+  const char *vendor;
+  GpuFeatureCheck check;
+} GpuMgtFeature;
+
+static gboolean
+gpu_feat_perf_level (const GpuInfo *gpu)
+{
+  return gpu->has_perf_level;
+}
+
+static gboolean
+gpu_feat_power_profile (const GpuInfo *gpu)
+{
+  return gpu->has_power_profile;
+}
+
+static gboolean
+gpu_feat_power_limit (const GpuInfo *gpu)
+{
+  return gpu->has_power_limit;
+}
+
+static gboolean
+gpu_feat_chill (const GpuInfo *gpu)
+{
+  return gpu->has_radeon_chill;
+}
+
+static gboolean
+gpu_feat_anti_lag (const GpuInfo *gpu)
+{
+  return gpu->has_anti_lag;
+}
+
+static gboolean
+gpu_feat_vrs (const GpuInfo *gpu)
+{
+  return gpu->has_vrs;
+}
+
+static gboolean
+gpu_feat_fan (const GpuInfo *gpu)
+{
+  return gpu->has_fan_control;
+}
+
+static gboolean
+gpu_feat_zero_rpm (const GpuInfo *gpu)
+{
+  return gpu->has_zero_rpm_fan;
+}
+
+static gboolean
+gpu_feat_nvidia (const GpuInfo *gpu)
+{
+  return gpu->has_nvidia_smi;
+}
+
+static const GpuMgtFeature gpu_mgt_features[] = {
+  { "perf-level",    "Performance Mode",            "AMD",    gpu_feat_perf_level },
+  { "power-profile", "Power Profile",               "AMD",    gpu_feat_power_profile },
+  { "power-limit",   "Power Limit (max)",           "AMD",    gpu_feat_power_limit },
+  { "chill",         "Radeon Chill",                "AMD",    gpu_feat_chill },
+  { "anti-lag",      "Radeon Anti-Lag",             "AMD",    gpu_feat_anti_lag },
+  { "vrs",           "Variable Rate Shading",       NULL,     gpu_feat_vrs },
+  { "fan",           "Fan Control",                 NULL,     gpu_feat_fan },
+  { "zero-rpm",      "Zero RPM Fan",                "AMD",    gpu_feat_zero_rpm },
+  { "nvidia-power",  "NVIDIA Power Limit",          "NVIDIA", gpu_feat_nvidia },
+  { "nvidia-fan",    "NVIDIA Fan Speed",            "NVIDIA", gpu_feat_nvidia },
+};
+
+static const GpuMgtFeature *
+gpu_mgt_feature_lookup (const char *id)
+{
+  for (guint i = 0; i < G_N_ELEMENTS (gpu_mgt_features); i++)
+    if (g_strcmp0 (gpu_mgt_features[i].id, id) == 0)
+      return &gpu_mgt_features[i];
+  return NULL;
+}
+
+static gboolean
+gpu_mgt_feature_visible (const HardwarePage *page, const GpuMgtFeature *f)
+{
+  const GpuInfo *gpu = page->gpu;
+  const char *vendor = gpu ? gpu->vendor : NULL;
+
+  /* 1) Name-based vendor rule (hard): AMD/Radeon/RDNA => AMD only,
+        NVIDIA/GeForce => NVIDIA only */
+  char *lower = g_ascii_strdown (f->name, -1);
+  if (strstr (lower, "amd") || strstr (lower, "radeon") || strstr (lower, "rdna"))
+    {
+      g_free (lower);
+      return g_strcmp0 (vendor, "AMD") == 0 && f->check (gpu);
+    }
+  if (strstr (lower, "nvidia") || strstr (lower, "geforce"))
+    {
+      g_free (lower);
+      return g_strcmp0 (vendor, "NVIDIA") == 0 && f->check (gpu);
+    }
+  g_free (lower);
+
+  /* 2) Explicit vendor tag: strict match (hidden when the GPU vendor is
+        unknown as well) */
+  if (f->vendor && g_strcmp0 (f->vendor, vendor) != 0)
+    return FALSE;
+
+  /* 3) Capability / driver support */
+  return f->check (gpu);
+}
+
 /* ---- GPU detail page ---- */
 
 void
@@ -458,6 +527,8 @@ hw_gpu_detail_build (HardwarePage *page)
   page->gpu_specs_container = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_specs_container"));
   page->gpu_mgt_group = ADW_PREFERENCES_GROUP (gtk_builder_get_object (builder, "gpu_mgt_group"));
   page->gpu_lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_lighting_status"));
+
+  n_gpu_mgt_rows = 0;
 
   page->gpu_vendor_row = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_vendor_row"));
   page->gpu_swdriver_row = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_swdriver_row"));
@@ -538,8 +609,8 @@ hw_gpu_detail_build (HardwarePage *page)
       "Forces the GPU to a specific performance level: auto, low power, high performance, or manual."));
     adw_action_row_add_suffix (row, page->perf_level_dropdown);
     g_object_set_data (G_OBJECT (row), "power-id", "perf-level");
-    g_object_set_data (G_OBJECT (row), "power-vendor", "AMD");
     adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (row));
+    gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (row);
   }
 
   /* 2 - Power Profile Mode */
@@ -552,8 +623,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Selects the clock and power switching heuristic for the GPU."));
   adw_action_row_add_suffix (pp_row, page->power_profile_dd);
   g_object_set_data (G_OBJECT (pp_row), "power-id", "power-profile");
-  g_object_set_data (G_OBJECT (pp_row), "power-vendor", "AMD");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (pp_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (pp_row);
 
   /* 3 - Power Limit */
   {
@@ -573,34 +644,9 @@ hw_gpu_detail_build (HardwarePage *page)
       "Sets the maximum power consumption of the GPU in watts."));
     adw_action_row_add_suffix (pl_row, pl_hbox);
     g_object_set_data (G_OBJECT (pl_row), "power-id", "power-limit");
-    g_object_set_data (G_OBJECT (pl_row), "power-vendor", "AMD");
     adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (pl_row));
+    gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (pl_row);
   }
-
-  /* 4 - Frame Rate Target Control */
-  page->frtc_switch = gtk_switch_new ();
-  gtk_widget_set_valign (page->frtc_switch, GTK_ALIGN_CENTER);
-  page->frtc_spin = gtk_spin_button_new_with_range (30, 360, 1);
-  gtk_widget_set_size_request (page->frtc_spin, 100, -1);
-  page->frtc_scale = gtk_scale_new_with_range (
-    GTK_ORIENTATION_HORIZONTAL, 30, 360, 1);
-  gtk_widget_set_hexpand (page->frtc_scale, TRUE);
-  gtk_scale_set_draw_value (GTK_SCALE (page->frtc_scale), FALSE);
-  page->frtc_opts = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  GtkWidget *frtc_cap_lbl = gtk_label_new (
-    tr ("FPS Limit"));
-  gtk_box_append (GTK_BOX (page->frtc_opts), frtc_cap_lbl);
-  gtk_box_append (GTK_BOX (page->frtc_opts), page->frtc_scale);
-  gtk_box_append (GTK_BOX (page->frtc_opts), page->frtc_spin);
-  gtk_widget_set_margin_start (page->frtc_opts, 16);
-  AdwActionRow *frtc_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (frtc_row), tr ("Frame Rate Target Control"));
-  adw_action_row_set_subtitle (frtc_row, tr (
-    "Sets a maximum frame rate cap for all 3D applications via MangoHud."));
-  adw_action_row_add_suffix (frtc_row, page->frtc_switch);
-  g_object_set_data (G_OBJECT (frtc_row), "power-id", "frtc");
-  /* frtc: no power-vendor — generic (MangoHud), works with any GPU */
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (frtc_row));
 
   /* 5 - Radeon Chill */
   page->chill_switch = gtk_switch_new ();
@@ -637,8 +683,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Dynamically regulates your game's frame rate based on your movements."));
   adw_action_row_add_suffix (chill_row, page->chill_switch);
   g_object_set_data (G_OBJECT (chill_row), "power-id", "chill");
-  g_object_set_data (G_OBJECT (chill_row), "power-vendor", "AMD");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (chill_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (chill_row);
 
   /* 6 - Anti-Lag */
   page->anti_lag_switch = gtk_switch_new ();
@@ -647,10 +693,10 @@ hw_gpu_detail_build (HardwarePage *page)
   adw_preferences_row_set_title (ADW_PREFERENCES_ROW (al_row), tr ("Radeon Anti-Lag"));
   adw_action_row_set_subtitle (al_row, tr (
     "Reduces input lag by pacing GPU frames."));
-  adw_action_row_add_suffix (al_row, page->anti_lag_switch);
+adw_action_row_add_suffix (al_row, page->anti_lag_switch);
   g_object_set_data (G_OBJECT (al_row), "power-id", "anti-lag");
-  g_object_set_data (G_OBJECT (al_row), "power-vendor", "AMD");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (al_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (al_row);
 
   /* 7 - Variable Rate Shading */
   page->vrs_switch = gtk_switch_new ();
@@ -667,11 +713,11 @@ hw_gpu_detail_build (HardwarePage *page)
   AdwActionRow *vrs_row = ADW_ACTION_ROW (adw_action_row_new ());
   adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vrs_row), tr ("Variable Rate Shading"));
   adw_action_row_set_subtitle (vrs_row, tr (
-    "Reduces shading rate to boost performance (RDNA2+ GPU required)."));
+    "Reduces shading rate to boost performance (AMD RDNA2+ or Intel Arc GPUs)."));
   adw_action_row_add_suffix (vrs_row, page->vrs_switch);
   g_object_set_data (G_OBJECT (vrs_row), "power-id", "vrs");
-  /* vrs: no power-vendor — cross-vendor (AMD RDNA2+, Intel Arc+) */
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (vrs_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (vrs_row);
 
   /* 8 - Fan Control */
   page->fan_switch = gtk_switch_new ();
@@ -684,8 +730,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Enables manual fan speed control (PWM). Toggle on to set speed."));
   adw_action_row_add_suffix (fan_row, page->fan_switch);
   g_object_set_data (G_OBJECT (fan_row), "power-id", "fan");
-  /* fan: no power-vendor — cross-vendor (AMD + Intel) */
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (fan_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (fan_row);
 
   /* 9 - Zero RPM Fan Mode */
   page->zero_rpm_switch = gtk_switch_new ();
@@ -708,8 +754,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Allows the GPU fan to stop completely when below the temperature threshold."));
   adw_action_row_add_suffix (zr_row, page->zero_rpm_switch);
   g_object_set_data (G_OBJECT (zr_row), "power-id", "zero-rpm");
-  g_object_set_data (G_OBJECT (zr_row), "power-vendor", "AMD");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (zr_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (zr_row);
 
   /* 10 - NVIDIA Power Limit */
   page->nvidia_power_scale = gtk_scale_new_with_range (
@@ -727,8 +773,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi)."));
   adw_action_row_add_suffix (np_row, np_hbox);
   g_object_set_data (G_OBJECT (np_row), "power-id", "nvidia-power");
-  g_object_set_data (G_OBJECT (np_row), "power-vendor", "NVIDIA");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (np_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (np_row);
 
   /* 11 - NVIDIA Fan Control */
   page->nvidia_fan_switch = gtk_switch_new ();
@@ -742,8 +788,8 @@ hw_gpu_detail_build (HardwarePage *page)
     "Controls NVIDIA GPU fan speed. Requires CoolBits enabled in nvidia-settings."));
   adw_action_row_add_suffix (nf_row, page->nvidia_fan_switch);
   g_object_set_data (G_OBJECT (nf_row), "power-id", "nvidia-fan");
-  g_object_set_data (G_OBJECT (nf_row), "power-vendor", "NVIDIA");
   adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (nf_row));
+  gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (nf_row);
 
   /* UI file handles specs_group, specs_container and lighting_group */
 }
@@ -817,28 +863,6 @@ hw_gpu_detail_load_config (HardwarePage *page)
           gtk_spin_button_set_value (GTK_SPIN_BUTTON (page->power_limit_spin), pl);
           g_signal_handlers_unblock_by_func (page->power_limit_spin,
             on_power_limit_changed, page);
-        }
-    }
-
-  /* FRTC */
-  if (page->frtc_switch)
-    {
-      gboolean frtc_on = CFG_BOOL ("frtc_enabled");
-      g_signal_handlers_block_by_func (page->frtc_switch,
-        on_frtc_toggled, page);
-      gtk_switch_set_active (GTK_SWITCH (page->frtc_switch), frtc_on);
-      gtk_widget_set_visible (page->frtc_opts, frtc_on);
-      g_signal_handlers_unblock_by_func (page->frtc_switch,
-        on_frtc_toggled, page);
-
-      int fps = CFG_INT ("frtc_fps", 60);
-      if (fps > 0)
-        {
-          g_signal_handlers_block_by_func (page->frtc_spin,
-            on_frtc_fps_changed, page);
-          gtk_spin_button_set_value (GTK_SPIN_BUTTON (page->frtc_spin), fps);
-          g_signal_handlers_unblock_by_func (page->frtc_spin,
-            on_frtc_fps_changed, page);
         }
     }
 
@@ -1126,20 +1150,6 @@ hw_gpu_detail_show (HardwarePage *page)
         gtk_switch_get_active (GTK_SWITCH (page->chill_switch)));
     }
 
-  /* Anti-Lag */
-  {
-    GtkWidget *row = NULL;
-    GtkWidget *child = gtk_widget_get_first_child (GTK_WIDGET (page->gpu_mgt_group));
-    while (child)
-      {
-        if (g_strcmp0 (g_object_get_data (G_OBJECT (child), "power-id"), "anti-lag") == 0)
-          { row = child; break; }
-        child = gtk_widget_get_next_sibling (child);
-      }
-    if (row)
-      gtk_widget_set_visible (row, page->gpu->has_anti_lag);
-  }
-
   /* Performance level — just update current value, visibility is handled by loop below */
   if (page->gpu->has_perf_level)
     {
@@ -1215,40 +1225,17 @@ hw_gpu_detail_show (HardwarePage *page)
       gtk_widget_set_visible (page->fan_scale, FALSE);
     }
 
-  /* Hide/show each management row based on capability */
-  {
-    GtkWidget *child = gtk_widget_get_first_child (GTK_WIDGET (page->gpu_mgt_group));
-    while (child)
-      {
-        const char *pid = g_object_get_data (G_OBJECT (child), "power-id");
-        if (pid)
-          {
-            gboolean vis = TRUE;
-
-            /* Vendor-gated: if power-vendor is set, it must match GPU vendor */
-            const char *pv = g_object_get_data (G_OBJECT (child), "power-vendor");
-            if (pv && page->gpu->vendor)
-              vis = (g_strcmp0 (pv, page->gpu->vendor) == 0);
-
-            if (vis)
-              {
-                if (g_strcmp0 (pid, "perf-level") == 0) vis = page->gpu->has_perf_level;
-                else if (g_strcmp0 (pid, "power-profile") == 0) vis = page->gpu->has_power_profile;
-                else if (g_strcmp0 (pid, "power-limit") == 0) vis = page->gpu->has_power_limit;
-                else if (g_strcmp0 (pid, "frtc") == 0) vis = page->gpu->has_frtc;
-                else if (g_strcmp0 (pid, "chill") == 0) vis = page->gpu->has_radeon_chill;
-                else if (g_strcmp0 (pid, "anti-lag") == 0) vis = page->gpu->has_anti_lag;
-                else if (g_strcmp0 (pid, "vrs") == 0) vis = page->gpu->has_vrs;
-                else if (g_strcmp0 (pid, "fan") == 0) vis = page->gpu->has_fan_control;
-                else if (g_strcmp0 (pid, "zero-rpm") == 0) vis = page->gpu->has_zero_rpm_fan;
-                else if (g_strcmp0 (pid, "nvidia-power") == 0) vis = page->gpu->has_nvidia_smi;
-                else if (g_strcmp0 (pid, "nvidia-fan") == 0) vis = page->gpu->has_nvidia_smi;
-              }
-            gtk_widget_set_visible (child, vis);
-          }
-        child = gtk_widget_get_next_sibling (child);
-      }
-  }
+  /* Hide/show each management row based on vendor rules and capability */
+  for (int i = 0; i < n_gpu_mgt_rows; i++)
+    {
+      const char *pid = g_object_get_data (G_OBJECT (gpu_mgt_rows[i]), "power-id");
+      if (pid)
+        {
+          const GpuMgtFeature *f = gpu_mgt_feature_lookup (pid);
+          gtk_widget_set_visible (gpu_mgt_rows[i],
+            f ? gpu_mgt_feature_visible (page, f) : TRUE);
+        }
+    }
 
   hw_monitor_start (page);
 
@@ -1323,16 +1310,6 @@ hw_gpu_detail_connect_signals (HardwarePage *page)
   /* Power Profile Mode */
   g_signal_connect (page->power_profile_dd, "notify::selected",
     G_CALLBACK (on_power_profile_changed), page);
-
-  /* Frame Rate Target Control */
-  g_signal_connect (page->frtc_switch, "notify::active",
-    G_CALLBACK (on_frtc_toggled), page);
-  g_signal_connect (page->frtc_spin, "value-changed",
-    G_CALLBACK (on_frtc_fps_changed), page);
-  g_signal_connect (page->frtc_scale, "value-changed",
-    G_CALLBACK (sync_scale_to_spin), page->frtc_spin);
-  g_signal_connect (page->frtc_spin, "value-changed",
-    G_CALLBACK (sync_spin_to_scale), page->frtc_scale);
 
   /* Power Limit */
   g_signal_connect (page->power_limit_spin, "value-changed",

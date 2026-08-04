@@ -869,10 +869,12 @@ hw_gpu_detect (HardwarePage *page)
       page->gpu->power_last_time_ns = 0;
     }
 
-  /* 7. Detect AMD-specific features */
+  /* 7. Detect AMD-specific features (Radeon Chill and Anti-Lag are only
+     available on cards bound to the amdgpu kernel driver) */
   page->gpu->has_radeon_chill = FALSE;
   page->gpu->has_anti_lag = FALSE;
-  if (page->gpu->vendor && strcmp (page->gpu->vendor, "AMD") == 0)
+  if (page->gpu->vendor && strcmp (page->gpu->vendor, "AMD") == 0
+      && g_strcmp0 (page->gpu->kernel_driver, "amdgpu") == 0)
     {
       page->gpu->has_radeon_chill = TRUE;
 
@@ -938,9 +940,6 @@ hw_gpu_detect (HardwarePage *page)
         g_free (pp_path);
     }
 
-  /* 9. Frame Rate Target Control (MangoHud) */
-  page->gpu->has_frtc = (g_find_program_in_path ("mangohud") != NULL);
-
   /* 10. Power Limit (sysfs power1_cap — must be writable) */
   page->gpu->has_power_limit = FALSE;
   if (page->gpu->hwmon_path)
@@ -961,18 +960,22 @@ hw_gpu_detect (HardwarePage *page)
       g_free (zrpm_path);
     }
 
-  /* 12. Variable Rate Shading (RDNA2+ / Intel Arc Xe HPG+) */
+  /* 12. Variable Rate Shading (AMD RDNA2+ / Intel Arc Xe HPG+) */
   page->gpu->has_vrs = FALSE;
-  if (page->gpu->device_name)
+  gboolean vrs_vendor_ok =
+    (g_strcmp0 (page->gpu->vendor, "AMD") == 0
+     || g_strcmp0 (page->gpu->vendor, "Intel") == 0);
+  if (vrs_vendor_ok && page->gpu->device_name)
     {
       char *lower = g_ascii_strdown (page->gpu->device_name, -1);
       if (strstr (lower, "navi2") || strstr (lower, "navi3")
-          || strstr (lower, "rdna2") || strstr (lower, "rdna3")
+          || strstr (lower, "navi4") || strstr (lower, "rdna2")
+          || strstr (lower, "rdna3") || strstr (lower, "rdna4")
           || strstr (lower, "arc") || strstr (lower, "xe2"))
           page->gpu->has_vrs = TRUE;
         g_free (lower);
     }
-  if (!page->gpu->has_vrs)
+  if (!page->gpu->has_vrs && vrs_vendor_ok)
     {
       /* Fallback: check Vulkan for VK_KHR_variable_rate_shading */
       const char *vrs_argv[] = {

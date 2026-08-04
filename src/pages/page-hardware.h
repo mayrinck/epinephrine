@@ -37,7 +37,6 @@ typedef struct
   gboolean has_radeon_chill;
   gboolean has_anti_lag;
   gboolean has_power_profile;
-  gboolean has_frtc;
   gboolean has_power_limit;
   gboolean has_zero_rpm_fan;
   gboolean has_vrs;
@@ -105,12 +104,6 @@ typedef struct
   GtkWidget *power_profile_dd;
   char **power_profile_names;
   int n_power_profiles;
-
-  /* Frame Rate Target Control */
-  GtkWidget *frtc_switch;
-  GtkWidget *frtc_opts;
-  GtkWidget *frtc_scale;
-  GtkWidget *frtc_spin;
 
   /* Power Limit */
   GtkWidget *power_limit_scale;
