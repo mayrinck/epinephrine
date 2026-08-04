@@ -10,7 +10,7 @@
 
 #define tr(x) epi_i18n_get (x)
 
-/* ---- Metric colors (same palette style as GPU monitor) ---- */
+/* ---- Metric colors ---- */
 
 static const GdkRGBA cpu_metric_colors[CPU_MON_METRICS] = {
   { 0.902, 0.380, 0.000, 1.0 },   /* Temperature (orange) */
@@ -27,15 +27,14 @@ static const char *cpu_metric_units[CPU_MON_METRICS] = {
   "°C", "%", "MHz", "V"
 };
 
-/* Normalization max values for the graph (0.0 – 1.0 range) */
 static const float cpu_norm_max[CPU_MON_METRICS] = {
-  100.0f,  /* Temperature: 0–100 °C */
-  100.0f,  /* Usage: 0–100 % */
-  5000.0f, /* Speed: 0–5000 MHz */
-  1.5f,    /* Voltage: 0–1.5 V */
+  100.0f,  /* Temperature */
+  100.0f,  /* Usage */
+  5000.0f, /* Speed */
+  1.5f,    /* Voltage */
 };
 
-/* ---- Graph draw callback (monotone cubic, same as GPU) ---- */
+/* ---- Graph draw callback ---- */
 
 static void
 cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
@@ -44,12 +43,10 @@ cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
   CpuPage *page = user_data;
   (void) area;
 
-  /* Background */
-  cairo_set_source_rgb (cr, 0.12, 0.12, 0.14);
-  cairo_paint (cr);
+  /* Transparent background — no fill */
 
-  /* Grid: 5 horizontal lines */
-  cairo_set_source_rgba (cr, 0.4, 0.4, 0.4, 0.5);
+  /* Grid lines + percentage labels */
+  cairo_set_source_rgba (cr, 0.5, 0.5, 0.5, 0.2);
   cairo_set_line_width (cr, 0.5);
   cairo_select_font_face (cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
                           CAIRO_FONT_WEIGHT_NORMAL);
@@ -68,7 +65,7 @@ cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
       cairo_show_text (cr, lbl);
     }
 
-  /* Draw traces */
+  /* Draw traces — always use full history size for fixed-width slots */
   int n = page->monitor_history_count;
   int pts = n < CPU_MON_HISTORY ? n : CPU_MON_HISTORY;
   if (pts < 2) return;
@@ -82,7 +79,7 @@ cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
     {
       const GdkRGBA *c = &cpu_metric_colors[m];
       cairo_set_source_rgba (cr, c->red, c->green, c->blue, 0.9);
-      cairo_set_line_width (cr, 1.2);
+      cairo_set_line_width (cr, 1.5);
 
       int start = (n - pts);
       for (int i = 0; i < pts - 1; i++)
@@ -93,12 +90,13 @@ cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
           float v0 = CLAMP (page->monitor_history[m][idx0], 0.0f, 1.0f);
           float v1 = CLAMP (page->monitor_history[m][idx1], 0.0f, 1.0f);
 
-          double px0 = x0 + plot_w * i / (pts - 1);
-          double px1 = x0 + plot_w * (i + 1) / (pts - 1);
+          /* Fixed-width slots: divide by (HISTORY-1) so each point has constant spacing */
+          double px0 = x0 + plot_w * i / (CPU_MON_HISTORY - 1);
+          double px1 = x0 + plot_w * (i + 1) / (CPU_MON_HISTORY - 1);
           double py0 = y0 + plot_h * (1.0 - v0);
           double py1 = y0 + plot_h * (1.0 - v1);
 
-          /* Monotone cubic (Fritsch-Carlson) */
+          /* Monotone cubic */
           double dx = (px1 - px0) / 8.0;
           double dy0, dy1;
 
@@ -120,7 +118,6 @@ cpu_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
           else
             dy1 = (v1 - v0) * plot_h;
 
-          /* Hermite basis */
           cairo_move_to (cr, px0, py0);
           for (int s = 1; s <= 8; s++)
             {
@@ -198,7 +195,6 @@ read_cpu_usage (CpuPage *page)
     { fclose (f); return 0.0f; }
   fclose (f);
 
-  /* First line: "cpu  user nice system idle iowait irq softirq steal" */
   unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
   if (sscanf (line, "cpu %llu %llu %llu %llu %llu %llu %llu %llu",
               &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal) < 4)
@@ -223,7 +219,6 @@ static float
 read_cpu_temp (void)
 {
   char path[256];
-  /* Try known thermal zone patterns */
   for (int tz = 0; tz < 20; tz++)
     {
       g_snprintf (path, sizeof (path),
@@ -233,7 +228,6 @@ read_cpu_temp (void)
         return raw / 1000.0f;
     }
 
-  /* Fallback: coretemp hwmon */
   for (int hw = 0; hw < 10; hw++)
     {
       g_snprintf (path, sizeof (path),
@@ -272,7 +266,6 @@ read_cpu_freq_mhz (void)
     "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq");
   if (khz > 0) return khz / 1000.0f;
 
-  /* Fallback: /proc/cpuinfo */
   FILE *f = fopen ("/proc/cpuinfo", "r");
   if (!f) return 0.0f;
   char line[256];
@@ -299,7 +292,6 @@ cpu_monitor_poll_cb (gpointer user_data)
 
   int n = page->monitor_history_count;
 
-  /* Read live values */
   float temp  = read_cpu_temp ();
   float usage = read_cpu_usage (page);
   float freq  = read_cpu_freq_mhz ();
@@ -308,27 +300,26 @@ cpu_monitor_poll_cb (gpointer user_data)
   float vals[CPU_MON_METRICS] = { temp, usage, freq, volt };
   gboolean ok[CPU_MON_METRICS] = {
     temp > 0,
-    n > 0,        /* first call has no valid delta */
+    n > 0,
     freq > 0,
     volt > 0
   };
 
-  /* Store normalized history */
   for (int m = 0; m < CPU_MON_METRICS; m++)
     page->monitor_history[m][n % CPU_MON_HISTORY] =
       ok[m] ? CLAMP (vals[m] / cpu_norm_max[m], 0.0f, 1.0f) : 0.0f;
 
   page->monitor_history_count++;
 
-  /* Update labels */
+  /* Update legend labels */
   for (int m = 0; m < CPU_MON_METRICS; m++)
     {
       if (ok[m])
         {
           char buf[32];
-          if (m == 3) /* Voltage */
+          if (m == 3)
             g_snprintf (buf, sizeof (buf), "%.3f %s", vals[m], cpu_metric_units[m]);
-          else if (m == 2) /* Frequency */
+          else if (m == 2)
             g_snprintf (buf, sizeof (buf), "%.0f %s", vals[m], cpu_metric_units[m]);
           else
             g_snprintf (buf, sizeof (buf), "%.1f %s", vals[m], cpu_metric_units[m]);
@@ -338,17 +329,27 @@ cpu_monitor_poll_cb (gpointer user_data)
         gtk_label_set_text (GTK_LABEL (page->monitor_values[m]), "N/A");
     }
 
-  /* Update current frequency label too */
-  if (page->cur_freq_label && freq > 0)
+  /* Update current frequency row */
+  if (page->cur_freq_row && freq > 0)
     {
       char freq_str[64];
       if (freq >= 1000.0f)
         g_snprintf (freq_str, sizeof (freq_str), "%.2f GHz", freq / 1000.0f);
       else
         g_snprintf (freq_str, sizeof (freq_str), "%.0f MHz", freq);
-      gtk_label_set_text (GTK_LABEL (page->cur_freq_label), freq_str);
+      adw_action_row_set_subtitle (page->cur_freq_row, freq_str);
     }
 
+  return G_SOURCE_CONTINUE;
+}
+
+/* ---- Graph redraw callback (150ms) ---- */
+
+static gboolean
+cpu_graph_redraw_cb (gpointer user_data)
+{
+  CpuPage *page = user_data;
+  if (!page) return G_SOURCE_REMOVE;
   gtk_widget_queue_draw (page->monitor_graph);
   return G_SOURCE_CONTINUE;
 }
@@ -359,23 +360,55 @@ void
 cpu_monitor_start (CpuPage *page)
 {
   if (!page) return;
+  /* If both timers already running, nothing to do */
+  if (page->monitor_timer_id && page->graph_timer_id) return;
   page->monitor_history_count = 0;
   memset (page->monitor_history, 0, sizeof (page->monitor_history));
   memset (&page->prev_idle, 0, sizeof (page->prev_idle) + sizeof (page->prev_total));
-  if (page->monitor_timer_id) return;
+  /* Clean up stale timers before creating new ones */
+  if (page->monitor_timer_id)
+    {
+      g_source_remove (page->monitor_timer_id);
+      page->monitor_timer_id = 0;
+    }
+  if (page->graph_timer_id)
+    {
+      g_source_remove (page->graph_timer_id);
+      page->graph_timer_id = 0;
+    }
+  /* Data poll every 1s (ALWAYS 1s, never changes) */
   page->monitor_timer_id = g_timeout_add (1000, cpu_monitor_poll_cb, page);
+  /* Graph redraw at configurable interval */
+  extern int g_graph_speed_ms;
+  page->graph_timer_id = g_timeout_add (g_graph_speed_ms, cpu_graph_redraw_cb, page);
   cpu_monitor_poll_cb (page);
 }
 
 void
 cpu_monitor_stop (CpuPage *page)
 {
-  if (!page || !page->monitor_timer_id) return;
-  g_source_remove (page->monitor_timer_id);
-  page->monitor_timer_id = 0;
+  if (!page) return;
+  if (page->monitor_timer_id)
+    {
+      g_source_remove (page->monitor_timer_id);
+      page->monitor_timer_id = 0;
+    }
+  if (page->graph_timer_id)
+    {
+      g_source_remove (page->graph_timer_id);
+      page->graph_timer_id = 0;
+    }
 }
 
-/* ---- Codename detection (comprehensive AMD + Intel) ---- */
+void
+cpu_monitor_restart (CpuPage *page)
+{
+  if (!page) return;
+  cpu_monitor_stop (page);
+  cpu_monitor_start (page);
+}
+
+/* ---- Codename detection ---- */
 
 static char *
 detect_codename (const char *model_name)
@@ -384,7 +417,6 @@ detect_codename (const char *model_name)
   char *lower = g_ascii_strdown (model_name, -1);
   char *codename = NULL;
 
-  /* AMD Ryzen Desktop */
   if (strstr (lower, "ryzen"))
     {
       if (strstr (lower, "9 ") || strstr (lower, "9950") ||
@@ -408,127 +440,79 @@ detect_codename (const char *model_name)
       else if (strstr (lower, "1 ") || strstr (lower, "1800") ||
                strstr (lower, "1700") || strstr (lower, "1600"))
         codename = g_strdup ("Summit Ridge");
-      /* AMD Mobile */
       else if (strstr (lower, "ai 9") || strstr (lower, "ai 7"))
         codename = g_strdup ("Strix Point");
-      else if (strstr (lower, "7 7840") || strstr (lower, "7 7840HS") ||
-               strstr (lower, "7 8840") || strstr (lower, "9 8945"))
+      else if (strstr (lower, "7 7840") || strstr (lower, "7 8840") ||
+               strstr (lower, "9 8945"))
         codename = g_strdup ("Hawk Point");
-      else if (strstr (lower, "7 7700") || strstr (lower, "7 7840") ||
-               strstr (lower, "7 7940") || strstr (lower, "9 8945"))
-        codename = g_strdup ("Phoenix");
       else if (strstr (lower, "6 6600") || strstr (lower, "6 6800") ||
                strstr (lower, "6 6900"))
         codename = g_strdup ("Rembrandt");
-      else if (strstr (lower, "5 5600") || strstr (lower, "5 5800") ||
-               strstr (lower, "5 5900"))
+      else if (strstr (lower, "5 5600") || strstr (lower, "5 5800"))
         codename = g_strdup ("Cezanne");
-      else if (strstr (lower, "4 4600") || strstr (lower, "4 4700") ||
-               strstr (lower, "4 4800"))
+      else if (strstr (lower, "4 4600") || strstr (lower, "4 4800"))
         codename = g_strdup ("Renoir");
-      else if (strstr (lower, "3 3200") || strstr (lower, "3 3400") ||
-               strstr (lower, "3 3500"))
-        codename = g_strdup ("Picasso");
-      /* AMD HEDT / Server */
       else if (strstr (lower, "threadripper"))
         {
           if (strstr (lower, "79") || strstr (lower, "78"))
             codename = g_strdup ("Storm Peak");
-          else if (strstr (lower, "39") || strstr (lower, "38"))
+          else if (strstr (lower, "39") || strstr (lower, "29"))
             codename = g_strdup ("Castle Peak");
-          else if (strstr (lower, "29") || strstr (lower, "28"))
+          else
             codename = g_strdup ("Castle Peak");
-          else if (strstr (lower, "19") || strstr (lower, "18"))
-            codename = g_strdup ("Colfax");
         }
       else if (strstr (lower, "epyc"))
         {
-          if (strstr (lower, "97") || strstr (lower, "96") || strstr (lower, "95") ||
-              strstr (lower, "94") || strstr (lower, "93") || strstr (lower, "92"))
+          if (strstr (lower, "97") || strstr (lower, "96") || strstr (lower, "95"))
             codename = g_strdup ("Genoa");
-          else if (strstr (lower, "77") || strstr (lower, "76") || strstr (lower, "75"))
-            codename = g_strdup ("Milan");
-          else if (strstr (lower, "73") || strstr (lower, "72"))
+          else if (strstr (lower, "77") || strstr (lower, "76"))
             codename = g_strdup ("Milan");
           else if (strstr (lower, "70") || strstr (lower, "60"))
             codename = g_strdup ("Rome");
-          else if (strstr (lower, "3") || strstr (lower, "4") || strstr (lower, "5"))
-            codename = g_strdup ("Naples");
+          else
+            codename = g_strdup ("EPYC");
         }
     }
-  /* Intel */
   else if (strstr (lower, "intel") || strstr (lower, "core"))
     {
-      /* Arrow Lake */
       if (strstr (lower, "ultra 9") || strstr (lower, "ultra 7") ||
           strstr (lower, "ultra 5"))
-        {
-          if (strstr (lower, "2") || strstr (lower, "k"))
-            codename = g_strdup ("Arrow Lake");
-          else
-            codename = g_strdup ("Lunar Lake");
-        }
-      /* Raptor Lake (13th/14th gen) */
+        codename = g_strdup ("Arrow Lake");
       else if (strstr (lower, "i9-13") || strstr (lower, "i7-13") ||
-               strstr (lower, "i5-13") || strstr (lower, "i3-13") ||
-               strstr (lower, "i9-14") || strstr (lower, "i7-14") ||
-               strstr (lower, "i5-14") || strstr (lower, "i3-14"))
+               strstr (lower, "i5-13") || strstr (lower, "i9-14") ||
+               strstr (lower, "i7-14") || strstr (lower, "i5-14"))
         codename = g_strdup ("Raptor Lake");
-      /* Alder Lake (12th gen) */
       else if (strstr (lower, "i9-12") || strstr (lower, "i7-12") ||
                strstr (lower, "i5-12") || strstr (lower, "i3-12"))
         codename = g_strdup ("Alder Lake");
-      /* Rocket Lake (11th gen) */
       else if (strstr (lower, "i9-11") || strstr (lower, "i7-11") ||
-               strstr (lower, "i5-11") || strstr (lower, "i3-11"))
+               strstr (lower, "i5-11"))
         codename = g_strdup ("Rocket Lake");
-      /* Comet Lake (10th gen) */
       else if (strstr (lower, "i9-10") || strstr (lower, "i7-10") ||
                strstr (lower, "i5-10") || strstr (lower, "i3-10"))
         codename = g_strdup ("Comet Lake");
-      /* Ice Lake (10th gen mobile) */
-      else if (strstr (lower, "i7-106") || strstr (lower, "i5-103"))
-        codename = g_strdup ("Ice Lake");
-      /* Coffee Lake (8th/9th gen) */
       else if (strstr (lower, "i9-9") || strstr (lower, "i7-9") ||
                strstr (lower, "i5-9") || strstr (lower, "i3-9") ||
                strstr (lower, "i7-8") || strstr (lower, "i5-8") ||
                strstr (lower, "i3-8"))
         codename = g_strdup ("Coffee Lake");
-      /* Kaby Lake (7th gen) */
       else if (strstr (lower, "i7-7") || strstr (lower, "i5-7") ||
                strstr (lower, "i3-7"))
         codename = g_strdup ("Kaby Lake");
-      /* Skylake (6th gen) */
       else if (strstr (lower, "i7-6") || strstr (lower, "i5-6") ||
                strstr (lower, "i3-6"))
         codename = g_strdup ("Skylake");
-      /* Xeon */
       else if (strstr (lower, "xeon"))
-        {
-          if (strstr (lower, "w9-35") || strstr (lower, "w7-34") ||
-              strstr (lower, "w5-34") || strstr (lower, "w3-34"))
-            codename = g_strdup ("Sapphire Rapids");
-          else if (strstr (lower, "w9-24") || strstr (lower, "w7-24") ||
-                   strstr (lower, "w5-24") || strstr (lower, "w3-24"))
-            codename = g_strdup ("Sapphire Rapids");
-          else if (strstr (lower, "e5-26") || strstr (lower, "e5-16") ||
-                   strstr (lower, "e5-46"))
-            codename = g_strdup ("Haswell");
-          else if (strstr (lower, "e3-12"))
-            codename = g_strdup ("Skylake");
-        }
-      /* Fallback for Intel with any number */
-      else if (strstr (lower, "i9") || strstr (lower, "i7") ||
-               strstr (lower, "i5") || strstr (lower, "i3"))
-        codename = g_strdup ("Intel (Unknown Gen)");
+        codename = g_strdup ("Xeon");
+      else
+        codename = g_strdup ("Intel");
     }
 
   g_free (lower);
   return codename;
 }
 
-/* ---- Collect CPU vulnerabilities from sysfs ---- */
+/* ---- Collect CPU vulnerabilities ---- */
 
 static void
 collect_vulnerabilities (CpuPage *page)
@@ -536,7 +520,6 @@ collect_vulnerabilities (CpuPage *page)
   char path[256];
   page->n_vulns = 0;
 
-  /* Known vulnerability names from /sys/devices/system/cpu/vulnerabilities/ */
   static const char *vuln_names[] = {
     "itlb_multihit", "l1tf", "mds", "meltdown", "mmio_stale_data",
     "retbleed", "spec_store_bypass", "spectre_v1", "spectre_v2",
@@ -583,22 +566,12 @@ collect_cpu_info (CpuPage *page)
           else if (g_str_has_prefix (buf, "model name"))
             {
               char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->model_name = g_strdup (colon);
-                }
+              if (colon) { colon += 2; g_strstrip (colon); page->model_name = g_strdup (colon); }
             }
           else if (g_str_has_prefix (buf, "vendor_id"))
             {
               char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->vendor_id = g_strdup (colon);
-                }
+              if (colon) { colon += 2; g_strstrip (colon); page->vendor_id = g_strdup (colon); }
             }
           else if (g_str_has_prefix (buf, "cpu family"))
             {
@@ -618,42 +591,17 @@ collect_cpu_info (CpuPage *page)
           else if (g_str_has_prefix (buf, "bogomips"))
             {
               char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->bogomips = g_strdup (colon);
-                }
+              if (colon) { colon += 2; g_strstrip (colon); page->bogomips = g_strdup (colon); }
             }
           else if (g_str_has_prefix (buf, "microcode"))
             {
               char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->microcode = g_strdup (colon);
-                }
-            }
-          else if (g_str_has_prefix (buf, "bugs"))
-            {
-              char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->bugs_str = g_strdup (colon);
-                }
+              if (colon) { colon += 2; g_strstrip (colon); page->microcode = g_strdup (colon); }
             }
           else if (g_str_has_prefix (buf, "flags\t"))
             {
               char *colon = strchr (buf, ':');
-              if (colon)
-                {
-                  colon += 2;
-                  g_strstrip (colon);
-                  page->flags = g_strdup (colon);
-                }
+              if (colon) { colon += 2; g_strstrip (colon); page->flags = g_strdup (colon); }
             }
         }
       fclose (f);
@@ -673,8 +621,7 @@ collect_cpu_info (CpuPage *page)
           else if (g_str_has_prefix (buf, "Socket(s):"))
             {
               char *val = strchr (buf, ':');
-              if (val) page->socket = g_strdup (val + 2);
-              if (page->socket) g_strstrip (page->socket);
+              if (val) { page->socket = g_strdup (val + 2); g_strstrip (page->socket); }
             }
           else if (g_str_has_prefix (buf, "Core(s) per socket:"))
             {
@@ -695,10 +642,7 @@ collect_cpu_info (CpuPage *page)
             {
               char *val = strchr (buf, ':');
               if (val && !page->base_freq)
-                {
-                  val++; g_strstrip (val);
-                  page->base_freq = g_strdup_printf ("%s MHz", val);
-                }
+                { val++; g_strstrip (val); page->base_freq = g_strdup (val); }
             }
           else if (g_str_has_prefix (buf, "CPU max MHz:"))
             {
@@ -706,15 +650,10 @@ collect_cpu_info (CpuPage *page)
               if (val && !page->boost_freq)
                 {
                   val++; g_strstrip (val);
-                  /* Remove trailing .000 */
                   char *dot = strstr (val, ".000");
                   if (dot) *dot = '\0';
-                  page->boost_freq = g_strdup_printf ("%s MHz", val);
+                  page->boost_freq = g_strdup (val);
                 }
-            }
-          else if (g_str_has_prefix (buf, "CPU min MHz:"))
-            {
-              /* Just skip — we don't display it */
             }
           else if (g_str_has_prefix (buf, "L1d cache:"))
             {
@@ -740,44 +679,36 @@ collect_cpu_info (CpuPage *page)
       pclose (lscpu);
     }
 
-  /* Thread fallback */
   if (page->threads_total < 1)
     page->threads_total = page->n_cores;
 
-  /* ---- Cache from sysfs (fallback if lscpu missed it) ---- */
+  /* ---- Cache from sysfs fallback ---- */
   if (!page->l1d_cache)
     {
-      uint64_t sz = read_sysfs_u64 (
-        "/sys/devices/system/cpu/cpu0/cache/index0/size");
+      uint64_t sz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cache/index0/size");
       if (sz > 0) page->l1d_cache = g_strdup_printf ("%lu KB", (unsigned long)sz);
     }
   if (!page->l2_cache)
     {
-      uint64_t sz = read_sysfs_u64 (
-        "/sys/devices/system/cpu/cpu0/cache/index2/size");
+      uint64_t sz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cache/index2/size");
       if (sz > 0) page->l2_cache = g_strdup_printf ("%lu KB", (unsigned long)sz);
     }
   if (!page->l3_cache)
     {
-      uint64_t sz = read_sysfs_u64 (
-        "/sys/devices/system/cpu/cpu0/cache/index3/size");
+      uint64_t sz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cache/index3/size");
       if (sz > 0) page->l3_cache = g_strdup_printf ("%lu KB", (unsigned long)sz);
     }
 
   /* ---- Base/Boost from sysfs fallback ---- */
   if (!page->base_freq)
     {
-      uint64_t khz = read_sysfs_u64 (
-        "/sys/devices/system/cpu/cpu0/cpufreq/base_frequency");
-      if (khz > 0)
-        page->base_freq = g_strdup_printf ("%.0f MHz", khz / 1000.0);
+      uint64_t khz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cpufreq/base_frequency");
+      if (khz > 0) page->base_freq = g_strdup_printf ("%.0f MHz", khz / 1000.0);
     }
   if (!page->boost_freq)
     {
-      uint64_t khz = read_sysfs_u64 (
-        "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
-      if (khz > 0)
-        page->boost_freq = g_strdup_printf ("%.0f MHz", khz / 1000.0);
+      uint64_t khz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq");
+      if (khz > 0) page->boost_freq = g_strdup_printf ("%.0f MHz", khz / 1000.0);
     }
 
   /* ---- Available governors ---- */
@@ -801,10 +732,8 @@ collect_cpu_info (CpuPage *page)
 
   /* ---- Min/Max freq from sysfs ---- */
   {
-    uint64_t min_khz = read_sysfs_u64 (
-      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq");
-    uint64_t max_khz = read_sysfs_u64 (
-      "/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq");
+    uint64_t min_khz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq");
+    uint64_t max_khz = read_sysfs_u64 ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq");
     page->min_freq_hw = g_strdup_printf ("%lu", (unsigned long)min_khz);
     page->max_freq_hw = g_strdup_printf ("%lu", (unsigned long)max_khz);
   }
@@ -813,21 +742,21 @@ collect_cpu_info (CpuPage *page)
   collect_vulnerabilities (page);
 }
 
-/* ---- Populate UI labels with collected data ---- */
+/* ---- Forward declarations ---- */
+static void update_governor_subtitle (CpuPage *page, const char *gov_name);
+
+/* ---- Populate all row subtitles ---- */
 
 static void
 populate_cpu_labels (CpuPage *page)
 {
-  char buf[1024];
-
   /* Branding */
   if (page->model_name)
     gtk_label_set_text (GTK_LABEL (page->cpu_name_label), page->model_name);
-
   if (page->vendor_id)
     gtk_label_set_text (GTK_LABEL (page->cpu_vendor_label), page->vendor_id);
 
-  /* Codename: comprehensive detection */
+  /* Codename */
   if (page->model_name)
     {
       char *codename = detect_codename (page->model_name);
@@ -838,130 +767,101 @@ populate_cpu_labels (CpuPage *page)
         }
     }
 
-  /* Socket */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-socket-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->socket ? page->socket : "—");
-  }
+  /* Specifications — all use adw_action_row_set_subtitle */
+  if (page->socket_row)
+    adw_action_row_set_subtitle (page->socket_row, page->socket ? page->socket : "—");
 
-  /* Architecture */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-arch-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->architecture ? page->architecture : "—");
-  }
+  if (page->arch_row)
+    adw_action_row_set_subtitle (page->arch_row, page->architecture ? page->architecture : "—");
 
-  /* Family/Model/Stepping */
-  {
-    char fms[64];
-    g_snprintf (fms, sizeof (fms), "0x%X / 0x%X / %d",
-                page->family, page->model, page->stepping);
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-family-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), fms);
-  }
+  if (page->family_row)
+    {
+      char fms[64];
+      g_snprintf (fms, sizeof (fms), "0x%X / 0x%X / %d",
+                  page->family, page->model, page->stepping);
+      adw_action_row_set_subtitle (page->family_row, fms);
+    }
 
-  /* Cores/Threads */
-  {
-    char ct[64];
-    g_snprintf (ct, sizeof (ct), "%d / %d",
-                page->cores_physical > 0 ? page->cores_physical : page->n_cores,
-                page->threads_total);
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-cores-threads-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), ct);
-  }
+  if (page->cores_row)
+    {
+      char ct[64];
+      g_snprintf (ct, sizeof (ct), "%d / %d",
+                  page->cores_physical > 0 ? page->cores_physical : page->n_cores,
+                  page->threads_total);
+      adw_action_row_set_subtitle (page->cores_row, ct);
+    }
 
-  /* BogoMIPS */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-bogomips-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->bogomips ? page->bogomips : "—");
-  }
+  if (page->bogomips_row)
+    adw_action_row_set_subtitle (page->bogomips_row, page->bogomips ? page->bogomips : "—");
 
-  /* Microcode */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-microcode-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->microcode ? page->microcode : "—");
-  }
+  if (page->microcode_row)
+    adw_action_row_set_subtitle (page->microcode_row, page->microcode ? page->microcode : "—");
 
-  /* Base frequency */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-base-freq-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->base_freq ? page->base_freq : "—");
-  }
+  if (page->base_freq_row)
+    adw_action_row_set_subtitle (page->base_freq_row, page->base_freq ? page->base_freq : "—");
 
-  /* Boost frequency */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-boost-freq-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->boost_freq ? page->boost_freq : "—");
-  }
+  if (page->boost_freq_row)
+    adw_action_row_set_subtitle (page->boost_freq_row, page->boost_freq ? page->boost_freq : "—");
 
-  /* Flags */
-  {
-    GtkWidget *w = g_object_get_data (G_OBJECT (page->box), "cpu-flags-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->flags ? page->flags : "—");
-  }
+  if (page->flags_row)
+    adw_action_row_set_subtitle (page->flags_row, page->flags ? page->flags : "—");
 
   /* Caches */
-  {
-    GtkWidget *w;
-    w = g_object_get_data (G_OBJECT (page->box), "cpu-l1d-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->l1d_cache ? page->l1d_cache : "—");
-    w = g_object_get_data (G_OBJECT (page->box), "cpu-l1i-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->l1i_cache ? page->l1i_cache : "—");
-    w = g_object_get_data (G_OBJECT (page->box), "cpu-l2-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->l2_cache ? page->l2_cache : "—");
-    w = g_object_get_data (G_OBJECT (page->box), "cpu-l3-label");
-    if (w) gtk_label_set_text (GTK_LABEL (w), page->l3_cache ? page->l3_cache : "—");
-  }
+  if (page->l1d_row)
+    adw_action_row_set_subtitle (page->l1d_row, page->l1d_cache ? page->l1d_cache : "—");
+  if (page->l1i_row)
+    adw_action_row_set_subtitle (page->l1i_row, page->l1i_cache ? page->l1i_cache : "—");
+  if (page->l2_row)
+    adw_action_row_set_subtitle (page->l2_row, page->l2_cache ? page->l2_cache : "—");
+  if (page->l3_row)
+    adw_action_row_set_subtitle (page->l3_row, page->l3_cache ? page->l3_cache : "—");
 
-  /* Vulnerabilities: add rows to the security section */
-  {
-    GtkWidget *vulns_group = GTK_WIDGET (g_object_get_data (G_OBJECT (page->box), "cpu-vulns-group"));
-    if (vulns_group)
-      {
-        for (int v = 0; v < page->n_vulns; v++)
-          {
-            AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
-            /* Split "name: status" for title/subtitle */
-            char *colon = strchr (page->vulnerabilities[v], ':');
-            if (colon)
-              {
-                char name[128] = {0};
-                size_t nlen = colon - page->vulnerabilities[v];
-                if (nlen > sizeof (name) - 1) nlen = sizeof (name) - 1;
-                memcpy (name, page->vulnerabilities[v], nlen);
-                adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), name);
-                adw_action_row_set_subtitle (row, colon + 2);
-              }
-            else
-              {
-                adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row),
-                  page->vulnerabilities[v]);
-              }
-            adw_preferences_group_add (ADW_PREFERENCES_GROUP (vulns_group),
-              GTK_WIDGET (row));
-          }
-
-        if (page->n_vulns == 0)
-          {
-            AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
-            adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row),
-              tr ("No known vulnerabilities detected"));
-            adw_action_row_add_suffix (row, NULL);
-            adw_preferences_group_add (ADW_PREFERENCES_GROUP (vulns_group),
-              GTK_WIDGET (row));
-          }
-      }
-  }
-
-  /* Governor */
-  if (page->governor_current_label)
+  /* Vulnerabilities */
+  if (page->vulns_group)
     {
+      for (int v = 0; v < page->n_vulns; v++)
+        {
+          AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
+          char *colon = strchr (page->vulnerabilities[v], ':');
+          if (colon)
+            {
+              char name[128] = {0};
+              size_t nlen = colon - page->vulnerabilities[v];
+              if (nlen > sizeof (name) - 1) nlen = sizeof (name) - 1;
+              memcpy (name, page->vulnerabilities[v], nlen);
+              adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), name);
+              adw_action_row_set_subtitle (row, colon + 2);
+            }
+          else
+            {
+              adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row),
+                page->vulnerabilities[v]);
+            }
+          adw_preferences_group_add (page->vulns_group, GTK_WIDGET (row));
+        }
+
+      if (page->n_vulns == 0)
+        {
+          AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
+          adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row),
+            tr ("No known vulnerabilities detected"));
+          adw_preferences_group_add (page->vulns_group, GTK_WIDGET (row));
+        }
+    }
+
+  /* Governor — subtitle shows current state */
+  if (page->governor_row)
+    {
+      char gov[64] = {0};
       if (read_file_line ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
-                          buf, sizeof (buf)))
-        gtk_label_set_text (GTK_LABEL (page->governor_current_label), buf);
+                          gov, sizeof (gov)))
+        update_governor_subtitle (page, gov);
+      else
+        update_governor_subtitle (page, NULL);
     }
 
   /* Current frequency */
-  if (page->cur_freq_label)
+  if (page->cur_freq_row)
     {
       float mhz = read_cpu_freq_mhz ();
       if (mhz > 0)
@@ -971,7 +871,7 @@ populate_cpu_labels (CpuPage *page)
             g_snprintf (freq_str, sizeof (freq_str), "%.2f GHz", mhz / 1000.0f);
           else
             g_snprintf (freq_str, sizeof (freq_str), "%.0f MHz", mhz);
-          gtk_label_set_text (GTK_LABEL (page->cur_freq_label), freq_str);
+          adw_action_row_set_subtitle (page->cur_freq_row, freq_str);
         }
     }
 
@@ -990,19 +890,37 @@ populate_cpu_labels (CpuPage *page)
     }
 }
 
-/* ---- Save handler ---- */
+/* ---- Update governor subtitle ---- */
 
 static void
-on_cpu_save (GtkButton *btn, CpuPage *page)
+update_governor_subtitle (CpuPage *page, const char *gov_name)
 {
-  (void) btn;
+  if (!page->governor_row) return;
 
+  if (gov_name && gov_name[0])
+    {
+      char *sub = g_strdup_printf (
+        "Define how the processes will be managed by the system. Current state: %s",
+        gov_name);
+      adw_action_row_set_subtitle (page->governor_row, sub);
+      g_free (sub);
+    }
+  else
+    {
+      adw_action_row_set_subtitle (page->governor_row,
+        "Define how the processes will be managed by the system.");
+    }
+}
+
+/* ---- Apply governor on change ---- */
+
+static void
+apply_governor (CpuPage *page)
+{
   const char *governor = NULL;
-  {
-    guint sel = gtk_drop_down_get_selected (GTK_DROP_DOWN (page->governor_dropdown));
-    if (sel < (guint) page->n_governors)
-      governor = page->available_governors[sel];
-  }
+  guint sel = gtk_drop_down_get_selected (GTK_DROP_DOWN (page->governor_dropdown));
+  if (sel < (guint) page->n_governors)
+    governor = page->available_governors[sel];
 
   if (governor && page->n_cores > 0)
     {
@@ -1014,10 +932,27 @@ on_cpu_save (GtkButton *btn, CpuPage *page)
       g_free (cmd);
     }
 
+  update_governor_subtitle (page, governor);
+}
+
+static void
+on_governor_changed (GtkDropDown *dd, GParamSpec *pspec, CpuPage *page)
+{
+  (void) dd; (void) pspec;
+  apply_governor (page);
+}
+
+/* ---- Apply frequency limits on change ---- */
+
+static void
+apply_freq_limits (CpuPage *page)
+{
+  if (page->n_cores <= 0) return;
+
   int min_freq = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->min_freq_spin));
   int max_freq = (int) gtk_spin_button_get_value (GTK_SPIN_BUTTON (page->max_freq_spin));
 
-  if (min_freq > 0 && page->n_cores > 0)
+  if (min_freq > 0)
     {
       char *cmd = g_strdup_printf (
         "for d in /sys/devices/system/cpu/cpu*/cpufreq; do "
@@ -1027,7 +962,7 @@ on_cpu_save (GtkButton *btn, CpuPage *page)
       g_free (cmd);
     }
 
-  if (max_freq > 0 && page->n_cores > 0)
+  if (max_freq > 0)
     {
       char *cmd = g_strdup_printf (
         "for d in /sys/devices/system/cpu/cpu*/cpufreq; do "
@@ -1036,35 +971,20 @@ on_cpu_save (GtkButton *btn, CpuPage *page)
       epi_privilege_exec_async (cmd);
       g_free (cmd);
     }
-
-  dashboard_show_toast (tr ("CPU settings applied"));
 }
 
-/* ---- OpenRGB handler ---- */
-
 static void
-on_cpu_openrgb_clicked (GtkButton *btn, CpuPage *page)
+on_min_freq_changed (GtkSpinButton *spin, CpuPage *page)
 {
-  (void) btn; (void) page;
-  GError *err = NULL;
-  g_spawn_async (NULL, (char *[]){ "openrgb", NULL },
-    NULL, G_SPAWN_DEFAULT | G_SPAWN_SEARCH_PATH,
-    NULL, NULL, NULL, &err);
-  if (err)
-    {
-      dashboard_show_toast (tr ("OpenRGB not installed. Install it from openrgb.org"));
-      g_error_free (err);
-    }
+  (void) spin;
+  apply_freq_limits (page);
 }
 
-/* ---- Helper to store a widget reference on page->box ---- */
-
 static void
-store_widget_ref (CpuPage *page, GtkBuilder *builder,
-                  const char *ui_id, const char *data_key)
+on_max_freq_changed (GtkSpinButton *spin, CpuPage *page)
 {
-  GtkWidget *w = GTK_WIDGET (gtk_builder_get_object (builder, ui_id));
-  if (w) g_object_set_data (G_OBJECT (page->box), data_key, w);
+  (void) spin;
+  apply_freq_limits (page);
 }
 
 /* ---- Constructor ---- */
@@ -1089,11 +1009,10 @@ cpu_page_new (void)
   page->monitor_graph = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_monitor_graph"));
   GtkWidget *monitor_left = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_monitor_left"));
 
-  /* Connect graph draw function */
   gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (page->monitor_graph),
     cpu_monitor_graph_draw, page, NULL);
 
-  /* Build monitor metric legend rows */
+  /* Build monitor legend rows */
   static const char *default_labels[CPU_MON_METRICS] = { "—", "—", "—", "—" };
   for (int i = 0; i < CPU_MON_METRICS; i++)
     {
@@ -1101,26 +1020,22 @@ cpu_page_new (void)
       gtk_widget_set_margin_start (row, 8);
       gtk_widget_set_margin_end (row, 8);
 
-      /* Colored dot */
       GtkWidget *dot = gtk_drawing_area_new ();
       gtk_widget_set_size_request (dot, 10, 10);
       gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (dot),
         cpu_metric_dot_draw, GINT_TO_POINTER (i), NULL);
       gtk_box_append (GTK_BOX (row), dot);
 
-      /* Metric name */
       page->monitor_labels[i] = gtk_label_new (cpu_metric_names[i]);
       gtk_widget_set_halign (page->monitor_labels[i], GTK_ALIGN_START);
       gtk_widget_set_hexpand (page->monitor_labels[i], TRUE);
       gtk_box_append (GTK_BOX (row), page->monitor_labels[i]);
 
-      /* Metric value */
       page->monitor_values[i] = gtk_label_new (default_labels[i]);
       gtk_widget_set_halign (page->monitor_values[i], GTK_ALIGN_END);
       gtk_label_set_width_chars (GTK_LABEL (page->monitor_values[i]), 12);
       gtk_box_append (GTK_BOX (row), page->monitor_values[i]);
 
-      /* Units */
       GtkWidget *unit_lbl = gtk_label_new (cpu_metric_units[i]);
       gtk_widget_set_halign (unit_lbl, GTK_ALIGN_START);
       gtk_label_set_width_chars (GTK_LABEL (unit_lbl), 4);
@@ -1129,30 +1044,34 @@ cpu_page_new (void)
       gtk_box_append (GTK_BOX (monitor_left), row);
     }
 
+  /* Specifications rows */
+  page->socket_row    = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-socket-row"));
+  page->arch_row      = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-arch-row"));
+  page->family_row    = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-family-row"));
+  page->cores_row     = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-cores-row"));
+  page->bogomips_row  = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-bogomips-row"));
+  page->microcode_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-microcode-row"));
+  page->base_freq_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-base-freq-row"));
+  page->boost_freq_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-boost-freq-row"));
+  page->flags_row     = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-flags-row"));
+
+  /* Cache rows */
+  page->l1d_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-l1d-row"));
+  page->l1i_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-l1i-row"));
+  page->l2_row  = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-l2-row"));
+  page->l3_row  = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cpu-l3-row"));
+
+  /* Vulnerabilities group */
+  page->vulns_group = ADW_PREFERENCES_GROUP (gtk_builder_get_object (builder, "cpu-vulns-section"));
+
   /* CPU control */
   page->governor_dropdown = GTK_WIDGET (gtk_builder_get_object (builder, "governor-dropdown"));
-  page->governor_current_label = GTK_WIDGET (gtk_builder_get_object (builder, "governor-current-label"));
-  page->min_freq_spin = GTK_WIDGET (gtk_builder_get_object (builder, "min-freq-spin"));
-  page->max_freq_spin = GTK_WIDGET (gtk_builder_get_object (builder, "max-freq-spin"));
-  page->cur_freq_label = GTK_WIDGET (gtk_builder_get_object (builder, "cur-freq-label"));
-  page->save_btn = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-save-btn"));
+  page->governor_row      = ADW_ACTION_ROW (gtk_builder_get_object (builder, "governor-row"));
+  page->min_freq_spin        = GTK_WIDGET (gtk_builder_get_object (builder, "min-freq-spin"));
+  page->max_freq_spin        = GTK_WIDGET (gtk_builder_get_object (builder, "max-freq-spin"));
+  page->cur_freq_row         = ADW_ACTION_ROW (gtk_builder_get_object (builder, "cur-freq-row"));
 
-  /* Store all spec/cache label references on page->box */
-  store_widget_ref (page, builder, "cpu-socket-label",        "cpu-socket-label");
-  store_widget_ref (page, builder, "cpu-arch-label",          "cpu-arch-label");
-  store_widget_ref (page, builder, "cpu-family-label",        "cpu-family-label");
-  store_widget_ref (page, builder, "cpu-cores-threads-label", "cpu-cores-threads-label");
-  store_widget_ref (page, builder, "cpu-bogomips-label",      "cpu-bogomips-label");
-  store_widget_ref (page, builder, "cpu-microcode-label",     "cpu-microcode-label");
-  store_widget_ref (page, builder, "cpu-base-freq-label",     "cpu-base-freq-label");
-  store_widget_ref (page, builder, "cpu-boost-freq-label",    "cpu-boost-freq-label");
-  store_widget_ref (page, builder, "cpu-flags-label",         "cpu-flags-label");
-  store_widget_ref (page, builder, "cpu-l1d-label",           "cpu-l1d-label");
-  store_widget_ref (page, builder, "cpu-l1i-label",           "cpu-l1i-label");
-  store_widget_ref (page, builder, "cpu-l2-label",            "cpu-l2-label");
-  store_widget_ref (page, builder, "cpu-l3-label",            "cpu-l3-label");
-
-  /* Collect static data first (governors, freq, vulnerabilities) */
+  /* Collect static data first */
   collect_cpu_info (page);
 
   /* Dynamic governor dropdown */
@@ -1160,16 +1079,13 @@ cpu_page_new (void)
     GtkStringList *gov_list = GTK_STRING_LIST (
       gtk_builder_get_object (builder, "governor-stringlist"));
 
-    /* Clear default items */
     guint n_items = g_list_model_get_n_items (G_LIST_MODEL (gov_list));
     for (guint i = 0; i < n_items; i++)
       gtk_string_list_remove (gov_list, 0);
 
-    /* Add detected governors */
     for (int i = 0; i < page->n_governors; i++)
       gtk_string_list_append (gov_list, page->available_governors[i]);
 
-    /* Select current governor */
     char cur_gov[64] = {0};
     if (read_file_line ("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
                         cur_gov, sizeof (cur_gov)))
@@ -1185,32 +1101,15 @@ cpu_page_new (void)
       }
   }
 
-  /* Lighting */
-  page->lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-lighting-status"));
-  if (page->lighting_status)
-    gtk_label_set_text (GTK_LABEL (page->lighting_status),
-      tr ("The app couldn't find any light source to manage."));
-
-  GtkWidget *cpu_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-lighting-header"));
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (cpu_lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (on_cpu_openrgb_clicked), page);
-    }
-
-  g_signal_connect (page->save_btn, "clicked", G_CALLBACK (on_cpu_save), page);
+  /* Connect on-change signals — apply immediately, no save button */
+  g_signal_connect (page->governor_dropdown, "notify::selected",
+    G_CALLBACK (on_governor_changed), page);
+  g_signal_connect (page->min_freq_spin, "value-changed",
+    G_CALLBACK (on_min_freq_changed), page);
+  g_signal_connect (page->max_freq_spin, "value-changed",
+    G_CALLBACK (on_max_freq_changed), page);
 
   g_object_ref_sink (page->box);
-
-  /* Store vulns group reference for dynamic row addition */
-  {
-    GtkWidget *vulns_group = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-vulns-section"));
-    if (vulns_group)
-      g_object_set_data (G_OBJECT (page->box), "cpu-vulns-group", vulns_group);
-  }
 
   /* Populate all labels */
   populate_cpu_labels (page);

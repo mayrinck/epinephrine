@@ -80,7 +80,7 @@
               </object>
             </child>
 
-            <!-- ===== Monitor Group ===== -->
+            <!-- ===== Monitor Group (always visible) ===== -->
             <child>
               <object class="AdwPreferencesGroup" id="cpu_monitor_group">
                 <property name="title" translatable="yes">Monitor</property>
@@ -112,282 +112,177 @@
               </object>
             </child>
 
-            <!-- ===== Specifications ===== -->
+            <!-- ===== CPU Management (collapsible — right after monitor) ===== -->
             <child>
-              <object class="AdwPreferencesGroup" id="cpu-specs-section">
-                <property name="title" translatable="yes">Specifications</property>
+              <object class="AdwPreferencesGroup">
                 <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Socket</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-socket-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Architecture</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-arch-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Family / Model / Stepping</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-family-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Cores / Threads</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-cores-threads-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">BogoMIPS</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-bogomips-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Microcode</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-microcode-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Base Frequency</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-base-freq-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Boost Frequency</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-boost-freq-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Instructions</property>
-                    <property name="subtitle" translatable="yes">CPU feature flags</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-flags-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                        <property name="wrap">True</property>
-                        <property name="max-width-chars">60</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <!-- ===== Caches ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="cpu-caches-section">
-                <property name="title" translatable="yes">Caches</property>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">L1 Data</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-l1d-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">L1 Instruction</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-l1i-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">L2</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-l2-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">L3</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cpu-l3-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <!-- ===== Vulnerabilities ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="cpu-vulns-section">
-                <property name="title" translatable="yes">Security</property>
-              </object>
-            </child>
-
-            <!-- ===== CPU Control ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="cpu-governor-section">
-                <property name="title" translatable="yes">CPU Control</property>
-                <child>
-                  <object class="AdwActionRow" id="governor-row">
-                    <property name="title" translatable="yes">Scaling Governor</property>
-                    <property name="subtitle" translatable="yes">Controls how the CPU scales its frequency.</property>
-                    <child type="widget">
-                      <object class="GtkDropDown" id="governor-dropdown">
-                        <property name="model">
-                          <object class="GtkStringList" id="governor-stringlist">
-                            <items>
-                              <item translatable="yes">performance</item>
-                              <item translatable="yes">powersave</item>
-                            </items>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Current Governor</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="governor-current-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Minimum Frequency (kHz)</property>
-                    <child type="widget">
-                      <object class="GtkSpinButton" id="min-freq-spin">
-                        <property name="adjustment">
-                          <object class="GtkAdjustment">
-                            <property name="lower">0</property>
-                            <property name="upper">9999999</property>
-                            <property name="step-increment">100000</property>
-                          </object>
-                        </property>
-                        <property name="width-request">120</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Maximum Frequency (kHz)</property>
-                    <child type="widget">
-                      <object class="GtkSpinButton" id="max-freq-spin">
-                        <property name="adjustment">
-                          <object class="GtkAdjustment">
-                            <property name="lower">0</property>
-                            <property name="upper">9999999</property>
-                            <property name="step-increment">100000</property>
-                          </object>
-                        </property>
-                        <property name="width-request">120</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow">
-                    <property name="title" translatable="yes">Current Frequency</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="cur-freq-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <!-- ===== Lighting Controls ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="cpu-lighting-section">
-                <child>
-                  <object class="GtkBox" id="cpu-lighting-header">
-                    <property name="orientation">horizontal</property>
-                    <property name="spacing">8</property>
-                    <property name="margin-start">8</property>
-                    <property name="margin-end">8</property>
-                    <property name="margin-top">4</property>
+                  <object class="AdwExpanderRow" id="cpu-section-control-toggle">
+                    <property name="title" translatable="yes">CPU Management</property>
+                    <property name="subtitle" translatable="yes">Governor, frequency scaling</property>
                     <child>
-                      <object class="GtkLabel" id="cpu-lighting-title">
-                        <property name="label" translatable="yes">Lighting Controls</property>
-                        <property name="halign">start</property>
-                        <property name="hexpand">True</property>
-                        <style>
-                          <class name="heading"/>
-                        </style>
+                      <object class="AdwActionRow" id="governor-row">
+                        <property name="title" translatable="yes">CPU Governor</property>
+                        <property name="subtitle" translatable="yes">Define how the processes will be managed by the system.</property>
+                        <child type="widget">
+                          <object class="GtkDropDown" id="governor-dropdown">
+                            <property name="width-request">160</property>
+                            <property name="model">
+                              <object class="GtkStringList" id="governor-stringlist">
+                                <items>
+                                  <item translatable="yes">performance</item>
+                                  <item translatable="yes">powersave</item>
+                                </items>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title" translatable="yes">Minimum Frequency (kHz)</property>
+                        <child type="widget">
+                          <object class="GtkSpinButton" id="min-freq-spin">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">0</property>
+                                <property name="upper">9999999</property>
+                                <property name="step-increment">100000</property>
+                              </object>
+                            </property>
+                            <property name="width-request">120</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title" translatable="yes">Maximum Frequency (kHz)</property>
+                        <child type="widget">
+                          <object class="GtkSpinButton" id="max-freq-spin">
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">0</property>
+                                <property name="upper">9999999</property>
+                                <property name="step-increment">100000</property>
+                              </object>
+                            </property>
+                            <property name="width-request">120</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cur-freq-row">
+                        <property name="title" translatable="yes">Current Frequency</property>
                       </object>
                     </child>
                   </object>
                 </child>
+              </object>
+            </child>
+
+            <!-- ===== Specifications (collapsible) ===== -->
+            <child>
+              <object class="AdwPreferencesGroup">
                 <child>
-                  <object class="GtkLabel" id="cpu-lighting-status">
-                    <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="wrap">True</property>
-                    <property name="max-width-chars">60</property>
+                  <object class="AdwExpanderRow" id="cpu-section-specs-toggle">
+                    <property name="title" translatable="yes">Specifications</property>
+                    <property name="subtitle" translatable="yes">Socket, architecture, cores, frequencies</property>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-socket-row">
+                        <property name="title" translatable="yes">Socket</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-arch-row">
+                        <property name="title" translatable="yes">Architecture</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-family-row">
+                        <property name="title" translatable="yes">Family / Model / Stepping</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-cores-row">
+                        <property name="title" translatable="yes">Cores / Threads</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-bogomips-row">
+                        <property name="title" translatable="yes">BogoMIPS</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-microcode-row">
+                        <property name="title" translatable="yes">Microcode</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-base-freq-row">
+                        <property name="title" translatable="yes">Base Frequency</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-boost-freq-row">
+                        <property name="title" translatable="yes">Boost Frequency</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-flags-row">
+                        <property name="title" translatable="yes">Instructions</property>
+                        <property name="subtitle" translatable="yes">CPU feature flags</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- ===== Caches (collapsible) ===== -->
+            <child>
+              <object class="AdwPreferencesGroup">
+                <child>
+                  <object class="AdwExpanderRow" id="cpu-section-caches-toggle">
+                    <property name="title" translatable="yes">Caches</property>
+                    <property name="subtitle" translatable="yes">L1, L2, L3 cache sizes</property>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-l1d-row">
+                        <property name="title" translatable="yes">L1 Data</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-l1i-row">
+                        <property name="title" translatable="yes">L1 Instruction</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-l2-row">
+                        <property name="title" translatable="yes">L2</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="cpu-l3-row">
+                        <property name="title" translatable="yes">L3</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- ===== Security / Vulnerabilities (collapsible) ===== -->
+            <child>
+              <object class="AdwPreferencesGroup">
+                <child>
+                  <object class="AdwExpanderRow" id="cpu-section-security-toggle">
+                    <property name="title" translatable="yes">Security</property>
+                    <property name="subtitle" translatable="yes">CPU vulnerability mitigations</property>
+                    <child>
+                      <object class="AdwPreferencesGroup" id="cpu-vulns-section">
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
@@ -396,24 +291,6 @@
           </object>
         </child>
 
-      </object>
-    </child>
-
-    <child>
-      <object class="GtkActionBar">
-        <property name="margin-top">6</property>
-        <property name="margin-bottom">6</property>
-        <property name="margin-start">6</property>
-        <property name="margin-end">6</property>
-        <child type="center">
-          <object class="GtkButton" id="cpu-save-btn">
-            <property name="label" translatable="yes">Save CPU Configuration</property>
-            <property name="halign">center</property>
-            <style>
-              <class name="suggested-action"/>
-            </style>
-          </object>
-        </child>
       </object>
     </child>
 

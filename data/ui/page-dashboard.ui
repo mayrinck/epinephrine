@@ -27,6 +27,45 @@
             <property name="margin-end">24</property>
             <property name="margin-bottom">12</property>
 
+            <!-- Recent Games header -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="margin-top">4</property>
+                <property name="margin-bottom">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Recent Games</property>
+                    <property name="xalign">0</property>
+                    <property name="hexpand">True</property>
+                    <style>
+                      <class name="title-3"/>
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="see-more-button">
+                    <property name="label" translatable="yes">Go to library</property>
+                    <style>
+                      <class name="flat"/>
+                      <class name="accent-btn"/>
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <!-- Recent games list -->
+            <child>
+              <object class="GtkBox" id="recent-games-box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">8</property>
+                <property name="homogeneous">False</property>
+              </object>
+            </child>
+
+            <!-- Gaming Score (below recent games) -->
             <child>
               <object class="GtkBox" id="gaming-score-box">
                 <property name="orientation">vertical</property>
@@ -210,42 +249,6 @@
             </child>
 
             <child>
-              <object class="GtkBox">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">8</property>
-                <property name="margin-top">4</property>
-                <property name="margin-bottom">4</property>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label" translatable="yes">Recent Games</property>
-                    <property name="xalign">0</property>
-                    <property name="hexpand">True</property>
-                    <style>
-                      <class name="title-3"/>
-                    </style>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkButton" id="see-more-button">
-                    <property name="label" translatable="yes">Go to library</property>
-                    <style>
-                      <class name="flat"/>
-                      <class name="accent-btn"/>
-                    </style>
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <child>
-              <object class="GtkBox" id="recent-games-box">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">8</property>
-                <property name="homogeneous">False</property>
-              </object>
-            </child>
-
-            <child>
               <object class="GtkSeparator">
                 <property name="orientation">horizontal</property>
                 <property name="margin-top">4</property>
@@ -253,14 +256,98 @@
               </object>
             </child>
 
+            <!-- Two-column layout: Hardware Summary + Gaming Components -->
             <child>
-              <object class="GtkFlowBox" id="dash-flowbox">
-                <property name="max-children-per-line">2</property>
-                <property name="min-children-per-line">1</property>
-                <property name="selection-mode">none</property>
-                <property name="homogeneous">True</property>
-                <property name="column-spacing">12</property>
-                <property name="row-spacing">12</property>
+              <object class="GtkBox" id="hw-gaming-columns">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">16</property>
+                <property name="margin-top">4</property>
+
+                <!-- Left column: Hardware Summary -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    <property name="hexpand">True</property>
+
+                    <!-- Hardware Summary header -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <property name="margin-bottom">4</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Hardware Summary</property>
+                            <property name="xalign">0</property>
+                            <property name="hexpand">True</property>
+                            <style>
+                              <class name="title-3"/>
+                            </style>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="hw-goto-button">
+                            <property name="label" translatable="yes">Manage</property>
+                            <style>
+                              <class name="flat"/>
+                              <class name="accent-btn"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Hardware card (no title inside) -->
+                    <child>
+                      <object class="GtkBox" id="hw-card">
+                        <property name="orientation">vertical</property>
+                        <style>
+                          <class name="dashboard-card"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Right column: Gaming Components -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    <property name="hexpand">True</property>
+
+                    <!-- Gaming Components header -->
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <property name="margin-bottom">4</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label" translatable="yes">Gaming Components</property>
+                            <property name="xalign">0</property>
+                            <property name="hexpand">True</property>
+                            <style>
+                              <class name="title-3"/>
+                            </style>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                    <!-- Gaming card (no title inside) -->
+                    <child>
+                      <object class="GtkBox" id="gr-card">
+                        <property name="orientation">vertical</property>
+                        <style>
+                          <class name="dashboard-card"/>
+                        </style>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+
               </object>
             </child>
 

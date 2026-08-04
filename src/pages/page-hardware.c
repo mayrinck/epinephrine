@@ -111,7 +111,10 @@ hardware_page_new (void)
   /* CPU, Keyboard, Mouse sub-pages */
   page->cpu_page = cpu_page_new ();
   if (page->cpu_page)
-    gtk_stack_add_named (page->detail_stack, page->cpu_page->box, "cpu");
+    {
+      gtk_stack_add_named (page->detail_stack, page->cpu_page->box, "cpu");
+      cpu_monitor_start (page->cpu_page);
+    }
 
   page->keyboard_page = keyboard_page_new ();
   if (page->keyboard_page)

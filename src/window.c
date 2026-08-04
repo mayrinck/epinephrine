@@ -7,6 +7,8 @@
 #include "pages/page-utilities.h"
 #include "pages/page-settings.h"
 #include "pages/page-hardware.h"
+#include "pages/hw-monitor.h"
+#include "pages/page-cpu.h"
 #include "epi-privilege.h"
 
 typedef struct
@@ -51,6 +53,13 @@ dashboard_navigate_to_games (void)
 }
 
 void
+dashboard_navigate_to_hardware (void)
+{
+  if (g_epi)
+    adw_view_stack_set_visible_child_name (g_epi->view_stack, "hardware");
+}
+
+void
 epinephrine_retranslate (void)
 {
   if (!g_epi)
@@ -74,6 +83,18 @@ epinephrine_retranslate (void)
     }
 }
 
+void
+eph_restart_monitors (void)
+{
+  if (!g_epi || !g_epi->hw_page)
+    return;
+
+  hw_monitor_restart (g_epi->hw_page);
+
+  if (g_epi->hw_page->cpu_page)
+    cpu_monitor_restart (g_epi->hw_page->cpu_page);
+}
+
 GtkWindow *
 epinephrine_window_new (EpinephrineApplication *app)
 {
@@ -88,6 +109,11 @@ epinephrine_window_new (EpinephrineApplication *app)
   epi->toast_overlay = ADW_TOAST_OVERLAY (gtk_builder_get_object (builder, "toast-overlay"));
 
   epi->dash_page     = dashboard_page_new ();
+
+  /* Load graph speed BEFORE creating hardware page so monitors start with correct speed */
+  extern int g_graph_speed_ms;
+  g_graph_speed_ms = settings_load_graph_speed ();
+
   epi->hw_page       = hardware_page_new ();
   epi->util_page     = utilidades_page_new ();
   epi->settings_page = settings_page_new ();

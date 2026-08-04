@@ -1863,25 +1863,7 @@ on_install_clicked (GtkButton *btn, gpointer data)
   g_timeout_add (5000, restore_install_btn, page);
 }
 
-/* ---- Card builders ---- */
 
-static GtkWidget *
-create_card (const char *title, AdwPreferencesGroup **out_group)
-{
-  GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-  gtk_widget_set_size_request (card, 400, 200);
-  gtk_widget_add_css_class (card, "dashboard-card");
-  gtk_widget_set_hexpand (card, TRUE);
-
-  GtkWidget *group = adw_preferences_group_new ();
-  adw_preferences_group_set_title (ADW_PREFERENCES_GROUP (group), title);
-  gtk_box_append (GTK_BOX (card), group);
-
-  if (out_group)
-    *out_group = ADW_PREFERENCES_GROUP (group);
-
-  return card;
-}
 
 /* ---- Thread-safe data gathering ---- */
 
@@ -2903,6 +2885,13 @@ on_see_more_clicked (GtkButton *btn, gpointer user_data)
 }
 
 static void
+on_hw_goto_clicked (GtkButton *btn, gpointer user_data)
+{
+  (void) btn; (void) user_data;
+  dashboard_navigate_to_hardware ();
+}
+
+static void
 on_gaming_score_details_clicked (GtkButton *btn, DashboardPage *page)
 {
   (void) btn;
@@ -2930,7 +2919,6 @@ dashboard_page_new (void)
   page->box      = GTK_WIDGET (gtk_builder_get_object (builder, "dashboard-page"));
   page->spinner  = GTK_WIDGET (gtk_builder_get_object (builder, "dash-spinner"));
   page->scroll   = GTK_WIDGET (gtk_builder_get_object (builder, "dash-scroll"));
-  page->flowbox  = GTK_FLOW_BOX (gtk_builder_get_object (builder, "dash-flowbox"));
   page->recent_box = GTK_WIDGET (gtk_builder_get_object (builder, "recent-games-box"));
   page->gaming_score_box = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-box"));
   page->gaming_score_label = GTK_WIDGET (gtk_builder_get_object (builder, "gaming-score-label"));
@@ -2950,6 +2938,10 @@ dashboard_page_new (void)
   GtkWidget *see_more_btn = GTK_WIDGET (gtk_builder_get_object (builder, "see-more-button"));
   g_signal_connect (see_more_btn, "clicked", G_CALLBACK (on_see_more_clicked), NULL);
 
+  /* Hardware goto button -> navigate to Hardware tab */
+  GtkWidget *hw_goto_btn = GTK_WIDGET (gtk_builder_get_object (builder, "hw-goto-button"));
+  g_signal_connect (hw_goto_btn, "clicked", G_CALLBACK (on_hw_goto_clicked), NULL);
+
   gtk_spinner_start (GTK_SPINNER (page->spinner));
 
   detected_pm = detect_pm ();
@@ -2958,9 +2950,11 @@ dashboard_page_new (void)
   load_games_config (page);
   refresh_recent_games (page);
 
-  /* Hardware card */
-  AdwPreferencesGroup *hw_group;
-  GtkWidget *hw_card = create_card (tr ("Hardware Summary"), &hw_group);
+  /* Hardware card — get the box from UI and create group without title */
+  GtkWidget *hw_card = GTK_WIDGET (gtk_builder_get_object (builder, "hw-card"));
+  AdwPreferencesGroup *hw_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+  adw_preferences_group_set_title (hw_group, NULL);
+  gtk_box_append (GTK_BOX (hw_card), GTK_WIDGET (hw_group));
   page->hw_group = hw_group;
 
   page->cpu_row = ADW_ACTION_ROW (adw_action_row_new ());
@@ -2987,11 +2981,11 @@ dashboard_page_new (void)
   g_object_set (page->driver_row, "title", tr ("Driver"), "icon-name", "executable-symbolic", NULL);
   adw_preferences_group_add (hw_group, GTK_WIDGET (page->driver_row));
 
-  gtk_flow_box_insert (page->flowbox, hw_card, -1);
-
-  /* Gaming resources card */
-  AdwPreferencesGroup *gr_group;
-  GtkWidget *gr_card = create_card (tr ("Gaming Components"), &gr_group);
+  /* Gaming resources card — get the box from UI and create group without title */
+  GtkWidget *gr_card = GTK_WIDGET (gtk_builder_get_object (builder, "gr-card"));
+  AdwPreferencesGroup *gr_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+  adw_preferences_group_set_title (gr_group, NULL);
+  gtk_box_append (GTK_BOX (gr_card), GTK_WIDGET (gr_group));
 
   for (int i = 0; i < DASHBOARD_N_RESOURCES; i++)
     {
@@ -3063,8 +3057,6 @@ dashboard_page_new (void)
       gtk_widget_set_visible (chk, FALSE);
       gtk_widget_set_visible (inst_lbl, FALSE);
     }
-
-  gtk_flow_box_insert (page->flowbox, gr_card, -1);
 
   /* Show spinner, hide scroll until data is ready */
   gtk_widget_set_visible (page->scroll, FALSE);

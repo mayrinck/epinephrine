@@ -25,6 +25,7 @@ typedef struct
   GtkWidget *monitor_labels[CPU_MON_METRICS];
   GtkWidget *monitor_values[CPU_MON_METRICS];
   guint monitor_timer_id;
+  guint graph_timer_id;
   float monitor_history[CPU_MON_METRICS][CPU_MON_HISTORY];
   int monitor_history_count;
 
@@ -35,13 +36,10 @@ typedef struct
   char *architecture;
   char *bogomips;
   char *microcode;
-  char *bugs_str;
-  char *vulnerabilities[CPU_MAX_VULNS];
-  int n_vulns;
+  char *flags;
   int family;
   int model;
   int stepping;
-  char *flags;
   int cores_physical;
   int threads_total;
   int n_cores;
@@ -58,14 +56,36 @@ typedef struct
   char *l2_cache;
   char *l3_cache;
 
+  /* Vulnerabilities */
+  char *vulnerabilities[CPU_MAX_VULNS];
+  int n_vulns;
+
+  /* Specification rows (AdwActionRow — set via subtitle) */
+  AdwActionRow *socket_row;
+  AdwActionRow *arch_row;
+  AdwActionRow *family_row;
+  AdwActionRow *cores_row;
+  AdwActionRow *bogomips_row;
+  AdwActionRow *microcode_row;
+  AdwActionRow *base_freq_row;
+  AdwActionRow *boost_freq_row;
+  AdwActionRow *flags_row;
+
+  /* Cache rows */
+  AdwActionRow *l1d_row;
+  AdwActionRow *l1i_row;
+  AdwActionRow *l2_row;
+  AdwActionRow *l3_row;
+
+  /* Vulnerabilities group */
+  AdwPreferencesGroup *vulns_group;
+
   /* CPU control */
   GtkWidget *governor_dropdown;
-  GtkWidget *governor_current_label;
+  AdwActionRow *governor_row;
+  AdwActionRow *cur_freq_row;
   GtkWidget *min_freq_spin;
   GtkWidget *max_freq_spin;
-  GtkWidget *cur_freq_label;
-  GtkWidget *save_btn;
-  GtkWidget *lighting_status;
 
   /* Dynamic governor list */
   char *available_governors[CPU_MAX_GOVERNORS];
@@ -77,7 +97,8 @@ typedef struct
 } CpuPage;
 
 CpuPage *cpu_page_new (void);
-void     cpu_monitor_start (CpuPage *page);
-void     cpu_monitor_stop  (CpuPage *page);
+void     cpu_monitor_start  (CpuPage *page);
+void     cpu_monitor_stop   (CpuPage *page);
+void     cpu_monitor_restart (CpuPage *page);
 
 G_END_DECLS

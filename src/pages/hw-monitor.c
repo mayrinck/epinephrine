@@ -96,13 +96,13 @@ hw_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
 
       if (max_pts < 2) continue;
 
-      /* Collect points */
+      /* Fixed-width slots: divide by (120-1) so each point has constant spacing */
       double px[120], py[120];
       for (int i = 0; i < max_pts; i++)
         {
           int idx = (n - max_pts + i) % 120;
           float val = page->monitor_history[m][idx];
-          px[i] = plot_x + (i + 0.5) * plot_w / max_pts;
+          px[i] = plot_x + i * plot_w / 119.0;
           py[i] = plot_y + plot_h * (1.0 - CLAMP (val, 0, 1));
         }
 
@@ -373,7 +373,7 @@ monitor_poll_cb (gpointer user_data)
         }
     }
 
-  /* Update labels and history */
+  /* Update labels every 1s */
   static const char *fmt8[] = {
     "%.0f °C",       /* Temp */
     "%.0f %%",       /* Usage */
@@ -401,27 +401,25 @@ monitor_poll_cb (gpointer user_data)
     "%.0f %%",       /* Fan (percentage on NVIDIA) */
   };
 
-  /* Update labels every 1s (every 2nd call at 500ms interval) */
-  if (page->monitor_history_count % 2 == 0)
-    {
-      gboolean any_data = FALSE;
-      for (int i = 0; i < 8; i++)
-        {
-          page->monitor_avail[i] = ok[i];
-          if (ok[i])
-            {
-              any_data = TRUE;
-              char buf[32];
-              const char *f = page->gpu->has_nvidia_smi ? nvidia_fmt8[i] : fmt8[i];
-              g_snprintf (buf, sizeof (buf), f, vals[i]);
-              gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), buf);
-            }
-          else
-            gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), na[i]);
-        }
-      if (any_data && page->monitor_notice)
-        gtk_widget_set_visible (page->monitor_notice, FALSE);
-    }
+  {
+    gboolean any_data = FALSE;
+    for (int i = 0; i < 8; i++)
+      {
+        page->monitor_avail[i] = ok[i];
+        if (ok[i])
+          {
+            any_data = TRUE;
+            char buf[32];
+            const char *f = page->gpu->has_nvidia_smi ? nvidia_fmt8[i] : fmt8[i];
+            g_snprintf (buf, sizeof (buf), f, vals[i]);
+            gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), buf);
+          }
+        else
+          gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), na[i]);
+      }
+    if (any_data && page->monitor_notice)
+      gtk_widget_set_visible (page->monitor_notice, FALSE);
+  }
 
   /* Store normalized values for graph */
   static const float norm_max[] = {
@@ -441,6 +439,16 @@ monitor_poll_cb (gpointer user_data)
       ? CLAMP (vals[i] / norm_max[i], 0, 1) : 0;
   page->monitor_history_count = n + 1;
 
+  return G_SOURCE_CONTINUE;
+}
+
+/* ---- Graph redraw callback (configurable speed) ---- */
+
+static gboolean
+gpu_graph_redraw_cb (gpointer user_data)
+{
+  HardwarePage *page = user_data;
+  if (!page) return G_SOURCE_REMOVE;
   gtk_widget_queue_draw (page->monitor_graph);
   return G_SOURCE_CONTINUE;
 }
@@ -448,11 +456,45 @@ monitor_poll_cb (gpointer user_data)
 void
 hw_monitor_start (HardwarePage *page)
 {
+  if (!page) return;
+  /* If both timers already running, nothing to do */
+  if (page->monitor_data_timer_id && page->monitor_timer_id) return;
   page->monitor_history_count = 0;
   memset (page->monitor_history, 0, sizeof (page->monitor_history));
-  if (page->monitor_timer_id) return;
-  page->monitor_timer_id = g_timeout_add (500, monitor_poll_cb, page);
+  /* Clean up stale timers before creating new ones */
+  if (page->monitor_data_timer_id)
+    {
+      g_source_remove (page->monitor_data_timer_id);
+      page->monitor_data_timer_id = 0;
+    }
+  if (page->monitor_timer_id)
+    {
+      g_source_remove (page->monitor_timer_id);
+      page->monitor_timer_id = 0;
+    }
+  extern int g_graph_speed_ms;
+  /* Data poll every 1s (ALWAYS 1s, never changes) */
+  page->monitor_data_timer_id = g_timeout_add (1000, monitor_poll_cb, page);
+  /* Graph redraw at configurable speed */
+  page->monitor_timer_id = g_timeout_add (g_graph_speed_ms, gpu_graph_redraw_cb, page);
   monitor_poll_cb (page);
+}
+
+void
+hw_monitor_restart (HardwarePage *page)
+{
+  if (!page) return;
+  if (page->monitor_data_timer_id)
+    {
+      g_source_remove (page->monitor_data_timer_id);
+      page->monitor_data_timer_id = 0;
+    }
+  if (page->monitor_timer_id)
+    {
+      g_source_remove (page->monitor_timer_id);
+      page->monitor_timer_id = 0;
+    }
+  hw_monitor_start (page);
 }
 
 gboolean

@@ -283,6 +283,44 @@ save_full_theme (gboolean enabled)
   g_free (path);
 }
 
+/* ---- Graph Speed ---- */
+
+int g_graph_speed_ms = GRAPH_SPEED_BALANCED_MS; /* default 100ms */
+
+int
+settings_load_graph_speed (void)
+{
+  char *path = get_config_file_path ("graph-speed-ms");
+  char *contents = file_read_all (path);
+  g_free (path);
+
+  if (contents)
+    {
+      int val = atoi (contents);
+      g_free (contents);
+      if (val > 0 && val <= 2500)
+        return val;
+    }
+  return GRAPH_SPEED_BALANCED_MS;
+}
+
+void
+settings_save_graph_speed (int speed_ms)
+{
+  char *path = get_config_file_path ("graph-speed-ms");
+  char *data = g_strdup_printf ("%d", speed_ms);
+  g_file_set_contents (path, data, -1, NULL);
+  g_free (data);
+  g_free (path);
+}
+
+void
+settings_apply_graph_speed (void)
+{
+  extern void eph_restart_monitors (void);
+  eph_restart_monitors ();
+}
+
 /* ---- Language ---- */
 
 char *
@@ -530,6 +568,48 @@ on_theme_toggled (AdwSwitchRow *sw, GParamSpec *pspec, SettingsPage *page)
 }
 
 static void
+on_custom_speed_changed (GtkSpinButton *spin, SettingsPage *page)
+{
+  (void) page;
+  guint sel = adw_combo_row_get_selected (page->graph_speed_combo);
+  if (sel == GRAPH_SPEED_CUSTOM_IDX)
+    {
+      g_graph_speed_ms = (int) gtk_spin_button_get_value (spin);
+      settings_save_graph_speed (g_graph_speed_ms);
+      settings_apply_graph_speed ();
+    }
+}
+
+static void
+on_graph_speed_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
+{
+  (void) pspec;
+  static const int speed_values[] = {
+    GRAPH_SPEED_REALTIME_MS,
+    GRAPH_SPEED_BALANCED_MS,
+    GRAPH_SPEED_POWERSAVE_MS
+  };
+  guint idx = adw_combo_row_get_selected (row);
+
+  /* Show/hide custom row */
+  gboolean is_custom = (idx == GRAPH_SPEED_CUSTOM_IDX);
+  gtk_widget_set_visible (GTK_WIDGET (page->custom_speed_row), is_custom);
+
+  if (idx < G_N_ELEMENTS (speed_values))
+    {
+      g_graph_speed_ms = speed_values[idx];
+      settings_save_graph_speed (g_graph_speed_ms);
+      settings_apply_graph_speed ();
+    }
+  else if (is_custom)
+    {
+      g_graph_speed_ms = (int) gtk_spin_button_get_value (page->custom_speed_spin);
+      settings_save_graph_speed (g_graph_speed_ms);
+      settings_apply_graph_speed ();
+    }
+}
+
+static void
 on_language_changed (AdwToggleGroup *group, GParamSpec *pspec, SettingsPage *page)
 {
   (void) pspec;
@@ -627,6 +707,9 @@ settings_page_new (void)
   page->accent_combo   = ADW_COMBO_ROW (gtk_builder_get_object (builder, "accent-color-row"));
   page->apply_theme_row = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "apply-theme-row"));
   page->language_row   = ADW_ACTION_ROW (gtk_builder_get_object (builder, "language-row"));
+  page->graph_speed_combo = ADW_COMBO_ROW (gtk_builder_get_object (builder, "graph-speed-row"));
+  page->custom_speed_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "custom-speed-row"));
+  page->custom_speed_spin = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "custom-speed-spin"));
 
   page->language_group = ADW_TOGGLE_GROUP (adw_toggle_group_new ());
   adw_toggle_group_set_homogeneous (page->language_group, TRUE);
@@ -637,6 +720,7 @@ settings_page_new (void)
   AccentChoice saved = settings_load_accent ();
   gboolean theme_saved = settings_load_full_theme ();
   char *lang_saved = settings_load_language ();
+  g_graph_speed_ms = settings_load_graph_speed ();
 
   g_signal_connect (page->accent_combo, "notify::selected",
     G_CALLBACK (on_accent_changed), page);
@@ -644,6 +728,10 @@ settings_page_new (void)
     G_CALLBACK (on_theme_toggled), page);
   g_signal_connect (page->language_group, "notify::active",
     G_CALLBACK (on_language_changed), page);
+  g_signal_connect (page->graph_speed_combo, "notify::selected",
+    G_CALLBACK (on_graph_speed_changed), page);
+  g_signal_connect (page->custom_speed_spin, "value-changed",
+    G_CALLBACK (on_custom_speed_changed), page);
 
   adw_combo_row_set_selected (page->accent_combo, saved);
   adw_switch_row_set_active (page->apply_theme_row, theme_saved);
@@ -652,6 +740,24 @@ settings_page_new (void)
   adw_toggle_group_set_active (page->language_group,
     language_index_for_code (lang_saved));
   g_free (lang_saved);
+
+  /* Set graph speed combo to match loaded value */
+  {
+    guint speed_idx = 1; /* default Balanced */
+    if (g_graph_speed_ms == GRAPH_SPEED_REALTIME_MS)
+      speed_idx = 0;
+    else if (g_graph_speed_ms == GRAPH_SPEED_BALANCED_MS)
+      speed_idx = 1;
+    else if (g_graph_speed_ms == GRAPH_SPEED_POWERSAVE_MS)
+      speed_idx = 2;
+    else
+      speed_idx = GRAPH_SPEED_CUSTOM_IDX;
+
+    gtk_spin_button_set_value (page->custom_speed_spin, g_graph_speed_ms);
+    gtk_widget_set_visible (GTK_WIDGET (page->custom_speed_row),
+      speed_idx == GRAPH_SPEED_CUSTOM_IDX);
+    adw_combo_row_set_selected (page->graph_speed_combo, speed_idx);
+  }
 
   settings_update_brand_icon (page, resolve_accent (saved));
 

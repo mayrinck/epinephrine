@@ -123,6 +123,7 @@ typedef struct
 
   /* GPU Monitor */
   guint monitor_timer_id;
+  guint monitor_data_timer_id;
   GtkWidget *monitor_panel;
   GtkWidget *monitor_graph;
   GtkWidget *monitor_notice;

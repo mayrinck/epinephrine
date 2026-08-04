@@ -4,8 +4,11 @@
 
 G_BEGIN_DECLS
 
-/* Start the 500 ms GPU metric poller (idempotent). */
+/* Start the GPU metric poller (idempotent). */
 void hw_monitor_start (HardwarePage *page);
+
+/* Stop and restart the GPU metric poller (for live speed changes). */
+void hw_monitor_restart (HardwarePage *page);
 
 /* 1 s RAM usage poller (timer callback). */
 gboolean hw_ram_monitor_tick (gpointer user_data);
