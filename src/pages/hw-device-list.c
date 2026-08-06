@@ -125,6 +125,12 @@ clear_device_list (HardwarePage *page)
       page->ram_monitor_timer_id = 0;
     }
 
+  if (page->monitor_data_timer_id > 0)
+    {
+      g_source_remove (page->monitor_data_timer_id);
+      page->monitor_data_timer_id = 0;
+    }
+
   if (page->monitor_timer_id > 0)
     {
       g_source_remove (page->monitor_timer_id);
@@ -196,6 +202,11 @@ hw_device_list_on_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_d
   hw_controller_close (page);
 
   /* Stop any active monitors */
+  if (page->monitor_data_timer_id > 0)
+    {
+      g_source_remove (page->monitor_data_timer_id);
+      page->monitor_data_timer_id = 0;
+    }
   if (page->monitor_timer_id > 0)
     {
       g_source_remove (page->monitor_timer_id);

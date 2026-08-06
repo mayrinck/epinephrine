@@ -362,9 +362,6 @@ cpu_monitor_start (CpuPage *page)
   if (!page) return;
   /* If both timers already running, nothing to do */
   if (page->monitor_timer_id && page->graph_timer_id) return;
-  page->monitor_history_count = 0;
-  memset (page->monitor_history, 0, sizeof (page->monitor_history));
-  memset (&page->prev_idle, 0, sizeof (page->prev_idle) + sizeof (page->prev_total));
   /* Clean up stale timers before creating new ones */
   if (page->monitor_timer_id)
     {
@@ -405,6 +402,10 @@ cpu_monitor_restart (CpuPage *page)
 {
   if (!page) return;
   cpu_monitor_stop (page);
+  /* Clear history on explicit restart (e.g. graph speed change) */
+  page->monitor_history_count = 0;
+  memset (page->monitor_history, 0, sizeof (page->monitor_history));
+  memset (&page->prev_idle, 0, sizeof (page->prev_idle) + sizeof (page->prev_total));
   cpu_monitor_start (page);
 }
 

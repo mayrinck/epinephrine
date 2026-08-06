@@ -40,7 +40,7 @@ typedef struct
   AdwActionRow *vram_row;
   AdwActionRow *vulkan_row;
   AdwActionRow *driver_row;
-  AdwPreferencesGroup *hw_group;
+  GtkWidget *hw_box;
   AdwActionRow *storage_rows[8];
   int n_storage_rows;
 

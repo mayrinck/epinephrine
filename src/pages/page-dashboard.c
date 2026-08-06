@@ -2812,7 +2812,7 @@ apply_gathered_data (gpointer data)
                     "title", r->storage_ssd[i] ? tr ("SSD") : tr ("HDD"),
                     "icon-name", r->storage_ssd[i] ? "ssd-symbolic" : "harddisk-symbolic",
                     "subtitle", r->storage[i], NULL);
-      adw_preferences_group_add (page->hw_group, GTK_WIDGET (page->storage_rows[i]));
+      gtk_box_append (GTK_BOX (page->hw_box), GTK_WIDGET (page->storage_rows[i]));
     }
   page->n_storage_rows = r->n_storage;
 
@@ -2950,48 +2950,48 @@ dashboard_page_new (void)
   load_games_config (page);
   refresh_recent_games (page);
 
-  /* Hardware card — get the box from UI and create group without title */
+  /* Hardware card — plain GtkBox (no AdwPreferencesGroup, avoids GtkListView cleanup issues) */
   GtkWidget *hw_card = GTK_WIDGET (gtk_builder_get_object (builder, "hw-card"));
-  AdwPreferencesGroup *hw_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (hw_group, NULL);
-  gtk_box_append (GTK_BOX (hw_card), GTK_WIDGET (hw_group));
-  page->hw_group = hw_group;
+  GtkWidget *hw_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_add_css_class (hw_box, "dashboard-card-group");
+  gtk_box_append (GTK_BOX (hw_card), hw_box);
+  page->hw_box = hw_box;
 
   page->cpu_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->cpu_row, "title", tr ("CPU"), "icon-name", "cpu-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->cpu_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->cpu_row));
 
   page->ram_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->ram_row, "title", tr ("RAM"), "icon-name", "memory-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->ram_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->ram_row));
 
   page->gpu_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->gpu_row, "title", tr ("GPU"), "icon-name", "pci-card-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->gpu_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->gpu_row));
 
   page->vram_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->vram_row, "title", tr ("VRAM"), "icon-name", "memory-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->vram_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->vram_row));
 
   page->vulkan_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->vulkan_row, "title", tr ("Vulkan / OpenGL"), "icon-name", "resource-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->vulkan_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->vulkan_row));
 
   page->driver_row = ADW_ACTION_ROW (adw_action_row_new ());
   g_object_set (page->driver_row, "title", tr ("Driver"), "icon-name", "executable-symbolic", NULL);
-  adw_preferences_group_add (hw_group, GTK_WIDGET (page->driver_row));
+  gtk_box_append (GTK_BOX (hw_box), GTK_WIDGET (page->driver_row));
 
-  /* Gaming resources card — get the box from UI and create group without title */
+  /* Gaming resources card — plain GtkBox */
   GtkWidget *gr_card = GTK_WIDGET (gtk_builder_get_object (builder, "gr-card"));
-  AdwPreferencesGroup *gr_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (gr_group, NULL);
-  gtk_box_append (GTK_BOX (gr_card), GTK_WIDGET (gr_group));
+  GtkWidget *gr_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_add_css_class (gr_box, "dashboard-card-group");
+  gtk_box_append (GTK_BOX (gr_card), gr_box);
 
   for (int i = 0; i < DASHBOARD_N_RESOURCES; i++)
     {
       page->resources[i].row = ADW_ACTION_ROW (adw_action_row_new ());
       g_object_set (page->resources[i].row, "title", RESOURCES[i].name, NULL);
-      adw_preferences_group_add (gr_group, GTK_WIDGET (page->resources[i].row));
+      gtk_box_append (GTK_BOX (gr_box), GTK_WIDGET (page->resources[i].row));
 
       /* Prefix: launcher icon from resource or icon name */
       GtkWidget *pix = NULL;

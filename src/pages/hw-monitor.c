@@ -459,8 +459,6 @@ hw_monitor_start (HardwarePage *page)
   if (!page) return;
   /* If both timers already running, nothing to do */
   if (page->monitor_data_timer_id && page->monitor_timer_id) return;
-  page->monitor_history_count = 0;
-  memset (page->monitor_history, 0, sizeof (page->monitor_history));
   /* Clean up stale timers before creating new ones */
   if (page->monitor_data_timer_id)
     {
@@ -494,6 +492,9 @@ hw_monitor_restart (HardwarePage *page)
       g_source_remove (page->monitor_timer_id);
       page->monitor_timer_id = 0;
     }
+  /* Clear history on explicit restart (e.g. graph speed change) */
+  page->monitor_history_count = 0;
+  memset (page->monitor_history, 0, sizeof (page->monitor_history));
   hw_monitor_start (page);
 }
 

@@ -525,7 +525,7 @@ hw_gpu_detail_build (HardwarePage *page)
   gtk_widget_set_visible (page->monitor_notice, FALSE);
   gtk_box_prepend (GTK_BOX (page->monitor_panel), page->monitor_notice);
   page->gpu_specs_container = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_specs_container"));
-  page->gpu_mgt_group = ADW_PREFERENCES_GROUP (gtk_builder_get_object (builder, "gpu_mgt_group"));
+  page->gpu_mgt_group = ADW_EXPANDER_ROW (gtk_builder_get_object (builder, "gpu-mgt-toggle"));
   page->gpu_lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_lighting_status"));
 
   n_gpu_mgt_rows = 0;
@@ -609,7 +609,7 @@ hw_gpu_detail_build (HardwarePage *page)
       "Forces the GPU to a specific performance level: auto, low power, high performance, or manual."));
     adw_action_row_add_suffix (row, page->perf_level_dropdown);
     g_object_set_data (G_OBJECT (row), "power-id", "perf-level");
-    adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (row));
+    adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (row));
     gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (row);
   }
 
@@ -623,7 +623,7 @@ hw_gpu_detail_build (HardwarePage *page)
     "Selects the clock and power switching heuristic for the GPU."));
   adw_action_row_add_suffix (pp_row, page->power_profile_dd);
   g_object_set_data (G_OBJECT (pp_row), "power-id", "power-profile");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (pp_row));
+  adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (pp_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (pp_row);
 
   /* 3 - Power Limit */
@@ -644,7 +644,7 @@ hw_gpu_detail_build (HardwarePage *page)
       "Sets the maximum power consumption of the GPU in watts."));
     adw_action_row_add_suffix (pl_row, pl_hbox);
     g_object_set_data (G_OBJECT (pl_row), "power-id", "power-limit");
-    adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (pl_row));
+    adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (pl_row));
     gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (pl_row);
   }
 
@@ -683,7 +683,7 @@ hw_gpu_detail_build (HardwarePage *page)
     "Dynamically regulates your game's frame rate based on your movements."));
   adw_action_row_add_suffix (chill_row, page->chill_switch);
   g_object_set_data (G_OBJECT (chill_row), "power-id", "chill");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (chill_row));
+  adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (chill_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (chill_row);
 
   /* 6 - Anti-Lag */
@@ -695,7 +695,7 @@ hw_gpu_detail_build (HardwarePage *page)
     "Reduces input lag by pacing GPU frames."));
 adw_action_row_add_suffix (al_row, page->anti_lag_switch);
   g_object_set_data (G_OBJECT (al_row), "power-id", "anti-lag");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (al_row));
+  adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (al_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (al_row);
 
   /* 7 - Variable Rate Shading */
@@ -716,7 +716,7 @@ adw_action_row_add_suffix (al_row, page->anti_lag_switch);
     "Reduces shading rate to boost performance (AMD RDNA2+ or Intel Arc GPUs)."));
   adw_action_row_add_suffix (vrs_row, page->vrs_switch);
   g_object_set_data (G_OBJECT (vrs_row), "power-id", "vrs");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (vrs_row));
+    adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (vrs_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (vrs_row);
 
   /* 8 - Fan Control */
@@ -730,7 +730,7 @@ adw_action_row_add_suffix (al_row, page->anti_lag_switch);
     "Enables manual fan speed control (PWM). Toggle on to set speed."));
   adw_action_row_add_suffix (fan_row, page->fan_switch);
   g_object_set_data (G_OBJECT (fan_row), "power-id", "fan");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (fan_row));
+  adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (fan_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (fan_row);
 
   /* 9 - Zero RPM Fan Mode */
@@ -754,7 +754,7 @@ adw_action_row_add_suffix (al_row, page->anti_lag_switch);
     "Allows the GPU fan to stop completely when below the temperature threshold."));
   adw_action_row_add_suffix (zr_row, page->zero_rpm_switch);
   g_object_set_data (G_OBJECT (zr_row), "power-id", "zero-rpm");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (zr_row));
+  adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (zr_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (zr_row);
 
   /* 10 - NVIDIA Power Limit */
@@ -773,7 +773,7 @@ adw_action_row_add_suffix (al_row, page->anti_lag_switch);
     "Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi)."));
   adw_action_row_add_suffix (np_row, np_hbox);
   g_object_set_data (G_OBJECT (np_row), "power-id", "nvidia-power");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (np_row));
+    adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (np_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (np_row);
 
   /* 11 - NVIDIA Fan Control */
@@ -788,7 +788,7 @@ adw_action_row_add_suffix (al_row, page->anti_lag_switch);
     "Controls NVIDIA GPU fan speed. Requires CoolBits enabled in nvidia-settings."));
   adw_action_row_add_suffix (nf_row, page->nvidia_fan_switch);
   g_object_set_data (G_OBJECT (nf_row), "power-id", "nvidia-fan");
-  adw_preferences_group_add (page->gpu_mgt_group, GTK_WIDGET (nf_row));
+    adw_expander_row_add_row (page->gpu_mgt_group, GTK_WIDGET (nf_row));
   gpu_mgt_rows[n_gpu_mgt_rows++] = GTK_WIDGET (nf_row);
 
   /* UI file handles specs_group, specs_container and lighting_group */

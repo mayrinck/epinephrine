@@ -977,80 +977,89 @@ hw_controller_build_detail (HardwarePage *page)
   gtk_widget_set_valign (settings_content, GTK_ALIGN_START);
   gtk_widget_set_margin_top (settings_content, 24);
 
-  /* --- Settings group --- */
-  AdwPreferencesGroup *settings_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (settings_group,
-    tr ("Settings"));
+  /* --- Settings group (collapsible) --- */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Settings"));
+    adw_expander_row_set_subtitle (toggle, tr ("Controller configuration options"));
 
-  GtkWidget *settings_placeholder = gtk_label_new (
-    tr ("No settings available yet."));
-  gtk_widget_add_css_class (settings_placeholder, "dim-label");
-  gtk_widget_set_halign (settings_placeholder, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (settings_placeholder, TRUE);
-  adw_preferences_group_add (settings_group, settings_placeholder);
+    GtkWidget *settings_placeholder = gtk_label_new (
+      tr ("No settings available yet."));
+    gtk_widget_add_css_class (settings_placeholder, "dim-label");
+    gtk_widget_set_halign (settings_placeholder, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (settings_placeholder, TRUE);
+    adw_expander_row_add_row (toggle, settings_placeholder);
 
-  gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (settings_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
+  }
 
-  /* --- Specifications group --- */
-  AdwPreferencesGroup *specs_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (specs_group,
-    tr ("Specifications"));
+  /* --- Specifications group (collapsible) --- */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Specifications"));
+    adw_expander_row_set_subtitle (toggle, tr ("Hardware information and capabilities"));
 
-  GtkWidget *specs_placeholder = gtk_label_new (
-    tr ("No specification data available."));
-  gtk_widget_add_css_class (specs_placeholder, "dim-label");
-  gtk_widget_set_halign (specs_placeholder, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (specs_placeholder, TRUE);
-  adw_preferences_group_add (specs_group, specs_placeholder);
+    GtkWidget *specs_placeholder = gtk_label_new (
+      tr ("No specification data available."));
+    gtk_widget_add_css_class (specs_placeholder, "dim-label");
+    gtk_widget_set_halign (specs_placeholder, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (specs_placeholder, TRUE);
+    adw_expander_row_add_row (toggle, specs_placeholder);
 
-  gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (specs_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
+  }
 
-  /* --- Lighting Controls --- */
-  AdwPreferencesGroup *lighting_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  GtkWidget *lighting_header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  GtkWidget *lighting_title = gtk_label_new (
-    tr ("Lighting Controls"));
-  gtk_widget_add_css_class (lighting_title, "heading");
-  gtk_widget_set_halign (lighting_title, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (lighting_title, TRUE);
-  gtk_box_append (GTK_BOX (lighting_header), lighting_title);
+  /* --- Lighting Controls (collapsible) --- */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
+    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
 
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-    }
+    if (g_find_program_in_path ("openrgb"))
+      {
+        GtkWidget *openrgb_btn = gtk_button_new_with_label (
+          tr ("Edit on OpenRGB"));
+        gtk_widget_add_css_class (openrgb_btn, "accent");
+        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
+        adw_expander_row_add_row (toggle, openrgb_btn);
+        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
+      }
 
-  adw_preferences_group_add (lighting_group, lighting_header);
+    GtkWidget *lighting_status = gtk_label_new (
+      tr ("The app couldn't find any light source to manage."));
+    gtk_widget_set_halign (lighting_status, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (lighting_status, TRUE);
+    gtk_label_set_wrap (GTK_LABEL (lighting_status), TRUE);
+    gtk_label_set_max_width_chars (GTK_LABEL (lighting_status), 60);
+    adw_expander_row_add_row (toggle, lighting_status);
 
-  GtkWidget *lighting_status = gtk_label_new (
-    tr ("The app couldn't find any light source to manage."));
-  gtk_widget_set_halign (lighting_status, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (lighting_status, TRUE);
-  gtk_label_set_wrap (GTK_LABEL (lighting_status), TRUE);
-  gtk_label_set_max_width_chars (GTK_LABEL (lighting_status), 60);
-  adw_preferences_group_add (lighting_group, lighting_status);
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
+  }
 
-  gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (lighting_group));
+  /* --- Extra Buttons group (collapsible) --- */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Extra Buttons"));
+    adw_expander_row_set_subtitle (toggle, tr ("Programmable buttons and macros"));
 
-  /* --- Extra Buttons group --- */
-  page->extra_buttons_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (page->extra_buttons_group,
-    tr ("Extra Buttons"));
+    page->extra_buttons_none = gtk_label_new (
+      tr ("No extra buttons detected. "
+        "This controller does not have programmable buttons."));
+    gtk_widget_add_css_class (page->extra_buttons_none, "dim-label");
+    gtk_widget_set_halign (page->extra_buttons_none, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (page->extra_buttons_none, TRUE);
+    adw_expander_row_add_row (toggle, page->extra_buttons_none);
 
-  page->extra_buttons_none = gtk_label_new (
-    tr ("No extra buttons detected. "
-      "This controller does not have programmable buttons."));
-  gtk_widget_add_css_class (page->extra_buttons_none, "dim-label");
-  gtk_widget_set_halign (page->extra_buttons_none, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (page->extra_buttons_none, TRUE);
-  adw_preferences_group_add (page->extra_buttons_group, page->extra_buttons_none);
-
-  gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (page->extra_buttons_group));
+    page->extra_buttons_group = toggle;
+    gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
+  }
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (settings_scroll), settings_content);
   adw_view_stack_add_titled_with_icon (ADW_VIEW_STACK (stack), settings_scroll, "settings",
@@ -1134,7 +1143,7 @@ hw_controller_update_extra_buttons (HardwarePage *page)
 
   if (page->controller_fd < 0)
     {
-      adw_preferences_group_add (page->extra_buttons_group, page->extra_buttons_none);
+      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
       gtk_widget_set_visible (page->extra_buttons_none, TRUE);
       return;
     }
@@ -1142,7 +1151,7 @@ hw_controller_update_extra_buttons (HardwarePage *page)
   unsigned long key_bits[KEY_MAX / (8 * sizeof (unsigned long)) + 1] = {0};
   if (ioctl (page->controller_fd, EVIOCGBIT (EV_KEY, sizeof (key_bits)), key_bits) < 0)
     {
-      adw_preferences_group_add (page->extra_buttons_group, page->extra_buttons_none);
+      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
       gtk_widget_set_visible (page->extra_buttons_none, TRUE);
       return;
     }
@@ -1166,14 +1175,14 @@ hw_controller_update_extra_buttons (HardwarePage *page)
           g_snprintf (subtitle, sizeof (subtitle), "%s (code 0x%x)",
             tr ("Detected"), btns[i].code);
           adw_action_row_set_subtitle (ADW_ACTION_ROW (row), subtitle);
-          adw_preferences_group_add (page->extra_buttons_group,
+          adw_expander_row_add_row (page->extra_buttons_group,
             GTK_WIDGET (row));
         }
     }
 
   if (found == 0)
     {
-      adw_preferences_group_add (page->extra_buttons_group, page->extra_buttons_none);
+      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
       gtk_widget_set_visible (page->extra_buttons_none, TRUE);
     }
 }

@@ -140,8 +140,8 @@ typedef struct
   GtkWidget *nvidia_fan_switch;
   GtkWidget *nvidia_fan_scale;
 
-  /* GPU Management AdwPreferencesGroup */
-  AdwPreferencesGroup *gpu_mgt_group;
+  /* GPU Management AdwExpanderRow (collapsible) */
+  AdwExpanderRow *gpu_mgt_group;
   GtkWidget *gpu_specs_group;
 
   /* New CPU-X style rows for Section 3 */
@@ -180,7 +180,7 @@ typedef struct
   GtkWidget *axis_rx_arcade;
 
   /* Extra buttons settings group */
-  AdwPreferencesGroup *extra_buttons_group;
+  AdwExpanderRow *extra_buttons_group;
   GtkWidget *extra_buttons_none;
 
   /* Motherboard info */

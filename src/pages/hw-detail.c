@@ -333,164 +333,173 @@ hw_detail_build_motherboard (HardwarePage *page)
   gtk_box_append (GTK_BOX (content), branding_box);
 
   /* ======= General Information ======= */
-  AdwPreferencesGroup *gen_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (gen_group,
-    tr ("General Information"));
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("General Information"));
+    adw_expander_row_set_subtitle (toggle, tr ("Board identification"));
 
-  page->mobo_vendor_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_vendor_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_vendor_label, TRUE);
-  AdwActionRow *vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vendor_row), tr ("Vendor"));
-  adw_action_row_add_suffix (vendor_row, page->mobo_vendor_label);
-  adw_preferences_group_add (gen_group, GTK_WIDGET (vendor_row));
+    page->mobo_vendor_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_vendor_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_vendor_label, TRUE);
+    AdwActionRow *vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vendor_row), tr ("Vendor"));
+    adw_action_row_add_suffix (vendor_row, page->mobo_vendor_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (vendor_row));
 
-  page->mobo_model_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_model_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_model_label, TRUE);
-  AdwActionRow *model_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (model_row), tr ("Model"));
-  adw_action_row_add_suffix (model_row, page->mobo_model_label);
-  adw_preferences_group_add (gen_group, GTK_WIDGET (model_row));
+    page->mobo_model_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_model_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_model_label, TRUE);
+    AdwActionRow *model_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (model_row), tr ("Model"));
+    adw_action_row_add_suffix (model_row, page->mobo_model_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (model_row));
 
-  page->mobo_revision_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_revision_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_revision_label, TRUE);
-  AdwActionRow *revision_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (revision_row), tr ("Revision"));
-  adw_action_row_add_suffix (revision_row, page->mobo_revision_label);
-  adw_preferences_group_add (gen_group, GTK_WIDGET (revision_row));
+    page->mobo_revision_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_revision_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_revision_label, TRUE);
+    AdwActionRow *revision_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (revision_row), tr ("Revision"));
+    adw_action_row_add_suffix (revision_row, page->mobo_revision_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (revision_row));
 
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (gen_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   /* ======= BIOS Information ======= */
-  AdwPreferencesGroup *bios_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (bios_group,
-    tr ("BIOS Information"));
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("BIOS Information"));
+    adw_expander_row_set_subtitle (toggle, tr ("Firmware details"));
 
-  page->mobo_bios_manufacturer_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_bios_manufacturer_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_bios_manufacturer_label, TRUE);
-  AdwActionRow *bios_mfg_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_mfg_row), tr ("Manufacturer"));
-  adw_action_row_add_suffix (bios_mfg_row, page->mobo_bios_manufacturer_label);
-  adw_preferences_group_add (bios_group, GTK_WIDGET (bios_mfg_row));
+    page->mobo_bios_manufacturer_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_bios_manufacturer_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_bios_manufacturer_label, TRUE);
+    AdwActionRow *bios_mfg_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_mfg_row), tr ("Manufacturer"));
+    adw_action_row_add_suffix (bios_mfg_row, page->mobo_bios_manufacturer_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (bios_mfg_row));
 
-  page->mobo_bios_detail_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_bios_detail_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_bios_detail_label, TRUE);
-  AdwActionRow *bios_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_row), tr ("Version"));
-  adw_action_row_add_suffix (bios_row, page->mobo_bios_detail_label);
-  adw_preferences_group_add (bios_group, GTK_WIDGET (bios_row));
+    page->mobo_bios_detail_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_bios_detail_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_bios_detail_label, TRUE);
+    AdwActionRow *bios_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_row), tr ("Version"));
+    adw_action_row_add_suffix (bios_row, page->mobo_bios_detail_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (bios_row));
 
-  page->mobo_bios_date_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_bios_date_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_bios_date_label, TRUE);
-  AdwActionRow *bios_date_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_date_row), tr ("Date"));
-  adw_action_row_add_suffix (bios_date_row, page->mobo_bios_date_label);
-  adw_preferences_group_add (bios_group, GTK_WIDGET (bios_date_row));
+    page->mobo_bios_date_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_bios_date_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_bios_date_label, TRUE);
+    AdwActionRow *bios_date_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (bios_date_row), tr ("Date"));
+    adw_action_row_add_suffix (bios_date_row, page->mobo_bios_date_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (bios_date_row));
 
-  page->mobo_bios_romsize_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_bios_romsize_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_bios_romsize_label, TRUE);
-  AdwActionRow *romsize_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (romsize_row), tr ("ROM Size"));
-  adw_action_row_add_suffix (romsize_row, page->mobo_bios_romsize_label);
-  adw_preferences_group_add (bios_group, GTK_WIDGET (romsize_row));
+    page->mobo_bios_romsize_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_bios_romsize_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_bios_romsize_label, TRUE);
+    AdwActionRow *romsize_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (romsize_row), tr ("ROM Size"));
+    adw_action_row_add_suffix (romsize_row, page->mobo_bios_romsize_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (romsize_row));
 
-  page->mobo_bios_efi_pk_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_bios_efi_pk_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_bios_efi_pk_label, TRUE);
-  gtk_label_set_selectable (GTK_LABEL (page->mobo_bios_efi_pk_label), TRUE);
-  AdwActionRow *efi_pk_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (efi_pk_row), tr ("EFI PK"));
-  adw_action_row_add_suffix (efi_pk_row, page->mobo_bios_efi_pk_label);
-  adw_preferences_group_add (bios_group, GTK_WIDGET (efi_pk_row));
+    page->mobo_bios_efi_pk_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_bios_efi_pk_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_bios_efi_pk_label, TRUE);
+    gtk_label_set_selectable (GTK_LABEL (page->mobo_bios_efi_pk_label), TRUE);
+    AdwActionRow *efi_pk_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (efi_pk_row), tr ("EFI PK"));
+    adw_action_row_add_suffix (efi_pk_row, page->mobo_bios_efi_pk_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (efi_pk_row));
 
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (bios_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   /* ======= Chipset ======= */
-  AdwPreferencesGroup *chipset_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (chipset_group,
-    tr ("Chipset"));
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Chipset"));
+    adw_expander_row_set_subtitle (toggle, tr ("Platform controller hub"));
 
-  page->mobo_chipset_vendor_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_chipset_vendor_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_chipset_vendor_label, TRUE);
-  AdwActionRow *cs_vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_vendor_row), tr ("Provider"));
-  adw_action_row_add_suffix (cs_vendor_row, page->mobo_chipset_vendor_label);
-  adw_preferences_group_add (chipset_group, GTK_WIDGET (cs_vendor_row));
+    page->mobo_chipset_vendor_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_chipset_vendor_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_chipset_vendor_label, TRUE);
+    AdwActionRow *cs_vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_vendor_row), tr ("Provider"));
+    adw_action_row_add_suffix (cs_vendor_row, page->mobo_chipset_vendor_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (cs_vendor_row));
 
-  page->mobo_chipset_model_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->mobo_chipset_model_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->mobo_chipset_model_label, TRUE);
-  AdwActionRow *cs_model_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_model_row), tr ("Model"));
-  adw_action_row_add_suffix (cs_model_row, page->mobo_chipset_model_label);
-  adw_preferences_group_add (chipset_group, GTK_WIDGET (cs_model_row));
+    page->mobo_chipset_model_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->mobo_chipset_model_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->mobo_chipset_model_label, TRUE);
+    AdwActionRow *cs_model_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (cs_model_row), tr ("Model"));
+    adw_action_row_add_suffix (cs_model_row, page->mobo_chipset_model_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (cs_model_row));
 
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (chipset_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   /* ===== Motherboard Management ===== */
-  AdwPreferencesGroup *mgt_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (mgt_group,
-    tr ("Motherboard Management"));
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Motherboard Management"));
+    adw_expander_row_set_subtitle (toggle, tr ("SMBus and management"));
 
-  page->mobo_smbus_toggle = gtk_switch_new ();
-  page->mobo_smbus_desc = gtk_label_new ("");
-  gtk_widget_set_halign (page->mobo_smbus_desc, GTK_ALIGN_END);
-  AdwActionRow *smbus_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (smbus_row), tr ("Unlock SMBus"));
-  adw_action_row_set_subtitle (smbus_row,
-    tr (
-      "Unlocks the SMBus controller for direct memory access by software like OpenRGB."));
-  gtk_widget_set_valign (page->mobo_smbus_toggle, GTK_ALIGN_CENTER);
-  adw_action_row_add_suffix (smbus_row, page->mobo_smbus_desc);
-  adw_action_row_add_suffix (smbus_row, page->mobo_smbus_toggle);
-  adw_preferences_group_add (mgt_group, GTK_WIDGET (smbus_row));
+    page->mobo_smbus_toggle = gtk_switch_new ();
+    page->mobo_smbus_desc = gtk_label_new ("");
+    gtk_widget_set_halign (page->mobo_smbus_desc, GTK_ALIGN_END);
+    AdwActionRow *smbus_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (smbus_row), tr ("Unlock SMBus"));
+    adw_action_row_set_subtitle (smbus_row,
+      tr (
+        "Unlocks the SMBus controller for direct memory access by software like OpenRGB."));
+    gtk_widget_set_valign (page->mobo_smbus_toggle, GTK_ALIGN_CENTER);
+    adw_action_row_add_suffix (smbus_row, page->mobo_smbus_desc);
+    adw_action_row_add_suffix (smbus_row, page->mobo_smbus_toggle);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (smbus_row));
 
-  g_signal_connect (page->mobo_smbus_toggle, "notify::active",
-    G_CALLBACK (on_smbus_toggled), page);
+    g_signal_connect (page->mobo_smbus_toggle, "notify::active",
+      G_CALLBACK (on_smbus_toggled), page);
 
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (mgt_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   /* ====== Lighting Controls ====== */
-  AdwPreferencesGroup *lighting_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
+    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
 
-  GtkWidget *mobo_lighting_header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  gtk_widget_set_margin_start (mobo_lighting_header, 8);
-  gtk_widget_set_margin_end (mobo_lighting_header, 8);
-  gtk_widget_set_margin_top (mobo_lighting_header, 4);
-  GtkWidget *mobo_lighting_title = gtk_label_new (
-    tr ("Lighting Controls"));
-  gtk_widget_add_css_class (mobo_lighting_title, "heading");
-  gtk_widget_set_halign (mobo_lighting_title, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (mobo_lighting_title, TRUE);
-  gtk_box_append (GTK_BOX (mobo_lighting_header), mobo_lighting_title);
+    if (g_find_program_in_path ("openrgb"))
+      {
+        GtkWidget *openrgb_btn = gtk_button_new_with_label (
+          tr ("Edit on OpenRGB"));
+        gtk_widget_add_css_class (openrgb_btn, "accent");
+        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
+        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
+        adw_expander_row_add_row (toggle, openrgb_btn);
+      }
 
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (mobo_lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-    }
+    page->mobo_lighting_status = gtk_label_new ("");
+    gtk_widget_set_halign (page->mobo_lighting_status, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (page->mobo_lighting_status, TRUE);
+    gtk_label_set_wrap (GTK_LABEL (page->mobo_lighting_status), TRUE);
+    gtk_label_set_max_width_chars (GTK_LABEL (page->mobo_lighting_status), 60);
+    adw_expander_row_add_row (toggle, page->mobo_lighting_status);
 
-  adw_preferences_group_add (lighting_group, mobo_lighting_header);
-
-  page->mobo_lighting_status = gtk_label_new ("");
-  gtk_widget_set_halign (page->mobo_lighting_status, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (page->mobo_lighting_status, TRUE);
-  gtk_label_set_wrap (GTK_LABEL (page->mobo_lighting_status), TRUE);
-  gtk_label_set_max_width_chars (GTK_LABEL (page->mobo_lighting_status), 60);
-  adw_preferences_group_add (lighting_group, page->mobo_lighting_status);
-
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (lighting_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (page->mobo_detail_box), content);
   gtk_stack_add_named (page->detail_stack, page->mobo_detail_box, "motherboard");
@@ -534,78 +543,75 @@ hw_detail_build_rams (HardwarePage *page)
   gtk_box_append (GTK_BOX (content), branding_box);
 
   /* ====== Memory Usage Group ====== */
-  AdwPreferencesGroup *usage_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-  adw_preferences_group_set_title (usage_group,
-    tr ("Memory Usage"));
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Memory Usage"));
+    adw_expander_row_set_subtitle (toggle, tr ("RAM utilization"));
 
-  page->ram_total_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->ram_total_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->ram_total_label, TRUE);
-  AdwActionRow *total_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (total_row), tr ("Total Memory"));
-  adw_action_row_add_suffix (total_row, page->ram_total_label);
-  adw_preferences_group_add (usage_group, GTK_WIDGET (total_row));
+    page->ram_total_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->ram_total_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->ram_total_label, TRUE);
+    AdwActionRow *total_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (total_row), tr ("Total Memory"));
+    adw_action_row_add_suffix (total_row, page->ram_total_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (total_row));
 
-  page->ram_used_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->ram_used_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->ram_used_label, TRUE);
-  AdwActionRow *used_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (used_row), tr ("Usage"));
-  adw_action_row_add_suffix (used_row, page->ram_used_label);
-  adw_preferences_group_add (usage_group, GTK_WIDGET (used_row));
+    page->ram_used_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->ram_used_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->ram_used_label, TRUE);
+    AdwActionRow *used_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (used_row), tr ("Usage"));
+    adw_action_row_add_suffix (used_row, page->ram_used_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (used_row));
 
-  page->ram_tech_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->ram_tech_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->ram_tech_label, TRUE);
-  AdwActionRow *tech_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (tech_row), tr ("Technology"));
-  adw_action_row_add_suffix (tech_row, page->ram_tech_label);
-  adw_preferences_group_add (usage_group, GTK_WIDGET (tech_row));
+    page->ram_tech_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->ram_tech_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->ram_tech_label, TRUE);
+    AdwActionRow *tech_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (tech_row), tr ("Technology"));
+    adw_action_row_add_suffix (tech_row, page->ram_tech_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (tech_row));
 
-  page->ram_freq_label = gtk_label_new ("—");
-  gtk_widget_set_halign (page->ram_freq_label, GTK_ALIGN_END);
-  gtk_widget_set_hexpand (page->ram_freq_label, TRUE);
-  AdwActionRow *freq_row = ADW_ACTION_ROW (adw_action_row_new ());
-  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (freq_row), tr ("RAM Frequency"));
-  adw_action_row_add_suffix (freq_row, page->ram_freq_label);
-  adw_preferences_group_add (usage_group, GTK_WIDGET (freq_row));
+    page->ram_freq_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->ram_freq_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->ram_freq_label, TRUE);
+    AdwActionRow *freq_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (freq_row), tr ("RAM Frequency"));
+    adw_action_row_add_suffix (freq_row, page->ram_freq_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (freq_row));
 
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (usage_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   /* ====== Lighting Controls Group ====== */
-  AdwPreferencesGroup *lighting_group = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
+    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
 
-  GtkWidget *ram_lighting_header = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-  gtk_widget_set_margin_start (ram_lighting_header, 8);
-  gtk_widget_set_margin_end (ram_lighting_header, 8);
-  gtk_widget_set_margin_top (ram_lighting_header, 4);
-  GtkWidget *ram_lighting_title = gtk_label_new (
-    tr ("Lighting Controls"));
-  gtk_widget_add_css_class (ram_lighting_title, "heading");
-  gtk_widget_set_halign (ram_lighting_title, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (ram_lighting_title, TRUE);
-  gtk_box_append (GTK_BOX (ram_lighting_header), ram_lighting_title);
+    if (g_find_program_in_path ("openrgb"))
+      {
+        GtkWidget *openrgb_btn = gtk_button_new_with_label (
+          tr ("Edit on OpenRGB"));
+        gtk_widget_add_css_class (openrgb_btn, "accent");
+        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
+        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
+        adw_expander_row_add_row (toggle, openrgb_btn);
+      }
 
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (ram_lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-    }
+    page->ram_lighting_status = gtk_label_new ("");
+    gtk_widget_set_halign (page->ram_lighting_status, GTK_ALIGN_START);
+    gtk_widget_set_hexpand (page->ram_lighting_status, TRUE);
+    gtk_label_set_wrap (GTK_LABEL (page->ram_lighting_status), TRUE);
+    gtk_label_set_max_width_chars (GTK_LABEL (page->ram_lighting_status), 60);
+    adw_expander_row_add_row (toggle, page->ram_lighting_status);
 
-  adw_preferences_group_add (lighting_group, ram_lighting_header);
-
-  page->ram_lighting_status = gtk_label_new ("");
-  gtk_widget_set_halign (page->ram_lighting_status, GTK_ALIGN_START);
-  gtk_widget_set_hexpand (page->ram_lighting_status, TRUE);
-  gtk_label_set_wrap (GTK_LABEL (page->ram_lighting_status), TRUE);
-  gtk_label_set_max_width_chars (GTK_LABEL (page->ram_lighting_status), 60);
-  adw_preferences_group_add (lighting_group, page->ram_lighting_status);
-
-  gtk_box_append (GTK_BOX (content), GTK_WIDGET (lighting_group));
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (page->ram_detail_box), content);
   gtk_stack_add_named (page->detail_stack, page->ram_detail_box, "ram");
