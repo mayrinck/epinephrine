@@ -2,9 +2,12 @@
 #include "command-builder.h"
 #include "page-dashboard.h"
 #include "epi-privilege.h"
+#include "../epi-i18n.h"
 
 #include <string.h>
 #include <fcntl.h>
+
+#define tr(x) epi_i18n_get (x)
 
 static const char *SCALER_VALUES[] = { "auto", "integer", "fit", "fill", "stretch" };
 static const char *FILTER_VALUES[] = { "linear", "nearest", "fsr", "nis", "pixel" };
@@ -162,8 +165,132 @@ on_restore_defaults_clicked (GtkButton *button, GamescopePage *page)
   gtk_editable_set_text (GTK_EDITABLE (page->reshade_effect), "");
   adw_spin_row_set_value (page->reshade_technique_idx, 0);
 
-  dashboard_show_toast ("Defaults restored (not saved)");
+  dashboard_show_toast (tr("Defaults restored (not saved)"));
   update_command (page);
+}
+
+static void
+set_combo_by_value (AdwComboRow *row, const char *value,
+                    const char *const *values, guint n)
+{
+  for (guint i = 0; i < n; i++)
+    if (g_strcmp0 (values[i], value) == 0)
+      {
+        adw_combo_row_set_selected (row, i);
+        return;
+      }
+}
+
+static void
+apply_command_to_widgets (GamescopePage *page, const char *command)
+{
+  if (!command || !command[0]) return;
+
+  char *dup = g_strdup (command);
+  g_strstrip (dup);
+  char **toks = g_strsplit (dup, " ", -1);
+  gboolean in_app = FALSE;
+
+  for (int i = 0; toks[i]; i++)
+    {
+      const char *t = toks[i];
+      if (t[0] == '\0') continue;
+      if (strcmp (t, "gamescope") == 0) continue;
+      if (strcmp (t, "--") == 0) { in_app = TRUE; continue; }
+      if (in_app) break;
+
+      const char *val = toks[i + 1];
+
+      if      (g_strcmp0 (t, "-W") == 0)
+        { if (val) adw_spin_row_set_value (page->output_width, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-H") == 0)
+        { if (val) adw_spin_row_set_value (page->output_height, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-w") == 0)
+        { if (val) adw_spin_row_set_value (page->nested_width, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-h") == 0)
+        { if (val) adw_spin_row_set_value (page->nested_height, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-r") == 0)
+        { if (val) adw_spin_row_set_value (page->nested_refresh, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-o") == 0)
+        { if (val) adw_spin_row_set_value (page->nested_unfocused_refresh, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-S") == 0)
+        { if (val) set_combo_by_value (page->scaler, val, SCALER_VALUES, G_N_ELEMENTS (SCALER_VALUES)); i++; }
+      else if (g_strcmp0 (t, "-F") == 0)
+        { if (val) set_combo_by_value (page->filter, val, FILTER_VALUES, G_N_ELEMENTS (FILTER_VALUES)); i++; }
+      else if (g_strcmp0 (t, "--sharpness") == 0)
+        { if (val) gtk_range_set_value (page->sharpness, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-m") == 0)
+        { if (val) adw_spin_row_set_value (page->max_scale, g_ascii_strtod (val, NULL)); i++; }
+      else if (g_strcmp0 (t, "--framerate-limit") == 0)
+        { if (val) adw_spin_row_set_value (page->framerate_limit, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-f") == 0)
+        adw_switch_row_set_active (page->fullscreen, TRUE);
+      else if (g_strcmp0 (t, "-b") == 0)
+        adw_switch_row_set_active (page->borderless, TRUE);
+      else if (g_strcmp0 (t, "--display-index") == 0)
+        { if (val) adw_spin_row_set_value (page->display_index, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "--backend") == 0)
+        { if (val) set_combo_by_value (page->backend, val, BACKEND_VALUES, G_N_ELEMENTS (BACKEND_VALUES)); i++; }
+      else if (g_strcmp0 (t, "--adaptive-sync") == 0)
+        adw_switch_row_set_active (page->adaptive_sync, TRUE);
+      else if (g_strcmp0 (t, "-e") == 0)
+        adw_switch_row_set_active (page->steam_integration, TRUE);
+      else if (g_strcmp0 (t, "-g") == 0)
+        adw_switch_row_set_active (page->grab_keyboard, TRUE);
+      else if (g_strcmp0 (t, "--force-grab-cursor") == 0)
+        adw_switch_row_set_active (page->force_grab_cursor, TRUE);
+      else if (g_strcmp0 (t, "--expose-wayland") == 0)
+        adw_switch_row_set_active (page->expose_wayland, TRUE);
+      else if (g_strcmp0 (t, "--mangoapp") == 0)
+        adw_switch_row_set_active (page->mangoapp, TRUE);
+      else if (g_strcmp0 (t, "--immediate-flips") == 0)
+        adw_switch_row_set_active (page->immediate_flips, TRUE);
+      else if (g_strcmp0 (t, "--keep-alive") == 0)
+        adw_switch_row_set_active (page->keep_alive, TRUE);
+      else if (g_strcmp0 (t, "--force-orientation") == 0)
+        { if (val) set_combo_by_value (page->force_orientation, val, ORIENTATION_VALUES, G_N_ELEMENTS (ORIENTATION_VALUES)); i++; }
+      else if (g_strcmp0 (t, "-O") == 0)
+        { if (val) gtk_editable_set_text (GTK_EDITABLE (page->prefer_output), val); i++; }
+      else if (g_strcmp0 (t, "--cursor-scale-height") == 0)
+        { if (val) adw_spin_row_set_value (page->cursor_scale_height, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "-s") == 0)
+        { if (val) adw_spin_row_set_value (page->mouse_sensitivity, g_ascii_strtod (val, NULL)); i++; }
+      else if (g_strcmp0 (t, "--hdr-enabled") == 0)
+        adw_switch_row_set_active (page->hdr_enabled, TRUE);
+      else if (g_strcmp0 (t, "--hdr-sdr-content-nits") == 0)
+        { if (val) adw_spin_row_set_value (page->hdr_sdr_content_nits, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "--hdr-itm-enabled") == 0)
+        adw_switch_row_set_active (page->hdr_itm_enabled, TRUE);
+      else if (g_strcmp0 (t, "--hdr-itm-sdr-nits") == 0)
+        { if (val) adw_spin_row_set_value (page->hdr_itm_sdr_nits, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "--hdr-itm-target-nits") == 0)
+        { if (val) adw_spin_row_set_value (page->hdr_itm_target_nits, atoi (val)); i++; }
+      else if (g_strcmp0 (t, "--sdr-gamut-wideness") == 0)
+        { if (val) gtk_range_set_value (page->sdr_gamut_wideness, g_ascii_strtod (val, NULL)); i++; }
+      else if (g_strcmp0 (t, "--reshade-effect") == 0)
+        { if (val) gtk_editable_set_text (GTK_EDITABLE (page->reshade_effect), val); i++; }
+      else if (g_strcmp0 (t, "--reshade-technique-idx") == 0)
+        { if (val) adw_spin_row_set_value (page->reshade_technique_idx, atoi (val)); i++; }
+    }
+
+  g_strfreev (toks);
+  g_free (dup);
+}
+
+static void
+on_load_defaults_clicked (GtkButton *button, GamescopePage *page)
+{
+  (void) button;
+  char *content = NULL;
+  if (!g_file_get_contents ("/etc/gamescope/epinephrine.conf", &content, NULL, NULL))
+    {
+      dashboard_show_toast (tr("No saved configuration found"));
+      return;
+    }
+  apply_command_to_widgets (page, content);
+  g_free (content);
+  update_command (page);
+  dashboard_show_toast (tr("Loaded saved configuration"));
 }
 
 static void
@@ -175,58 +302,46 @@ on_save_defaults_clicked (GtkButton *button, GamescopePage *page)
   command_builder_build (settings, &command);
   free_settings (settings);
 
-  g_mkdir_with_parents ("/etc/gamescope", 0755);
-
-  GError *err = NULL;
-  if (g_file_set_contents ("/etc/gamescope/epinephrine.conf", command, -1, &err))
+  /* /etc/gamescope is root-owned: write through the admin session */
+  char tmp_path[] = "/tmp/gamescope-conf-XXXXXX";
+  int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd < 0)
     {
-      dashboard_show_toast ("Saved to /etc/gamescope/epinephrine.conf");
+      dashboard_show_toast (tr("Failed to create temp file for elevation"));
+      g_free (command);
+      return;
+    }
+
+  FILE *f = fdopen (fd, "w");
+  if (f)
+    {
+      fputs (command, f);
+      fclose (f);
+    }
+  else
+    close (fd);
+
+  char *install_cmd = g_strdup_printf (
+    "mkdir -p /etc/gamescope && install -D -m 644 '%s' /etc/gamescope/epinephrine.conf", tmp_path);
+  int exit_code = -1;
+  GError *err2 = NULL;
+  if (epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err2))
+    {
+      if (exit_code == 0)
+        dashboard_show_toast (tr("Saved to /etc/gamescope/epinephrine.conf (elevated)"));
+      else
+        dashboard_show_toast (tr("Failed to save (permission denied)"));
     }
   else
     {
-      /* Try with pkexec */
-      g_clear_error (&err);
-
-      char tmp_path[] = "/tmp/gamescope-conf-XXXXXX";
-      int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-      if (fd < 0)
-        {
-          dashboard_show_toast ("Failed to create temp file for elevation");
-          g_free (command);
-          return;
-        }
-
-      FILE *f = fdopen (fd, "w");
-      if (f)
-        {
-          fputs (command, f);
-          fclose (f);
-        }
+      if (err2)
+        dashboard_show_toast (err2->message);
       else
-        close (fd);
-
-      char *install_cmd = g_strdup_printf (
-        "install -D -m 644 '%s' /etc/gamescope/epinephrine.conf", tmp_path);
-      int exit_code = -1;
-      GError *err2 = NULL;
-      if (epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err2))
-        {
-          if (exit_code == 0)
-            dashboard_show_toast ("Saved to /etc/gamescope/epinephrine.conf (elevated)");
-          else
-            dashboard_show_toast ("Failed to save (permission denied)");
-        }
-      else
-        {
-          if (err2)
-            dashboard_show_toast (err2->message);
-          else
-            dashboard_show_toast ("Failed to launch pkexec");
-          g_clear_error (&err2);
-        }
-      g_free (install_cmd);
-      unlink (tmp_path);
+        dashboard_show_toast (tr("Failed to launch pkexec"));
+      g_clear_error (&err2);
     }
+  g_free (install_cmd);
+  unlink (tmp_path);
 
   g_free (command);
 }
@@ -240,7 +355,7 @@ on_copy_clicked (GtkButton *button, GamescopePage *page)
   GdkClipboard *clipboard = gdk_display_get_clipboard (display);
   gdk_clipboard_set_text (clipboard, text);
 
-  dashboard_show_toast ("Command copied to clipboard");
+  dashboard_show_toast (tr("Command copied to clipboard"));
 }
 
 static void
@@ -298,6 +413,7 @@ connect_signals (GamescopePage *page)
   g_signal_connect (page->copy_button, "clicked", G_CALLBACK (on_copy_clicked), page);
   g_signal_connect (page->save_button, "clicked", G_CALLBACK (on_save_defaults_clicked), page);
   g_signal_connect (page->restore_button, "clicked", G_CALLBACK (on_restore_defaults_clicked), page);
+  g_signal_connect (page->load_button, "clicked", G_CALLBACK (on_load_defaults_clicked), page);
 }
 
 GamescopePage *
@@ -355,9 +471,21 @@ gamescope_page_new (void)
   page->copy_button    = GTK_BUTTON (gtk_builder_get_object (builder, "copy-button"));
   page->save_button    = GTK_BUTTON (gtk_builder_get_object (builder, "save-defaults-button"));
   page->restore_button = GTK_BUTTON (gtk_builder_get_object (builder, "restore-defaults-button"));
+  page->load_button    = GTK_BUTTON (gtk_builder_get_object (builder, "load-defaults-button"));
 
   connect_signals (page);
   update_command (page);
+
+  {
+    /* Read back the saved system-wide defaults, if present */
+    char *content = NULL;
+    if (g_file_get_contents ("/etc/gamescope/epinephrine.conf", &content, NULL, NULL))
+      {
+        apply_command_to_widgets (page, content);
+        g_free (content);
+        update_command (page);
+      }
+  }
 
   g_object_ref_sink (page->box);
   g_object_unref (builder);

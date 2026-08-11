@@ -1,6 +1,8 @@
 #include "application.h"
 #include "window.h"
 #include "pages/page-settings.h"
+#include "epi-privilege.h"
+#include "epi-i18n.h"
 
 #include <fontconfig/fontconfig.h>
 
@@ -41,8 +43,12 @@ static const char *EPI_BASE_CSS =
   ".dashboard-card {\n"
   "  background-color: rgba(255, 255, 255, 0.06);\n"
   "  border-radius: 12px;\n"
-  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
-  "  padding: 4px;\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.12);\n"
+  "  padding: 16px;\n"
+  "  transition: border-color 200ms ease;\n"
+  "}\n"
+  ".dashboard-card:hover {\n"
+  "  border-color: rgba(255, 255, 255, 0.2);\n"
   "}\n"
   ".dashboard-card .header {\n"
   "  font-size: 1.1em;\n"
@@ -52,11 +58,60 @@ static const char *EPI_BASE_CSS =
   "  border: none;\n"
   "  box-shadow: none;\n"
   "  background: none;\n"
-  "  padding: 6px;\n"
+  "  padding: 0;\n"
   "}\n"
-  ".games-flowbox flowboxchild {\n"
+  ".games-grid {\n"
   "  padding: 0;\n"
   "  margin: 0;\n"
+  "}\n"
+  ".game-card {\n"
+  "  background-color: rgba(255, 255, 255, 0.06);\n"
+  "  border-radius: 12px;\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
+  "  padding: 16px;\n"
+  "  min-width: 180px;\n"
+  "  transition: all 200ms ease;\n"
+  "}\n"
+  ".game-card:hover {\n"
+  "  background-color: rgba(255, 255, 255, 0.10);\n"
+  "  border-color: alpha(@accent_color, 0.3);\n"
+  "}\n"
+  ".game-card .game-icon {\n"
+  "  font-size: 32px;\n"
+  "  margin-bottom: 8px;\n"
+  "}\n"
+  ".game-card .game-name {\n"
+  "  font-weight: bold;\n"
+  "  margin-bottom: 4px;\n"
+  "}\n"
+  ".game-card .game-stats {\n"
+  "  font-size: 0.85em;\n"
+  "  opacity: 0.7;\n"
+  "}\n"
+  ".game-card .play-now-btn {\n"
+  "  border-radius: 8px;\n"
+  "  padding: 4px 12px;\n"
+  "  font-size: 0.85em;\n"
+  "  margin-top: 8px;\n"
+  "}\n"
+  ".game-card.game-selected {\n"
+  "  border-color: @accent_color;\n"
+  "  box-shadow: 0 0 12px 2px alpha(@accent_color, 0.45);\n"
+  "}\n"
+  ".game-select-check {\n"
+  "  margin: 6px;\n"
+  "}\n"
+  ".category-chip {\n"
+  "  border-radius: 16px;\n"
+  "  padding: 4px 14px;\n"
+  "  font-size: 0.9em;\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.12);\n"
+  "}\n"
+  ".category-chip:checked {\n"
+  "  background-color: alpha(@accent_color, 0.2);\n"
+  "  border-color: @accent_color;\n"
+  "  color: @accent_color;\n"
+  "  font-weight: bold;\n"
   "}\n"
   ".game-shortcut {\n"
   "  background-color: rgba(255, 255, 255, 0.06);\n"
@@ -69,12 +124,6 @@ static const char *EPI_BASE_CSS =
   "  background-color: rgba(255, 255, 255, 0.10);\n"
   "  border-color: alpha(@accent_color, 0.3);\n"
   "}\n"
-  ".play-now-btn {\n"
-  "  border-radius: 8px;\n"
-  "  padding: 4px 12px;\n"
-  "  font-size: 0.85em;\n"
-  "  font-weight: bold;\n"
-  "}\n"
   ".game-shortcut .game-icon {\n"
   "  font-size: 32px;\n"
   "  margin-bottom: 8px;\n"
@@ -86,6 +135,32 @@ static const char *EPI_BASE_CSS =
   ".game-shortcut .game-stats {\n"
   "  font-size: 0.85em;\n"
   "  opacity: 0.7;\n"
+  "}\n"
+  ".game-search-bar {\n"
+  "  min-width: 280px;\n"
+  "  border-radius: 8px;\n"
+  "  background-color: rgba(255, 255, 255, 0.06);\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
+  "  padding: 4px 8px;\n"
+  "}\n"
+  ".game-search-bar:focus-within {\n"
+  "  border-color: alpha(@accent_color, 0.5);\n"
+  "  box-shadow: 0 0 8px 2px alpha(@accent_color, 0.2);\n"
+  "}\n"
+  ".import-launcher-row {\n"
+  "  padding: 12px;\n"
+  "  border-radius: 8px;\n"
+  "  background-color: rgba(255, 255, 255, 0.04);\n"
+  "  margin-bottom: 4px;\n"
+  "}\n"
+  ".import-launcher-row:hover {\n"
+  "  background-color: rgba(255, 255, 255, 0.08);\n"
+  "}\n"
+  ".import-launcher-row.detected {\n"
+  "  border-left: 3px solid alpha(@accent_color, 0.8);\n"
+  "}\n"
+  ".import-launcher-row.not-detected {\n"
+  "  opacity: 0.5;\n"
   "}\n"
   ".section-header {\n"
   "  border-radius: 8px;\n"
@@ -108,7 +183,7 @@ static const char *EPI_BASE_CSS =
   "  background-color: alpha(@accent_color, 0.15);\n"
   "  border-color: alpha(@accent_color, 0.4);\n"
   "}\n"
-  ".game-running .play-btn {\n"
+  ".game-running .play-now-btn {\n"
   "  background-color: alpha(@destructive_color, 0.8);\n"
   "  color: white;\n"
   "}\n"
@@ -119,11 +194,16 @@ static const char *EPI_BASE_CSS =
   "  color: #e5a11c;\n"
   "}\n"
   ".dashboard-card row {\n"
-  "  background: none;\n"
-  "  padding: 0;\n"
+  "  background: transparent;\n"
+  "  border: none;\n"
+  "  padding: 4px 0;\n"
+  "  min-height: 0;\n"
   "}\n"
-  ".dashboard-card preferences-group-title {\n"
-  "  margin-left: 16px;\n"
+  ".dashboard-card row:hover {\n"
+  "  background: transparent;\n"
+  "}\n"
+  ".dashboard-card-group {\n"
+  "  spacing: 0;\n"
   "}\n"
   ".ctrl-indicator {\n"
   "  border-radius: 20px;\n"
@@ -154,15 +234,57 @@ static const char *EPI_BASE_CSS =
   "  color: @accent_color;\n"
   "}\n"
   ".gaming-score-card {\n"
-  "  background-color: rgba(255, 255, 255, 0.06);\n"
+  "  background-color: rgba(255, 255, 255, 0.04);\n"
   "  border-radius: 12px;\n"
-  "  border: 1px solid rgba(255, 255, 255, 0.1);\n"
-  "  padding: 20px 24px;\n"
+  "  border: 1px solid rgba(255, 255, 255, 0.08);\n"
+  "  padding: 24px 28px;\n"
   "}\n"
   ".gaming-score-value {\n"
   "  font-size: 2.5em;\n"
   "  font-weight: bold;\n"
   "  color: @accent_color;\n"
+  "}\n"
+  ".gaming-score-tier {\n"
+  "  font-size: 11px;\n"
+  "  font-weight: 600;\n"
+  "  padding: 2px 8px;\n"
+  "  border-radius: 4px;\n"
+  "  border: 1px solid transparent;\n"
+  "  letter-spacing: 0.5px;\n"
+  "}\n"
+  ".gaming-score-tier.tier-ruim {\n"
+  "  color: #e01b24;\n"
+  "  border-color: #e01b24;\n"
+  "  background-color: rgba(224, 27, 36, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-regular {\n"
+  "  color: #ff7800;\n"
+  "  border-color: #ff7800;\n"
+  "  background-color: rgba(255, 120, 0, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-boa {\n"
+  "  color: #f5c211;\n"
+  "  border-color: #f5c211;\n"
+  "  background-color: rgba(245, 194, 17, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-muito-boa {\n"
+  "  color: #73d216;\n"
+  "  border-color: #73d216;\n"
+  "  background-color: rgba(115, 210, 22, 0.10);\n"
+  "}\n"
+  ".gaming-score-tier.tier-ideal {\n"
+  "  color: #2ec27e;\n"
+  "  border-color: #2ec27e;\n"
+  "  background-color: rgba(46, 194, 126, 0.10);\n"
+  "}\n"
+  ".score-bar-low progress {\n"
+  "  background-color: #e01b24;\n"
+  "}\n"
+  ".score-bar-mid progress {\n"
+  "  background-color: #ff8c00;\n"
+  "}\n"
+  ".score-bar-good progress {\n"
+  "  background-color: #2ec27e;\n"
   "}\n"
   ".status-icon-ok {\n"
   "  color: #2ec27e;\n"
@@ -205,9 +327,6 @@ epinephrine_application_startup (GApplication *app)
                                         (const FcChar8 *)font_path))
         g_warning ("Fontconfig failed to register %s", font_path);
     }
-
-  TemaChoice tema_saved = settings_load_tema ();
-  settings_apply_tema (tema_saved);
 }
 
 static void
@@ -215,8 +334,33 @@ epinephrine_application_activate (GApplication *app)
 {
   EpinephrineApplication *epi_app = EPINEPHRINE_APPLICATION (app);
 
+  /* Apply saved language preference before building the UI so every widget
+     is created already translated. */
+  char *lang = settings_load_language ();
+  epi_i18n_set_language (lang);
+  g_free (lang);
+
   GtkWindow *win = epinephrine_window_new (epi_app);
   gtk_window_present (win);
+
+  /* Request the persistent admin session once, at startup. All features
+     that need root consume this single session for the app lifetime. */
+  static gboolean admin_notified = FALSE;
+  if (!epi_privilege_is_available () && !admin_notified)
+    {
+      GError *perr = NULL;
+      if (!epi_privilege_init (&perr))
+        {
+          admin_notified = TRUE;
+          char *msg = g_strdup_printf (
+            "%s\n%s",
+            epi_i18n_get ("Administrator session is unavailable. Features that need admin access won't work."),
+            perr && perr->message ? perr->message : "");
+          epinephrine_show_toast (msg);
+          g_free (msg);
+          g_clear_error (&perr);
+        }
+    }
 
   GdkDisplay *display = gtk_widget_get_display (GTK_WIDGET (win));
 
@@ -247,17 +391,6 @@ epinephrine_application_activate (GApplication *app)
   settings_apply_accent (saved);
   gboolean theme_on = settings_load_full_theme ();
   settings_apply_full_theme (saved, theme_on);
-
-  /* Apply saved tema */
-  TemaChoice tema_saved = settings_load_tema ();
-  settings_apply_tema (tema_saved);
-
-  /* Apply language preference */
-  int lang = settings_load_language ();
-  if (lang == 1)
-    g_setenv ("LANGUAGE", "pt_BR", TRUE);
-  else if (lang == 2)
-    g_setenv ("LANGUAGE", "en_US", TRUE);
 }
 
 static void

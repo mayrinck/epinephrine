@@ -11,11 +11,20 @@ sources = files(
   'application.c',
   'window.c',
   'command-builder.c',
+  'hydra-ldb.c',
   'epi-privilege.c',
+  'epi-i18n.c',
   'usb-ids.c',
   'pages/page-dashboard.c',
   'pages/page-games.c',
   'pages/page-hardware.c',
+  'pages/hw-gpu.c',
+  'pages/hw-monitor.c',
+  'pages/hw-gpu-detail.c',
+  'pages/hw-controller.c',
+  'pages/hw-detail.c',
+  'pages/hw-devices.c',
+  'pages/hw-device-list.c',
   'pages/page-cpu.c',
   'pages/page-keyboard.c',
   'pages/page-mouse.c',
@@ -30,4 +39,23 @@ executable('epinephrine',
   sources, resources,
   dependencies: [gtk4_dep, libadwaita_dep, m_dep, fontconfig_dep],
   install: true,
+)
+
+executable('epi-hidraw',
+  'epi-hidraw.c',
+  install: true,
+)
+
+install_data('../lang/pt_BR.md',
+  install_dir: join_paths(get_option('datadir'), 'epinephrine', 'lang'),
+)
+install_data('../lang/en_US.md',
+  install_dir: join_paths(get_option('datadir'), 'epinephrine', 'lang'),
+)
+install_data('../lang/es_ES.md',
+  install_dir: join_paths(get_option('datadir'), 'epinephrine', 'lang'),
+)
+
+install_data('../scripts/hydra_games.py',
+  install_dir: join_paths(get_option('datadir'), 'epinephrine', 'scripts'),
 )

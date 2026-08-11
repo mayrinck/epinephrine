@@ -14,256 +14,286 @@
           </object>
         </child>
 
+        <!-- Toggle Visibility Section -->
         <child>
           <object class="AdwPreferencesGroup">
-            <property name="title" translatable="yes">Toggle Visibility</property>
             <child>
-              <object class="AdwSwitchRow" id="mh-show-fps">
-                <property name="title" translatable="yes">FPS Counter</property>
-                <property name="subtitle" translatable="yes">Display frames per second</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-frame-timing">
-                <property name="title" translatable="yes">Frame Timing</property>
-                <property name="subtitle" translatable="yes">Show frame time graph</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-cpu">
-                <property name="title" translatable="yes">CPU Stats</property>
-                <property name="subtitle" translatable="yes">Show CPU usage per core</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-cpu-temp">
-                <property name="title" translatable="yes">CPU Temperature</property>
-                <property name="subtitle" translatable="yes">Show CPU temperature reading</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-gpu">
-                <property name="title" translatable="yes">GPU Stats</property>
-                <property name="subtitle" translatable="yes">Show GPU usage</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-gpu-temp">
-                <property name="title" translatable="yes">GPU Temperature</property>
-                <property name="subtitle" translatable="yes">Show GPU temperature reading</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-vram">
-                <property name="title" translatable="yes">VRAM Usage</property>
-                <property name="subtitle" translatable="yes">Show video memory usage</property>
-                <property name="active">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-ram">
-                <property name="title" translatable="yes">RAM Usage</property>
-                <property name="subtitle" translatable="yes">Show system memory usage</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-procmem">
-                <property name="title" translatable="yes">Process Memory</property>
-                <property name="subtitle" translatable="yes">Show per-process memory usage</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-io">
-                <property name="title" translatable="yes">I/O Stats</property>
-                <property name="subtitle" translatable="yes">Show disk read/write stats</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-power">
-                <property name="title" translatable="yes">Power Draw</property>
-                <property name="subtitle" translatable="yes">Show GPU power consumption</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-engine">
-                <property name="title" translatable="yes">Engine Version</property>
-                <property name="subtitle" translatable="yes">Show game engine version</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-vulkan-driver">
-                <property name="title" translatable="yes">Vulkan Driver</property>
-                <property name="subtitle" translatable="yes">Show Vulkan driver information</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-wine">
-                <property name="title" translatable="yes">Wine Info</property>
-                <property name="subtitle" translatable="yes">Show Wine/Proton version</property>
-                <property name="active">False</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSwitchRow" id="mh-show-histogram">
-                <property name="title" translatable="yes">Frame Time Histogram</property>
-                <property name="subtitle" translatable="yes">Show frame time distribution</property>
-                <property name="active">False</property>
+              <object class="AdwExpanderRow" id="mh-section-visibility-toggle">
+                <property name="title" translatable="yes">Toggle Visibility</property>
+                <property name="subtitle" translatable="yes">Choose which stats to display on the overlay.</property>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-fps">
+                    <property name="title" translatable="yes">FPS Counter</property>
+                    <property name="subtitle" translatable="yes">Display frames per second</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-frame-timing">
+                    <property name="title" translatable="yes">Frame Timing</property>
+                    <property name="subtitle" translatable="yes">Show frame time graph</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-cpu">
+                    <property name="title" translatable="yes">CPU Stats</property>
+                    <property name="subtitle" translatable="yes">Show CPU usage per core</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-cpu-temp">
+                    <property name="title" translatable="yes">CPU Temperature</property>
+                    <property name="subtitle" translatable="yes">Show CPU temperature reading</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-gpu">
+                    <property name="title" translatable="yes">GPU Stats</property>
+                    <property name="subtitle" translatable="yes">Show GPU usage</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-gpu-temp">
+                    <property name="title" translatable="yes">GPU Temperature</property>
+                    <property name="subtitle" translatable="yes">Show GPU temperature reading</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-vram">
+                    <property name="title" translatable="yes">VRAM Usage</property>
+                    <property name="subtitle" translatable="yes">Show video memory usage</property>
+                    <property name="active">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-ram">
+                    <property name="title" translatable="yes">RAM Usage</property>
+                    <property name="subtitle" translatable="yes">Show system memory usage</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-procmem">
+                    <property name="title" translatable="yes">Process Memory</property>
+                    <property name="subtitle" translatable="yes">Show per-process memory usage</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-io">
+                    <property name="title" translatable="yes">I/O Stats</property>
+                    <property name="subtitle" translatable="yes">Show disk read/write stats</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-power">
+                    <property name="title" translatable="yes">Power Draw</property>
+                    <property name="subtitle" translatable="yes">Show GPU power consumption</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-engine">
+                    <property name="title" translatable="yes">Engine Version</property>
+                    <property name="subtitle" translatable="yes">Show game engine version</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-vulkan-driver">
+                    <property name="title" translatable="yes">Vulkan Driver</property>
+                    <property name="subtitle" translatable="yes">Show Vulkan driver information</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-wine">
+                    <property name="title" translatable="yes">Wine Info</property>
+                    <property name="subtitle" translatable="yes">Show Wine/Proton version</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="mh-show-histogram">
+                    <property name="title" translatable="yes">Frame Time Histogram</property>
+                    <property name="subtitle" translatable="yes">Show frame time distribution</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
         </child>
 
+        <!-- Position and Layout Section -->
         <child>
           <object class="AdwPreferencesGroup">
-            <property name="title" translatable="yes">Position and Layout</property>
             <child>
-              <object class="AdwComboRow" id="mh-position">
-                <property name="title" translatable="yes">Position</property>
-                <property name="subtitle" translatable="yes">HUD position on screen</property>
-                <property name="model">
-                  <object class="GtkStringList">
-                    <items>
-                      <item translatable="yes">Top-Left</item>
-                      <item translatable="yes">Top-Right</item>
-                      <item translatable="yes">Bottom-Left</item>
-                      <item translatable="yes">Bottom-Right</item>
-                      <item translatable="yes">Top-Center</item>
-                      <item translatable="yes">Bottom-Center</item>
-                      <item translatable="yes">Middle-Left</item>
-                      <item translatable="yes">Middle-Right</item>
-                    </items>
+              <object class="AdwExpanderRow" id="mh-section-position-toggle">
+                <property name="title" translatable="yes">Position and Layout</property>
+                <property name="subtitle" translatable="yes">HUD position, offset, font size and table columns.</property>
+                <child>
+                  <object class="AdwComboRow" id="mh-position">
+                    <property name="title" translatable="yes">Position</property>
+                    <property name="subtitle" translatable="yes">HUD position on screen</property>
+                    <property name="model">
+                      <object class="GtkStringList">
+                        <items>
+                          <item translatable="yes">Top-Left</item>
+                          <item translatable="yes">Top-Right</item>
+                          <item translatable="yes">Bottom-Left</item>
+                          <item translatable="yes">Bottom-Right</item>
+                          <item translatable="yes">Top-Center</item>
+                          <item translatable="yes">Bottom-Center</item>
+                          <item translatable="yes">Middle-Left</item>
+                          <item translatable="yes">Middle-Right</item>
+                        </items>
+                      </object>
+                    </property>
+                    <property name="selected">0</property>
                   </object>
-                </property>
-                <property name="selected">0</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSpinRow" id="mh-offset-x">
-                <property name="title" translatable="yes">Offset X</property>
-                <property name="subtitle" translatable="yes">Horizontal offset in pixels</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">0</property>
-                    <property name="upper">3840</property>
-                    <property name="step-increment">1</property>
-                    <property name="value">0</property>
+                </child>
+                <child>
+                  <object class="AdwSpinRow" id="mh-offset-x">
+                    <property name="title" translatable="yes">Offset X</property>
+                    <property name="subtitle" translatable="yes">Horizontal offset in pixels</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">3840</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSpinRow" id="mh-offset-y">
-                <property name="title" translatable="yes">Offset Y</property>
-                <property name="subtitle" translatable="yes">Vertical offset in pixels</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">0</property>
-                    <property name="upper">2160</property>
-                    <property name="step-increment">1</property>
-                    <property name="value">0</property>
+                </child>
+                <child>
+                  <object class="AdwSpinRow" id="mh-offset-y">
+                    <property name="title" translatable="yes">Offset Y</property>
+                    <property name="subtitle" translatable="yes">Vertical offset in pixels</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">2160</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSpinRow" id="mh-font-size">
-                <property name="title" translatable="yes">Font Size</property>
-                <property name="subtitle" translatable="yes">Text size in points</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">8</property>
-                    <property name="upper">72</property>
-                    <property name="step-increment">1</property>
-                    <property name="value">24</property>
+                </child>
+                <child>
+                  <object class="AdwSpinRow" id="mh-font-size">
+                    <property name="title" translatable="yes">Font Size</property>
+                    <property name="subtitle" translatable="yes">Text size in points</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">8</property>
+                        <property name="upper">72</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">24</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwSpinRow" id="mh-table-columns">
-                <property name="title" translatable="yes">Table Columns</property>
-                <property name="subtitle" translatable="yes">Number of columns in table mode</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">1</property>
-                    <property name="upper">6</property>
-                    <property name="step-increment">1</property>
-                    <property name="value">3</property>
+                </child>
+                <child>
+                  <object class="AdwSpinRow" id="mh-table-columns">
+                    <property name="title" translatable="yes">Table Columns</property>
+                    <property name="subtitle" translatable="yes">Number of columns in table mode</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">1</property>
+                        <property name="upper">6</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">3</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
+                </child>
               </object>
             </child>
           </object>
         </child>
 
+        <!-- Appearance Section -->
         <child>
           <object class="AdwPreferencesGroup">
-            <property name="title" translatable="yes">Appearance</property>
             <child>
-              <object class="AdwSpinRow" id="mh-background-alpha">
-                <property name="title" translatable="yes">Background Opacity</property>
-                <property name="subtitle" translatable="yes">Background transparency (0 = transparent, 100 = solid)</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">0</property>
-                    <property name="upper">100</property>
-                    <property name="step-increment">5</property>
-                    <property name="value">75</property>
+              <object class="AdwExpanderRow" id="mh-section-appearance-toggle">
+                <property name="title" translatable="yes">Appearance</property>
+                <property name="subtitle" translatable="yes">Background opacity and transparency settings.</property>
+                <child>
+                  <object class="AdwSpinRow" id="mh-background-alpha">
+                    <property name="title" translatable="yes">Background Opacity</property>
+                    <property name="subtitle" translatable="yes">Background transparency (0 = transparent, 100 = solid)</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">100</property>
+                        <property name="step-increment">5</property>
+                        <property name="value">75</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
+                </child>
               </object>
             </child>
           </object>
         </child>
 
+        <!-- Custom Text Section -->
         <child>
           <object class="AdwPreferencesGroup">
-            <property name="title" translatable="yes">Custom Text</property>
             <child>
-              <object class="AdwEntryRow" id="mh-custom-text-center">
-                <property name="title" translatable="yes">Center Text</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwEntryRow" id="mh-custom-text-left">
-                <property name="title" translatable="yes">Left Text</property>
-              </object>
-            </child>
-            <child>
-              <object class="AdwEntryRow" id="mh-custom-text-right">
-                <property name="title" translatable="yes">Right Text</property>
+              <object class="AdwExpanderRow" id="mh-section-custom-text-toggle">
+                <property name="title" translatable="yes">Custom Text</property>
+                <property name="subtitle" translatable="yes">Custom text labels displayed on the overlay.</property>
+                <child>
+                  <object class="AdwEntryRow" id="mh-custom-text-center">
+                    <property name="title" translatable="yes">Center Text</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwEntryRow" id="mh-custom-text-left">
+                    <property name="title" translatable="yes">Left Text</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwEntryRow" id="mh-custom-text-right">
+                    <property name="title" translatable="yes">Right Text</property>
+                  </object>
+                </child>
               </object>
             </child>
           </object>
         </child>
 
+        <!-- Performance Section -->
         <child>
           <object class="AdwPreferencesGroup">
-            <property name="title" translatable="yes">Performance</property>
             <child>
-              <object class="AdwSpinRow" id="mh-fps-limit">
-                <property name="title" translatable="yes">FPS Limit</property>
-                <property name="subtitle" translatable="yes">Limit the frame rate (0 = unlimited)</property>
-                <property name="adjustment">
-                  <object class="GtkAdjustment">
-                    <property name="lower">0</property>
-                    <property name="upper">1000</property>
-                    <property name="step-increment">1</property>
-                    <property name="value">0</property>
+              <object class="AdwExpanderRow" id="mh-section-performance-toggle">
+                <property name="title" translatable="yes">Performance</property>
+                <property name="subtitle" translatable="yes">FPS limit and performance tuning.</property>
+                <child>
+                  <object class="AdwSpinRow" id="mh-fps-limit">
+                    <property name="title" translatable="yes">FPS Limit</property>
+                    <property name="subtitle" translatable="yes">Limit the frame rate (0 = unlimited)</property>
+                    <property name="adjustment">
+                      <object class="GtkAdjustment">
+                        <property name="lower">0</property>
+                        <property name="upper">1000</property>
+                        <property name="step-increment">1</property>
+                        <property name="value">0</property>
+                      </object>
+                    </property>
                   </object>
-                </property>
+                </child>
               </object>
             </child>
           </object>

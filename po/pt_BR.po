@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: epinephrine 0.1.0\n"
-"Report-Msgid-Bugs-To: https://github.com/mayrinck/epinephrine/issues\n"
-"POT-Creation-Date: 2025-01-01 00:00+0000\n"
+"Report-Mid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-03 03:14-0300\n"
 "PO-Revision-Date: 2025-01-01 00:00-0300\n"
 "Last-Translator: mayrinck\n"
 "Language-Team: Brazilian Portuguese <pt_BR@example.com>\n"
@@ -17,936 +17,1625 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: data/ui/window.ui:11
-msgid "Menu"
-msgstr "Menu"
-
-#: data/ui/page-placeholder.ui:40
-msgid "Este módulo será implementado em uma versão futura."
-msgstr "Este módulo será implementado em uma versão futura."
-
-#: data/ui/page-gamescope.ui:14
-msgid "Display"
-msgstr "Monitor"
-
-#: data/ui/page-gamescope.ui:16
-msgid "Output Width"
-msgstr "Largura da Saída"
-
-#: data/ui/page-gamescope.ui:17
-msgid "Leave 0 for default (1280)"
-msgstr "Deixe 0 para o padrão (1280)"
-
-#: data/ui/page-gamescope.ui:30
-msgid "Output Height"
-msgstr "Altura da Saída"
-
-#: data/ui/page-gamescope.ui:31
-msgid "Leave 0 for default (720)"
-msgstr "Deixe 0 para o padrão (720)"
-
-#: data/ui/page-gamescope.ui:44
-msgid "Game Width"
-msgstr "Largura do Jogo"
-
-#: data/ui/page-gamescope.ui:45 data/ui/page-gamescope.ui:59
-msgid "Leave 0 to match output"
-msgstr "Deixe 0 para igualar à saída"
-
-#: data/ui/page-gamescope.ui:58
-msgid "Game Height"
-msgstr "Altura do Jogo"
-
-#: data/ui/page-gamescope.ui:72
-msgid "Refresh Rate"
-msgstr "Taxa de Atualização (Hz)"
-
-#: data/ui/page-gamescope.ui:73
-msgid "FPS limit for vsync games (0 = unlimited)"
-msgstr "Limite de FPS para jogos com vsync (0 = ilimitado)"
-
-#: data/ui/page-gamescope.ui:83
-msgid "Fullscreen"
-msgstr "Tela Cheia"
-
-#: data/ui/page-gamescope.ui:84
-msgid "Create a full-screen window"
-msgstr "Criar uma janela em tela cheia"
-
-#: data/ui/page-gamescope.ui:90
-msgid "Borderless"
-msgstr "Sem Bordas"
-
-#: data/ui/page-gamescope.ui:91
-msgid "Create a border-less window"
-msgstr "Criar uma janela sem bordas"
-
-#: data/ui/page-gamescope.ui:97
-msgid "Display Index"
-msgstr "Índice do Monitor"
-
-#: data/ui/page-gamescope.ui:98
-msgid "Force a specific display in nested mode"
-msgstr "Forçar um monitor específico no modo aninhado"
-
-#: data/ui/page-gamescope.ui:110
-msgid "Unfocused Refresh"
-msgstr "Atualização sem Foco"
-
-#: data/ui/page-gamescope.ui:111
-msgid "FPS limit when unfocused (0 = unlimited)"
-msgstr "Limite de FPS de janela sem foco (0 = ilimitado)"
-
-#: data/ui/page-gamescope.ui:124
-msgid "Scaling"
-msgstr "Escalonamento"
-
-#: data/ui/page-gamescope.ui:126
-msgid "Scaler"
-msgstr "Escalonador"
-
-#: data/ui/page-gamescope.ui:127
-msgid "Scaling algorithm"
-msgstr "Algoritmo de escalonamento"
-
-#: data/ui/page-gamescope.ui:130
-msgid "Auto"
-msgstr "Automático"
-
-#: data/ui/page-gamescope.ui:131
-msgid "Integer"
-msgstr "Inteiros"
-
-#: data/ui/page-gamescope.ui:132
-msgid "Fit"
-msgstr "Ajustar na tela"
-
-#: data/ui/page-gamescope.ui:133
-msgid "Fill"
-msgstr "Preencher na tela"
-
-#: data/ui/page-gamescope.ui:134
-msgid "Stretch"
-msgstr "Esticar na tela"
-
-#: data/ui/page-gamescope.ui:140
-msgid "Filter"
-msgstr "Filtro"
-
-#: data/ui/page-gamescope.ui:141
-msgid "Upscaler filter type"
-msgstr "Tipo de filtro de upscaling"
-
-#: data/ui/page-gamescope.ui:144
-msgid "Linear"
-msgstr "Linear"
-
-#: data/ui/page-gamescope.ui:145
-msgid "Nearest"
-msgstr "Vizinho mais próximo"
-
-#: data/ui/page-gamescope.ui:146
-msgid "FSR"
-msgstr "AMD™ FSR"
-
-#: data/ui/page-gamescope.ui:147
-msgid "NIS"
-msgstr "NVIDIA™ NIS"
-
-#: data/ui/page-gamescope.ui:148
-msgid "Pixel"
-msgstr "Pixel"
-
-#: data/ui/page-gamescope.ui:156
-msgid "Sharpness"
-msgstr "Nitidez"
-
-#: data/ui/page-gamescope.ui:157
-msgid "0 = sharpest, 20 = blurriest (default: 2)"
-msgstr "0 = mais nítido, 20 = mais borrado (padrão: 2)"
-
-#: data/ui/page-gamescope.ui:177
-msgid "Max Scale"
-msgstr "Escala Máxima"
-
-#: data/ui/page-gamescope.ui:178
-msgid "Maximum scale factor (0 = no limit)"
-msgstr "Fator de escala máximo (0 = sem limite)"
-
-#: data/ui/page-gamescope.ui:191
-msgid "Frame Rate"
-msgstr "Taxa de quadros (FPS)"
-
-#: data/ui/page-gamescope.ui:193
-msgid "Framerate Limit"
-msgstr "Limite de FPS"
-
-#: data/ui/page-gamescope.ui:194 data/ui/page-gamescope.ui:385
-msgid "0 = disabled"
-msgstr "0 = desabilitado"
-
-#: data/ui/page-gamescope.ui:207
-msgid "HDR & Color"
-msgstr "HDR & Cor"
-
-#: data/ui/page-gamescope.ui:209
-msgid "HDR Enabled"
-msgstr "HDR Ativado"
-
-#: data/ui/page-gamescope.ui:210
-msgid "Enable HDR10 output"
-msgstr "Ativar saída HDR10"
-
-#: data/ui/page-gamescope.ui:216
-msgid "SDR Content Nits"
-msgstr "Nits do SDR"
-
-#: data/ui/page-gamescope.ui:217
-msgid "Brightness of SDR in HDR mode (default: 400)"
-msgstr "Brilho do SDR em modo HDR (padrão: 400)"
-
-#: data/ui/page-gamescope.ui:229
-msgid "ITM Enabled"
-msgstr "ITM Ativado"
-
-#: data/ui/page-gamescope.ui:230
-msgid "SDR to HDR inverse tone mapping"
-msgstr "Mapeamento de tom inverso SDR para HDR"
-
-#: data/ui/page-gamescope.ui:236
-msgid "ITM SDR Nits"
-msgstr "Nits SDR do ITM"
-
-#: data/ui/page-gamescope.ui:237
-msgid "SDR input luminance (default: 100)"
-msgstr "Luminância de entrada SDR (padrão: 100)"
-
-#: data/ui/page-gamescope.ui:248
-msgid "ITM Target Nits"
-msgstr "Nits Alvo do ITM"
-
-#: data/ui/page-gamescope.ui:249
-msgid "Target luminance (default: 1000)"
-msgstr "Luminância alvo (padrão: 1000)"
-
-#: data/ui/page-gamescope.ui:260
-msgid "SDR Gamut Wideness"
-msgstr "Amplitude do Gamut SDR"
-
-#: data/ui/page-gamescope.ui:261
-msgid "0.0 = standard, 1.0 = max"
-msgstr "0.0 = padrão, 1.0 = máximo"
-
-#: data/ui/page-gamescope.ui:280
-msgid "Advanced"
-msgstr "Avançado"
-
-#: data/ui/page-gamescope.ui:282
-msgid "Rendering Backend"
-msgstr "Backend de Renderização"
-
-#: data/ui/page-gamescope.ui:283
-msgid "Auto-detect is recommended"
-msgstr "Recomenda-se detecção automática"
-
-#: data/ui/page-gamescope.ui:286
-msgid "DRM"
-msgstr "DRM"
-
-#: data/ui/page-gamescope.ui:287
-msgid "SDL"
-msgstr "SDL"
-
-#: data/ui/page-gamescope.ui:288
-msgid "Wayland"
-msgstr "Wayland"
-
-#: data/ui/page-gamescope.ui:289
-msgid "Headless"
-msgstr "Headless"
-
-#: data/ui/page-gamescope.ui:295
-msgid "Mouse Sensitivity"
-msgstr "Sensibilidade do Mouse"
-
-#: data/ui/page-gamescope.ui:296
-msgid "Multiplier (default: 1.0)"
-msgstr "Multiplicador (padrão: 1.0)"
-
-#: data/ui/page-gamescope.ui:307
-msgid "Steam Integration"
-msgstr "Integração da Steam"
-
-#: data/ui/page-gamescope.ui:308
-msgid "Steam-specific protocols and logic"
-msgstr "Usa protocolos e lógica específicos da Steam"
-
-#: data/ui/page-gamescope.ui:313
-msgid "Adaptive Sync"
-msgstr "Adaptive Sync"
-
-#: data/ui/page-gamescope.ui:314
-msgid "Enable Variable Refresh Rate, if supported"
-msgstr "Ativar taxa de atualização variável, se suportado"
-
-#: data/ui/page-gamescope.ui:319
-msgid "Grab Keyboard"
-msgstr "Capturar Teclado"
-
-#: data/ui/page-gamescope.ui:320
-msgid "Grab keyboard input"
-msgstr "Capturar entrada do teclado"
-
-#: data/ui/page-gamescope.ui:325
-msgid "Force Grab Cursor"
-msgstr "Forçar Captura do Cursor"
-
-#: data/ui/page-gamescope.ui:326
-msgid "Always use relative mouse mode"
-msgstr "Sempre usar modo relativo do mouse"
-
-#: data/ui/page-gamescope.ui:331
-msgid "Expose Wayland"
-msgstr "Expor Wayland"
-
-#: data/ui/page-gamescope.ui:332
-msgid "Support Wayland clients via xdg-shell"
-msgstr "Suportar clientes Wayland via xdg-shell"
-
-#: data/ui/page-gamescope.ui:337
-msgid "MangoApp"
-msgstr "MangoApp"
-
-#: data/ui/page-gamescope.ui:338
-msgid "Launch with MangoHud overlay"
-msgstr "Iniciar com sobreposição do MangoHud integrada ao Gamescope"
-
-#: data/ui/page-gamescope.ui:344
-msgid "Force Orientation"
-msgstr "Forçar Orientação"
-
-#: data/ui/page-gamescope.ui:345
-msgid "Rotate the display"
-msgstr "Rotacionar a tela"
-
-#: data/ui/page-gamescope.ui:348
-msgid "Normal"
-msgstr "Normal"
-
-#: data/ui/page-gamescope.ui:349
-msgid "Left"
-msgstr "Esquerda"
-
-#: data/ui/page-gamescope.ui:350
-msgid "Right"
-msgstr "Direita"
-
-#: data/ui/page-gamescope.ui:351
-msgid "Upside Down"
-msgstr "Invertido"
-
-#: data/ui/page-gamescope.ui:357
-msgid "Prefer Output"
-msgstr "Preferir Saída"
-
-#: data/ui/page-gamescope.ui:358
-msgid "Connectors (ex: DP-1,HDMI-A-1)"
-msgstr "Conectores (ex: DP-1,HDMI-A-1)"
-
-#: data/ui/page-gamescope.ui:371
-msgid "Immediate Flips"
-msgstr "Flips Imediatos"
-
-#: data/ui/page-gamescope.ui:372
-msgid "May cause tearing"
-msgstr "Pode causar tearing"
-
-#: data/ui/page-gamescope.ui:377
-msgid "Keep Alive"
-msgstr "Manter Vivo"
-
-#: data/ui/page-gamescope.ui:378
-msgid "Keep running after game exits"
-msgstr "Manter rodando após o jogo sair"
-
-#: data/ui/page-gamescope.ui:384
-msgid "Cursor Scale Height"
-msgstr "Altura da Escala do Cursor"
-
-#: data/ui/page-gamescope.ui:398
-msgid "ReShade"
-msgstr "ReShade"
-
-#: data/ui/page-gamescope.ui:400
-msgid "Effect Path"
-msgstr "Caminho do Efeito"
-
-#: data/ui/page-gamescope.ui:401
-msgid "Path to a .fx shader file"
-msgstr "Caminho para um arquivo .fx de shader"
-
-#: data/ui/page-gamescope.ui:414
-msgid "Technique Index"
-msgstr "Índice da Técnica"
-
-#: data/ui/page-gamescope.ui:415
-msgid "Technique index from the effect"
-msgstr "Índice da técnica do efeito"
-
-#: data/ui/page-gamescope.ui:445
-msgid "Copy"
-msgstr "Copiar"
-
-#: data/ui/page-gamescope.ui:
-msgid "Gamescope Manager"
-msgstr "Gerenciador do Gamescope"
-
-#: data/ui/page-gamescope.ui:
-msgid "Configure Gamescope parameters visually. Save your configuration as the system default or copy it to use with a specific game in Steam or other launchers."
-msgstr "Configure os parâmetros do Gamescope visualmente. Salve sua configuração como padrão do sistema ou copie para usar com um jogo específico na Steam ou em outros launchers."
-
-#: data/ui/page-gamescope.ui:
-msgid "Save as System Default"
-msgstr "Salvar como Padrão do Sistema"
-
-#: data/ui/page-dashboard.ui:
-msgid "Overview"
-msgstr "Visão Geral"
-
-#: data/ui/page-dashboard.ui:
-msgid "System overview and gaming readiness"
-msgstr "Visão geral do sistema e prontidão para jogos"
-
-#: src/pages/page-dashboard.c:
-msgid "Hardware Specifications"
-msgstr "Especificações de Hardware"
-
-#: src/pages/page-dashboard.c:
-msgid "Gaming Resources"
-msgstr "Recursos para Jogos"
-
-#: src/pages/page-dashboard.c:
-msgid "CPU"
-msgstr "CPU"
-
-#: src/pages/page-dashboard.c:
-msgid "RAM"
-msgstr "RAM"
-
-#: src/pages/page-dashboard.c:
-msgid "GPU"
-msgstr "GPU"
-
-#: src/pages/page-dashboard.c:
-msgid "VRAM"
-msgstr "VRAM"
-
-#: src/pages/page-dashboard.c:
-msgid "Vulkan / OpenGL"
-msgstr "Vulkan / OpenGL"
-
-#: src/pages/page-dashboard.c:
-msgid "Driver"
-msgstr "Driver"
-
-#: src/pages/page-dashboard.c:
-msgid "Installed"
-msgstr "Instalado"
-
-#: src/pages/page-dashboard.c:
-msgid "Not installed"
-msgstr "Não instalado"
-
-#: src/pages/page-dashboard.c:
-msgid "Installing..."
-msgstr "Instalando..."
-
-#: src/pages/page-dashboard.c:
-msgid "Failed"
-msgstr "Falhou"
-
-#: src/pages/page-dashboard.c:
-msgid "Error"
-msgstr "Erro"
-
-#: src/pages/page-dashboard.c:
-msgid "Install"
-msgstr "Instalar"
-
-#: src/window.c:
-msgid "Hardware"
-msgstr "Hardware"
-
-#: data/ui/page-dashboard.ui:
-msgid "Game Library"
-msgstr "Biblioteca de Jogos"
-
-#: data/ui/page-dashboard.ui:
-msgid "Add Game"
-msgstr "Adicionar Jogo"
-
-#: data/ui/page-gamemode.ui:
-msgid "GameMode Settings"
-msgstr "Configurações do GameMode"
-
-#: data/ui/page-gamemode.ui:
-msgid "Configure Feral GameMode for optimal gaming performance. GameMode applies system-level optimizations when games are running."
-msgstr "Configure o Feral GameMode para desempenho ideal nos jogos. O GameMode aplica otimizações de nível de sistema quando jogos estão rodando."
-
-#: data/ui/page-gamemode.ui:
-msgid "Process Priority"
-msgstr "Prioridade do Processo"
-
-#: data/ui/page-gamemode.ui:
-msgid "Nice Value"
-msgstr "Valor Nice"
-
-#: data/ui/page-gamemode.ui:
-msgid "Process priority (-20 = highest, 19 = lowest). Default: 0"
-msgstr "Prioridade do processo (-20 = mais alta, 19 = mais baixa). Padrão: 0"
-
-#: data/ui/page-gamemode.ui:
-msgid "I/O Priority"
-msgstr "Prioridade de Entrada/Saida"
-
-#: data/ui/page-gamemode.ui:
-msgid "Disk I/O scheduling class. Default: none"
-msgstr "Classe de agendamento de Entrada/Saida do disco. Padrão: nenhuma"
-
-#: data/ui/page-gamemode.ui:
-msgid "None"
-msgstr "Nenhuma"
-
-#: data/ui/page-gamemode.ui:
-msgid "Realtime"
-msgstr "Tempo real"
-
-#: data/ui/page-gamemode.ui:
-msgid "Best-effort"
-msgstr "Melhor esforço"
-
-#: data/ui/page-gamemode.ui:
-msgid "Idle"
-msgstr "Ocioso"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU Settings"
-msgstr "Configurações da CPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU Governor"
-msgstr "Governador da CPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU frequency scaling policy. Performance mode keeps max frequency. Default: performance"
-msgstr "Política de escala de frequência da CPU. Modo performance mantém frequência máxima. Padrão: performance"
-
-#: data/ui/page-gamemode.ui:
-msgid "Performance"
-msgstr "Performance"
-
-#: data/ui/page-gamemode.ui:
-msgid "Powersave"
-msgstr "Economia de energia"
-
-#: data/ui/page-gamemode.ui:
-msgid "Schedutil"
-msgstr "Schedutil"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU Min Frequency"
-msgstr "Frequência Mínima da CPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "Minimum CPU frequency in kHz. 0 = no minimum. Default: 0"
-msgstr "Frequência mínima da CPU em kHz. 0 = sem mínimo. Padrão: 0"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU Max Frequency"
-msgstr "Frequência Máxima da CPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "Maximum CPU frequency in kHz. 0 = no maximum. Default: 0"
-msgstr "Frequência máxima da CPU em kHz. 0 = sem máximo. Padrão: 0"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU Performance Percentage"
-msgstr "Porcentagem de Performance da CPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "CPU performance level (0-100). Higher = more aggressive. Default: 100"
-msgstr "Nível de performance da CPU (0-100). Maior = mais agressivo. Padrão: 100"
-
-#: data/ui/page-gamemode.ui:
-msgid "Scheduler"
-msgstr "Agendador"
-
-#: data/ui/page-gamemode.ui:
-msgid "Scheduler Priority"
-msgstr "Prioridade do Agendador"
-
-#: data/ui/page-gamemode.ui:
-msgid "Process scheduler priority (-20 to 19). Default: 0"
-msgstr "Prioridade do agendador de processos (-20 a 19). Padrão: 0"
-
-#: data/ui/page-gamemode.ui:
-msgid "I/O Weight"
-msgstr "Peso de E/S"
-
-#: data/ui/page-gamemode.ui:
-msgid "I/O scheduling weight (1-10000). Higher = more I/O priority. Default: 100"
-msgstr "Peso de agendamento de E/S (1-10000). Maior = mais prioridade de E/S. Padrão: 100"
-
-#: data/ui/page-gamemode.ui:
-msgid "GPU Settings"
-msgstr "Configurações da GPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "GPU Governor"
-msgstr "Governador da GPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "GPU frequency scaling policy. Default: performance"
-msgstr "Política de escala de frequência da GPU. Padrão: performance"
-
-#: data/ui/page-gamemode.ui:
-msgid "Apply GPU Governor"
-msgstr "Aplicar Governador da GPU"
-
-#: data/ui/page-gamemode.ui:
-msgid "Enable GPU governor override when GameMode is active"
-msgstr "Ativar sobrescrita do governador da GPU quando o GameMode estiver ativo"
-
-#: data/ui/page-gamemode.ui:
-msgid "Custom Scripts"
-msgstr "Scripts Personalizados"
-
-#: data/ui/page-gamemode.ui:
-msgid "Start Script"
-msgstr "Script de Início"
-
-#: data/ui/page-gamemode.ui:
-msgid "Script to run when GameMode activates"
-msgstr "Script para executar quando o GameMode ativar"
-
-#: data/ui/page-gamemode.ui:
-msgid "End Script"
-msgstr "Script de Fim"
-
-#: data/ui/page-gamemode.ui:
-msgid "Script to run when GameMode deactivates"
-msgstr "Script para executar quando o GameMode desativar"
-
-#: data/ui/page-gamemode.ui:
-msgid "Save Configuration"
-msgstr "Salvar Configuração"
-
-#: data/ui/page-gamemode.ui:
-msgid "Reset to Defaults"
-msgstr "Restaurar Padrões"
-
-#: data/ui/page-gamemode.ui:
-msgid "Configuration file: /etc/gamemode.ini"
-msgstr "Arquivo de configuração: /etc/gamemode.ini"
-
-#: data/ui/page-settings.ui:
-msgid "Settings"
-msgstr "Configurações"
-
-#: data/ui/page-settings.ui:
-msgid "Application preferences and appearance"
-msgstr "Preferências e aparência do aplicativo"
-
-#: data/ui/page-settings.ui:
-msgid "Appearance"
-msgstr "Aparência"
-
-#: data/ui/page-settings.ui:
-msgid "Accent Color"
-msgstr "Cor de Destaque"
-
-#: data/ui/page-settings.ui:
-msgid "Choose the application accent color"
-msgstr "Escolha a cor de destaque do aplicativo"
-
-#: data/ui/page-settings.ui:
-msgid "System Default"
-msgstr "Padrão do Sistema"
-
-#: data/ui/page-settings.ui:
-msgid "Intel Blue"
-msgstr "Azul Intel"
-
-#: data/ui/page-settings.ui:
-msgid "AMD Red"
-msgstr "Vermelho AMD"
-
-#: data/ui/page-settings.ui:
-msgid "NVIDIA Green"
-msgstr "Verde NVIDIA"
-
-#: data/ui/page-settings.ui:
-msgid "System Information"
-msgstr "Informações do Sistema"
-
-#: data/ui/page-settings.ui:
-msgid "Detected GPU"
-msgstr "GPU Detectada"
-
-#: data/ui/page-settings.ui:
-msgid "Detecting..."
-msgstr "Detectando..."
-
-#: data/ui/page-settings.ui:
-msgid "Apply theme to entire interface"
-msgstr "Aplicar tema para toda a interface"
-
-#: data/ui/page-settings.ui:
-msgid "Applies a color palette based on the chosen accent color"
-msgstr "Aplica uma paleta de cores baseada na cor de destaque escolhida"
-
-#: data/ui/page-settings.ui:
-msgid "About"
-msgstr "Sobre"
-
-#: data/ui/page-settings.ui:
-msgid "Application Name"
-msgstr "Nome do Aplicativo"
-
-#: data/ui/page-settings.ui:
+#: data/io.github.mayrinck.epinephrine.desktop.in:2
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:4 data/ui/window.ui:8
+#: data/ui/page-settings.ui:29 data/ui/page-settings.ui:119
 msgid "Epinephrine"
 msgstr "Epinephrine"
 
-#: data/ui/page-settings.ui:
-msgid "Version"
-msgstr "Versão"
+#: data/io.github.mayrinck.epinephrine.desktop.in:6
+msgid ""
+"Configure gamescope settings, optimize system performance, and monitor "
+"hardware"
+msgstr ""
+"Configure settings do gamescope, otimize o desempenho do sistema e monitore "
+"o hardware"
 
-#: data/ui/page-settings.ui:
-msgid "0.1.0"
-msgstr "0.1.0"
+#: data/io.github.mayrinck.epinephrine.desktop.in:13
+msgid "gamescope;game;compositor;optimization;hardware;"
+msgstr "gamescope;jogo;compositor;otimização;hardware;"
 
-#: data/ui/page-settings.ui:
-msgid "Toolkit"
-msgstr "Ferramentas"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:5
+msgid "System Optimization & Gamescope Configuration Tool"
+msgstr "Ferramenta de Otimização de Sistema e Configuração do Gamescope"
 
-#: data/ui/page-settings.ui:
-msgid "License"
-msgstr "Licença"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:7
+msgid "mayrinck"
+msgstr "mayrinck"
 
-#: data/ui/page-settings.ui:
-msgid "GNU General Public License v3.0"
-msgstr "GNU General Public License v3.0"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:10
+msgid ""
+"An all-in-one system optimization and configuration tool for Linux gamers."
+msgstr ""
+"Uma ferramenta tudo-em-um de otimização e configuração de sistema para "
+"gamers Linux."
 
-#: data/ui/page-dashboard.ui:
-msgid "Import Games"
-msgstr "Importar Jogos"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:13
+msgid ""
+"Epinephrine brings together hardware monitoring, system performance tuning, "
+"and Gamescope configuration into a single, intuitive interface."
+msgstr ""
+"Epinephrine reúne monitoramento de hardware, ajuste de desempenho do "
+"sistema e configuração do Gamescope em uma única interface intuitiva."
 
-#: data/ui/page-dashboard.ui:
-msgid "Steam"
-msgstr "Steam"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:17
+msgid "Features:"
+msgstr "Recursos:"
 
-#: data/ui/page-dashboard.ui:
-msgid "Heroic"
-msgstr "Heroic"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:19
+msgid "Gamescope command generator with visual configuration"
+msgstr "Gerador de comandos do Gamescope com configuração visual"
 
-#: data/ui/page-dashboard.ui:
-msgid "Lutris"
-msgstr "Lutris"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:20
+msgid "System optimization and cleanup utilities (coming soon)"
+msgstr "Utilitários de otimização e limpeza do sistema (em breve)"
 
-#: src/pages/page-dashboard.c
-msgid "Edit Game"
-msgstr "Editar Jogo"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:21
+msgid "Hardware monitoring and control (coming soon)"
+msgstr "Monitoramento e controle de hardware (em breve)"
 
-#: src/pages/page-dashboard.c
-msgid "Save"
-msgstr "Salvar"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:30
+msgid "gamescope"
+msgstr "gamescope"
 
-#: src/pages/page-dashboard.c
-msgid "Delete"
-msgstr "Excluir"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:31
+msgid "gamemode"
+msgstr "gamemode"
 
-#: src/pages/page-dashboard.c
-msgid "Cancel"
-msgstr "Cancelar"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:32
+#: data/ui/page-cpu.ui:39
+msgid "performance"
+msgstr "performance"
 
-#: src/pages/page-dashboard.c
-msgid "Add"
-msgstr "Adicionar"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:33
+msgid "monitor"
+msgstr "monitor"
 
-#: src/pages/page-dashboard.c
-msgid "Play"
-msgstr "Jogar"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:34
+msgid "joystick"
+msgstr "controle"
 
-#: src/pages/page-dashboard.c
-msgid "Running..."
-msgstr "Executando..."
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:35
+msgid "launcher"
+msgstr "launcher"
 
-#: src/pages/page-dashboard.c
-msgid "Game removed"
-msgstr "Jogo removido"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:36
+msgid "adrenalin"
+msgstr "adrenalin"
 
-#: src/pages/page-dashboard.c
-msgid "Icon (icon name or path)"
-msgstr "Ícone (nome do ícone ou caminho)"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:37
+msgid "game"
+msgstr "jogo"
 
-#: src/pages/page-dashboard.c
-msgid "Game Name"
-msgstr "Nome do Jogo"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:38
+msgid "compositor"
+msgstr "compositor"
 
-#: src/pages/page-dashboard.c
-msgid "Launch Command"
-msgstr "Comando de Inicialização"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:39
+msgid "scaling"
+msgstr "escalonamento"
 
-#: src/pages/page-dashboard.c
-msgid "Working Directory (optional)"
-msgstr "Diretório de Trabalho (opcional)"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:40
+msgid "steam"
+msgstr "steam"
 
-#: src/pages/page-dashboard.c
-msgid "Imported %d game from Steam"
-msgid_plural "Imported %d games from Steam"
-msgstr[0] "%d jogo importado do Steam"
-msgstr[1] "%d jogos importados do Steam"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:41
+msgid "optimization"
+msgstr "otimização"
 
-#: src/pages/page-dashboard.c
-msgid "No Steam games found"
-msgstr "Nenhum jogo do Steam encontrado"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:42
+msgid "hardware"
+msgstr "hardware"
 
-#: src/pages/page-dashboard.c
-msgid "Imported %d game from Heroic"
-msgid_plural "Imported %d games from Heroic"
-msgstr[0] "%d jogo importado do Heroic"
-msgstr[1] "%d jogos importados do Heroic"
+#: data/io.github.mayrinck.epinephrine.metainfo.xml.in:46
+msgid "The main window of Epinephrine"
+msgstr "A janela principal do Epinephrine"
 
-#: src/pages/page-dashboard.c
-msgid "No Heroic games found"
-msgstr "Nenhum jogo do Heroic encontrado"
+#: data/ui/page-gamemode.ui:12
+msgid "GameMode Settings"
+msgstr "Configurações do GameMode"
 
-#: src/pages/page-dashboard.c
-msgid "Imported %d game from Lutris"
-msgid_plural "Imported %d games from Lutris"
-msgstr[0] "%d jogo importado do Lutris"
-msgstr[1] "%d jogos importados do Lutris"
+#: data/ui/page-gamemode.ui:13
+msgid ""
+"Configure Feral GameMode for optimal gaming performance. GameMode applies "
+"system-level optimizations when games are running."
+msgstr ""
+"Configure o Feral GameMode para desempenho ideal nos jogos. O GameMode "
+"aplica otimizações de nível de sistema quando jogos estão rodando."
 
-#: src/pages/page-dashboard.c
-msgid "No Lutris games found"
-msgstr "Nenhum jogo do Lutris encontrado"
+#: data/ui/page-gamemode.ui:22
+msgid "Process Priority"
+msgstr "Prioridade do Processo"
 
-#: src/pages/page-hardware.c
-msgid "Processor"
-msgstr "Processador"
+#: data/ui/page-gamemode.ui:23
+msgid "Defines the priority of the processes while gamemode is active."
+msgstr "Define a prioridade dos processos enquanto o gamemode está ativo."
 
-#: src/pages/page-hardware.c
-msgid "Memory"
-msgstr "Memória"
+#: data/ui/page-gamemode.ui:26
+msgid "Nice Value"
+msgstr "Valor Nice"
 
-#: src/pages/page-hardware.c
-msgid "Video Card"
-msgstr "Placa de Vídeo"
+#: data/ui/page-gamemode.ui:27
+msgid "Process priority (-20 = highest, 19 = lowest). Default: 0"
+msgstr "Prioridade do processo (-20 = mais alta, 19 = mais baixa). Padrão: 0"
 
-#: src/pages/page-hardware.c
-msgid "GPU Management"
-msgstr "Gerenciamento da GPU"
+#: data/ui/page-gamemode.ui:46
+msgid "I/O Priority"
+msgstr "Prioridade de Entrada/Saída"
 
-#: src/pages/page-hardware.c
-msgid "Specs, Drivers & Resources"
-msgstr "Specs, Drivers & Resources"
+#: data/ui/page-gamemode.ui:47
+msgid "Disk I/O scheduling class. Default: none"
+msgstr "Classe de agendamento de E/S do disco. Padrão: nenhuma"
 
-#: src/pages/page-hardware.c
-msgid "Specs"
-msgstr "Especificações"
+#: data/ui/page-gamemode.ui:52
+msgid "None"
+msgstr "Nenhuma"
 
-#: src/pages/page-hardware.c
-msgid "Radeon Chill"
-msgstr "Radeon Chill"
+#: data/ui/page-gamemode.ui:53
+msgid "Realtime"
+msgstr "Tempo real"
 
-#: src/pages/page-hardware.c
-msgid "Min FPS"
-msgstr "FPS Mínimo"
+#: data/ui/page-gamemode.ui:54
+msgid "Best-effort"
+msgstr "Melhor esforço"
 
-#: src/pages/page-hardware.c
-msgid "Max FPS"
-msgstr "FPS Máximo"
+#: data/ui/page-gamemode.ui:55
+msgid "Idle"
+msgstr "Ocioso"
 
-#: src/pages/page-hardware.c
-msgid "Anti-Lag"
-msgstr "Anti-Lag"
+#: data/ui/page-gamemode.ui:72
+msgid "CPU Settings"
+msgstr "Configurações da CPU"
 
-#: src/pages/page-hardware.c
-msgid "Dynamically regulates your game's frame rate (FPS) based on your movements."
-msgstr "Regula dinamicamente a taxa de quadros (FPS) do seu jogo com base nos seus movimentos."
+#: data/ui/page-gamemode.ui:73
+msgid "Configure the behavior of your CPU while gamemode is active."
+msgstr "Configure o comportamento da CPU enquanto o gamemode está ativo."
 
-#: src/pages/page-hardware.c
-msgid "Forces the GPU to a specific performance level: auto, low power, high performance, or manual."
-msgstr "Força a GPU para um nível específico de desempenho: automático, baixo consumo, alto desempenho ou manual."
+#: data/ui/page-gamemode.ui:76
+msgid "CPU Governor"
+msgstr "Governador da CPU"
 
-#: src/pages/page-hardware.c
-msgid "Controls GPU fan behavior. Enable manual mode to set fan speed (PWM) directly."
-msgstr "Controla o comportamento da ventoinha da GPU. Ative o modo manual para definir a velocidade (PWM) diretamente."
+#: data/ui/page-gamemode.ui:77
+msgid ""
+"CPU frequency scaling policy. Performance mode keeps max frequency. Default: "
+"performance"
+msgstr ""
+"Política de escala de frequência da CPU. Modo performance mantém frequência "
+"máxima. Padrão: performance"
 
-#: src/pages/page-hardware.c
-msgid "Official Page"
-msgstr "Página Oficial"
+#: data/ui/page-gamemode.ui:82 data/ui/page-gamemode.ui:224
+#: data/ui/page-mangohud.ui:281
+msgid "Performance"
+msgstr "Performance"
 
-#: src/pages/page-hardware.c
-msgid "Release: %s"
-msgstr "Lançamento: %s"
+#: data/ui/page-gamemode.ui:83 data/ui/page-gamemode.ui:225
+msgid "Powersave"
+msgstr "Economia de energia"
 
-#: src/pages/page-hardware.c
-msgid "Power Profile"
-msgstr "Perfil de Energia"
+#: data/ui/page-gamemode.ui:84
+msgid "Schedutil"
+msgstr "Schedutil"
 
-#: src/pages/page-hardware.c
-msgid "Selects the clock and power switching heuristic for the GPU."
-msgstr "Seleciona a heurística de chaveamento de clock e energia da GPU."
+#: data/ui/page-gamemode.ui:93
+msgid "CPU Min Frequency"
+msgstr "Frequência Mínima da CPU"
 
-#: src/pages/page-hardware.c
-msgid "Frame Rate Target Control"
-msgstr "Controle de Taxa de Quadros Alvo"
+#: data/ui/page-gamemode.ui:94
+msgid "Minimum CPU frequency in kHz. 0 = no minimum. Default: 0"
+msgstr "Frequência mínima da CPU em kHz. 0 = sem mínimo. Padrão: 0"
 
-#: src/pages/page-hardware.c
-msgid "Sets a maximum frame rate cap for all 3D applications via MangoHud."
-msgstr "Define um limite máximo de taxa de quadros para todos os aplicativos 3D via MangoHud."
+#: data/ui/page-gamemode.ui:113
+msgid "CPU Max Frequency"
+msgstr "Frequência Máxima da CPU"
 
-#: src/pages/page-hardware.c
+#: data/ui/page-gamemode.ui:114
+msgid "Maximum CPU frequency in kHz. 0 = no maximum. Default: 0"
+msgstr "Frequência máxima da CPU em kHz. 0 = sem máximo. Padrão: 0"
+
+#: data/ui/page-gamemode.ui:133
+msgid "CPU Performance Percentage"
+msgstr "Porcentagem de Performance da CPU"
+
+#: data/ui/page-gamemode.ui:134
+msgid "CPU performance level (0-100). Higher = more aggressive. Default: 100"
+msgstr ""
+"Nível de performance da CPU (0-100). Maior = mais agressivo. Padrão: 100"
+
+#: data/ui/page-gamemode.ui:161
+msgid "Scheduler"
+msgstr "Agendador"
+
+#: data/ui/page-gamemode.ui:162
+msgid "Define the scheduler behavior while gamemode is active."
+msgstr "Define o comportamento do agendador enquanto o gamemode está ativo."
+
+#: data/ui/page-gamemode.ui:165
+msgid "Scheduler Priority"
+msgstr "Prioridade do Agendador"
+
+#: data/ui/page-gamemode.ui:166
+msgid "Process scheduler priority (-20 to 19). Default: 0"
+msgstr "Prioridade do agendador de processos (-20 a 19). Padrão: 0"
+
+#: data/ui/page-gamemode.ui:185
+msgid "I/O Weight"
+msgstr "Peso de E/S"
+
+#: data/ui/page-gamemode.ui:186
+msgid ""
+"I/O scheduling weight (1-10000). Higher = more I/O priority. Default: 100"
+msgstr ""
+"Peso de agendamento de E/S (1-10000). Maior = mais prioridade de E/S. "
+"Padrão: 100"
+
+#: data/ui/page-gamemode.ui:214
+msgid "GPU Settings"
+msgstr "Configurações da GPU"
+
+#: data/ui/page-gamemode.ui:215
+msgid "Configure the behavior of the GPU while gamemode is active"
+msgstr "Configure o comportamento da GPU enquanto o gamemode está ativo"
+
+#: data/ui/page-gamemode.ui:218
+msgid "GPU Governor"
+msgstr "Governador da GPU"
+
+#: data/ui/page-gamemode.ui:219
+msgid "GPU frequency scaling policy. Default: performance"
+msgstr "Política de escala de frequência da GPU. Padrão: performance"
+
+#: data/ui/page-gamemode.ui:226
+msgid "Default"
+msgstr "Padrão"
+
+#: data/ui/page-gamemode.ui:235
+msgid "Apply GPU Governor"
+msgstr "Aplicar Governador da GPU"
+
+#: data/ui/page-gamemode.ui:236
+msgid "Enable GPU governor override when GameMode is active"
+msgstr "Ativar sobrescrita do governador da GPU quando o GameMode estiver ativo"
+
+#: data/ui/page-gamemode.ui:250
+msgid "Tweaks"
+msgstr "Ajustes"
+
+#: data/ui/page-gamemode.ui:251
+msgid ""
+"System tweaks applied while GameMode is active. Changes are reverted when "
+"GameMode stops."
+msgstr ""
+"Ajustes do sistema aplicados enquanto o GameMode está ativo. As mudanças "
+"são revertidas quando o GameMode para."
+
+#: data/ui/page-gamemode.ui:254
+msgid "Disable animations"
+msgstr "Desabilitar animações"
+
+#: data/ui/page-gamemode.ui:255
+msgid "System animations will not occur while gamemode is active"
+msgstr "Animações do sistema não ocorrerão enquanto o gamemode estiver ativo"
+
+#: data/ui/page-gamemode.ui:261
+msgid "Disable notifications"
+msgstr "Desabilitar notificações"
+
+#: data/ui/page-gamemode.ui:262
+msgid "System notification bubbles will not occur while gamemode is active"
+msgstr ""
+"Bolhas de notificação do sistema não ocorrerão enquanto o gamemode estiver "
+"ativo"
+
+#: data/ui/page-gamemode.ui:268
+msgid "Suspend compositor"
+msgstr "Suspender compositor"
+
+#: data/ui/page-gamemode.ui:269
+msgid ""
+"Suspend the desktop compositor to reduce input lag and eliminate forced "
+"vsync. Supported on KDE and GNOME."
+msgstr ""
+" suspendedor o compositor da área de trabalho para reduzir o lag de entrada "
+"e eliminar vsync forçado. Suportado no KDE e GNOME."
+
+#: data/ui/page-gamemode.ui:275
+msgid "Reduce swappiness"
+msgstr "Reduzir swappiness"
+
+#: data/ui/page-gamemode.ui:276
+msgid ""
+"Keep data in RAM longer by reducing the kernel's tendency to swap. Safer "
+"with 8 GB+ of RAM."
+msgstr ""
+"Mantém os dados na RAM por mais tempo reduzindo a tendência do kernel de "
+"fazer swap. Mais seguro com 8 GB+ de RAM."
+
+#: data/ui/page-gamemode.ui:282
+msgid "Disable NMI watchdog"
+msgstr "Desabilitar watchdog NMI"
+
+#: data/ui/page-gamemode.ui:283
+msgid ""
+"Disables periodic CPU interrupt monitoring. Most useful on older CPUs to "
+"reclaim a small amount of cycles."
+msgstr ""
+"Desabilita o monitoramento periódico de interrupções da CPU. Mais útil em "
+"CPUs antigas para recuperar uma pequena quantidade de ciclos."
+
+#: data/ui/page-gamemode.ui:289
+msgid "Disable USB autosuspend"
+msgstr "Desabilitar autosuspend USB"
+
+#: data/ui/page-gamemode.ui:290
+msgid ""
+"Prevents USB devices from entering sleep during gameplay, reducing potential "
+"input micro-lags."
+msgstr ""
+"Impede que dispositivos USB entrem em suspensão durante o jogo, reduzindo "
+"possíveis micro-lags de entrada."
+
+#: data/ui/page-gamemode.ui:296
+msgid "Increase timer frequency"
+msgstr "Aumentar frequência do timer"
+
+#: data/ui/page-gamemode.ui:297
+msgid ""
+"Raises kernel timer resolution from 250 Hz to 1000 Hz for more consistent "
+"frametimes."
+msgstr ""
+"Aumenta a resolução do timer do kernel de 250 Hz para 1000 Hz para "
+"frametimes mais consistentes."
+
+#: data/ui/page-gamemode.ui:303
+msgid "Disable USB wakeup"
+msgstr "Desabilitar despertar USB"
+
+#: data/ui/page-gamemode.ui:304
+msgid ""
+"Prevents USB devices from waking the CPU, avoiding micro-interruptions "
+"during gameplay."
+msgstr ""
+"Impede que dispositivos USB despertem a CPU, evitando micro-interrupções "
+"durante o jogo."
+
+#: data/ui/page-gamemode.ui:310
+msgid "Reduce write cache"
+msgstr "Reduzir cache de escrita"
+
+#: data/ui/page-gamemode.ui:311
+msgid ""
+"Lowers kernel dirty page thresholds so writes happen more frequently, "
+"reducing I/O spikes."
+msgstr ""
+"Reduz os limites de páginas sujas do kernel para que as escritas ocorram "
+"com mais frequência, reduzindo picos de E/S."
+
+#: data/ui/page-gamemode.ui:317
+msgid "Kill background indexers"
+msgstr "Matar indexadores em segundo plano"
+
+#: data/ui/page-gamemode.ui:318
+msgid ""
+"Terminates file indexers (baloo, tracker) that consume CPU and disk during "
+"gameplay."
+msgstr ""
+"Termina indexadores de arquivos (baloo, tracker) que consomem CPU e disco "
+"durante o jogo."
+
+#: data/ui/page-gamemode.ui:324
+msgid "Increase scheduler limit"
+msgstr "Aumentar limite do agendador"
+
+#: data/ui/page-gamemode.ui:325
+msgid ""
+"Allows real-time processes to use a larger CPU slice. Useful for audio/"
+"PipeWire and Wine."
+msgstr ""
+"Permite que processos em tempo real usem uma fatia maior da CPU. Útil para "
+"áudio/PipeWire e Wine."
+
+#: data/ui/page-gamemode.ui:331
+msgid "Stop auto-updaters"
+msgstr "Parar atualizadores automáticos"
+
+#: data/ui/page-gamemode.ui:332
+msgid ""
+"Disables packagekit and snapd during gameplay to prevent unexpected download/"
+"install spikes."
+msgstr ""
+"Desabilita packagekit e snapd durante o jogo para prevenir picos "
+"inesperados de download/instalação."
+
+#: data/ui/page-gamemode.ui:346
+msgid "Custom Scripts"
+msgstr "Scripts Personalizados"
+
+#: data/ui/page-gamemode.ui:347
+msgid "Scripts that will execute every time Gamemode turns on/off"
+msgstr "Scripts que serão executados toda vez que o Gamemode ligar/desligar"
+
+#: data/ui/page-gamemode.ui:350
+msgid "Startup Script"
+msgstr "Script de Inicialização"
+
+#: data/ui/page-gamemode.ui:351
+msgid "Executed when GameMode activates, right before a game starts"
+msgstr ""
+"Executado quando o GameMode é ativado, logo antes de um jogo começar"
+
+#: data/ui/page-gamemode.ui:355
+msgid "/path/to/start.sh"
+msgstr "/caminho/para/inicio.sh"
+
+#: data/ui/page-gamemode.ui:365
+msgid "Shutdown Script"
+msgstr "Script de Desligamento"
+
+#: data/ui/page-gamemode.ui:366
+msgid "Executed when GameMode deactivates, after a game closes"
+msgstr ""
+"Executado quando o GameMode é desativado, depois que um jogo é fechado"
+
+#: data/ui/page-gamemode.ui:370
+msgid "/path/to/end.sh"
+msgstr "/caminho/para/fim.sh"
+
+#: data/ui/page-gamemode.ui:400 data/ui/page-gamescope.ui:547
+#: data/ui/page-mangohud.ui:319
+msgid "Restore Defaults"
+msgstr "Restaurar Padrões"
+
+#: data/ui/page-gamemode.ui:424 data/ui/page-gamescope.ui:603
+#: data/ui/page-mangohud.ui:343
+msgid "Save Configuration"
+msgstr "Salvar Configuração"
+
+#: data/ui/page-gamescope.ui:12
+msgid "Gamescope Manager"
+msgstr "Gerenciador do Gamescope"
+
+#: data/ui/page-gamescope.ui:13
+msgid ""
+"Configure Gamescope parameters visually. Save your configuration as the "
+"system default or copy it to use with a specific game in Steam or other "
+"launchers as startup command."
+msgstr ""
+"Configure os parâmetros do Gamescope visualmente. Salve sua configuração "
+"como padrão do sistema ou copie para usar com um jogo específico na Steam "
+"ou em outros launchers como comando de inicialização."
+
+#: data/ui/page-gamescope.ui:22
+msgid "Display"
+msgstr "Monitor"
+
+#: data/ui/page-gamescope.ui:23
+msgid "Output resolution, game resolution, refresh rates and fullscreen options."
+msgstr ""
+"Resolução de saída, resolução do jogo, taxas de atualização e opções de "
+"tela cheia."
+
+#: data/ui/page-gamescope.ui:26
+msgid "Output Width"
+msgstr "Largura da Saída"
+
+#: data/ui/page-gamescope.ui:27
+msgid "Leave 0 for default (1280)"
+msgstr "Deixe 0 para o padrão (1280)"
+
+#: data/ui/page-gamescope.ui:40
+msgid "Output Height"
+msgstr "Altura da Saída"
+
+#: data/ui/page-gamescope.ui:41
+msgid "Leave 0 for default (720)"
+msgstr "Deixe 0 para o padrão (720)"
+
+#: data/ui/page-gamescope.ui:54
+msgid "Game Width"
+msgstr "Largura do Jogo"
+
+#: data/ui/page-gamescope.ui:55 data/ui/page-gamescope.ui:69
+msgid "Leave 0 to match output"
+msgstr "Deixe 0 para igualar à saída"
+
+#: data/ui/page-gamescope.ui:68
+msgid "Game Height"
+msgstr "Altura do Jogo"
+
+#: data/ui/page-gamescope.ui:82
+msgid "Refresh Rate"
+msgstr "Taxa de Atualização (Hz)"
+
+#: data/ui/page-gamescope.ui:83
+msgid "FPS limit for vsync games (0 = unlimited)"
+msgstr "Limite de FPS para jogos com vsync (0 = ilimitado)"
+
+#: data/ui/page-gamescope.ui:96
+msgid "Unfocused Refresh"
+msgstr "Atualização sem Foco"
+
+#: data/ui/page-gamescope.ui:97
+msgid "FPS limit when unfocused (0 = unlimited)"
+msgstr "Limite de FPS de janela sem foco (0 = ilimitado)"
+
+#: data/ui/page-gamescope.ui:110
+msgid "Fullscreen"
+msgstr "Tela Cheia"
+
+#: data/ui/page-gamescope.ui:111
+msgid "Create a full-screen window"
+msgstr "Criar uma janela em tela cheia"
+
+#: data/ui/page-gamescope.ui:117
+msgid "Borderless"
+msgstr "Sem Bordas"
+
+#: data/ui/page-gamescope.ui:118
+msgid "Create a border-less window"
+msgstr "Criar uma janela sem bordas"
+
+#: data/ui/page-gamescope.ui:124
+msgid "Display Index"
+msgstr "Índice do Monitor"
+
+#: data/ui/page-gamescope.ui:125
+msgid "Force a specific display in nested mode"
+msgstr "Forçar um monitor específico no modo aninhado"
+
+#: data/ui/page-gamescope.ui:146
+msgid "Scaling"
+msgstr "Escalonamento"
+
+#: data/ui/page-gamescope.ui:147
+msgid "Upscaling algorithm, filter type, sharpness and max scale factor."
+msgstr ""
+"Algoritmo de upscaling, tipo de filtro, nitidez e fator de escala máximo."
+
+#: data/ui/page-gamescope.ui:150
+msgid "Scaler"
+msgstr "Escalonador"
+
+#: data/ui/page-gamescope.ui:151
+msgid "Scaling algorithm"
+msgstr "Algoritmo de escalonamento"
+
+#: data/ui/page-gamescope.ui:155 data/ui/page-gamescope.ui:358
+msgid "Auto"
+msgstr "Automático"
+
+#: data/ui/page-gamescope.ui:156
+msgid "Integer"
+msgstr "Inteiros"
+
+#: data/ui/page-gamescope.ui:157
+msgid "Fit"
+msgstr "Ajustar na tela"
+
+#: data/ui/page-gamescope.ui:158
+msgid "Fill"
+msgstr "Preencher na tela"
+
+#: data/ui/page-gamescope.ui:159
+msgid "Stretch"
+msgstr "Esticar na tela"
+
+#: data/ui/page-gamescope.ui:168
+msgid "Filter"
+msgstr "Filtro"
+
+#: data/ui/page-gamescope.ui:169
+msgid "Upscaler filter type"
+msgstr "Tipo de filtro de upscaling"
+
+#: data/ui/page-gamescope.ui:173
+msgid "Linear"
+msgstr "Linear"
+
+#: data/ui/page-gamescope.ui:174
+msgid "Nearest"
+msgstr "Vizinho mais próximo"
+
+#: data/ui/page-gamescope.ui:175
+msgid "FSR"
+msgstr "AMD™ FSR"
+
+#: data/ui/page-gamescope.ui:176
+msgid "NIS"
+msgstr "NVIDIA™ NIS"
+
+#: data/ui/page-gamescope.ui:177
+msgid "Pixel"
+msgstr "Pixel"
+
+#: data/ui/page-gamescope.ui:186
+msgid "Sharpness"
+msgstr "Nitidez"
+
+#: data/ui/page-gamescope.ui:187
+msgid "0 = sharpest, 20 = blurriest (default: 2)"
+msgstr "0 = mais nítido, 20 = mais borrado (padrão: 2)"
+
+#: data/ui/page-gamescope.ui:209
+msgid "Max Scale"
+msgstr "Escala Máxima"
+
+#: data/ui/page-gamescope.ui:210
+msgid "Maximum scale factor (0 = no limit)"
+msgstr "Fator de escala máximo (0 = sem limite)"
+
+#: data/ui/page-gamescope.ui:232
+msgid "Frame Rate"
+msgstr "Taxa de Quadros (FPS)"
+
+#: data/ui/page-gamescope.ui:233
+msgid "Framerate limit for the compositor."
+msgstr "Limite de taxa de quadros para o compositor."
+
+#: data/ui/page-gamescope.ui:236
+msgid "Framerate Limit"
+msgstr "Limite de FPS"
+
+#: data/ui/page-gamescope.ui:237 data/ui/page-gamescope.ui:474
+msgid "0 = disabled"
+msgstr "0 = desabilitado"
+
+#: data/ui/page-gamescope.ui:258
+msgid "HDR and Color"
+msgstr "HDR e Cor"
+
+#: data/ui/page-gamescope.ui:259
+msgid "HDR10 output, inverse tone mapping and SDR gamut settings."
+msgstr ""
+"Saída HDR10, mapeamento de tom inverso e configurações de gamut SDR."
+
+#: data/ui/page-gamescope.ui:262
+msgid "HDR Enabled"
+msgstr "HDR Ativado"
+
+#: data/ui/page-gamescope.ui:263
+msgid "Enable HDR10 output"
+msgstr "Ativar saída HDR10"
+
+#: data/ui/page-gamescope.ui:269
+msgid "SDR Content Nits"
+msgstr "Nits do SDR"
+
+#: data/ui/page-gamescope.ui:270
+msgid "Brightness of SDR in HDR mode (default: 400)"
+msgstr "Brilho do SDR em modo HDR (padrão: 400)"
+
+#: data/ui/page-gamescope.ui:283
+msgid "ITM Enabled"
+msgstr "ITM Ativado"
+
+#: data/ui/page-gamescope.ui:284
+msgid "SDR to HDR inverse tone mapping"
+msgstr "Mapeamento de tom inverso SDR para HDR"
+
+#: data/ui/page-gamescope.ui:290
+msgid "ITM SDR Nits"
+msgstr "Nits SDR do ITM"
+
+#: data/ui/page-gamescope.ui:291
+msgid "SDR input luminance (default: 100)"
+msgstr "Luminância de entrada SDR (padrão: 100)"
+
+#: data/ui/page-gamescope.ui:304
+msgid "ITM Target Nits"
+msgstr "Nits Alvo do ITM"
+
+#: data/ui/page-gamescope.ui:305
+msgid "Target luminance (default: 1000)"
+msgstr "Luminância alvo (padrão: 1000)"
+
+#: data/ui/page-gamescope.ui:318
+msgid "SDR Gamut Wideness"
+msgstr "Amplitude do Gamut SDR"
+
+#: data/ui/page-gamescope.ui:319
+msgid "0.0 = standard, 1.0 = max"
+msgstr "0.0 = padrão, 1.0 = máximo"
+
+#: data/ui/page-gamescope.ui:349
+msgid "Advanced"
+msgstr "Avançado"
+
+#: data/ui/page-gamescope.ui:350
+msgid "Backend, mouse, keyboard, cursor and MangoApp settings."
+msgstr ""
+"Configurações de backend, mouse, teclado, cursor e MangoApp."
+
+#: data/ui/page-gamescope.ui:353
+msgid "Rendering Backend"
+msgstr "Backend de Renderização"
+
+#: data/ui/page-gamescope.ui:354
+msgid "Auto-detect is recommended"
+msgstr "Recomenda-se detecção automática"
+
+#: data/ui/page-gamescope.ui:359
+msgid "DRM"
+msgstr "DRM"
+
+#: data/ui/page-gamescope.ui:360
+msgid "SDL"
+msgstr "SDL"
+
+#: data/ui/page-gamescope.ui:361
+msgid "Wayland"
+msgstr "Wayland"
+
+#: data/ui/page-gamescope.ui:362
+msgid "Headless"
+msgstr "Headless"
+
+#: data/ui/page-gamescope.ui:371
+msgid "Mouse Sensitivity"
+msgstr "Sensibilidade do Mouse"
+
+#: data/ui/page-gamescope.ui:372
+msgid "Multiplier (default: 1.0)"
+msgstr "Multiplicador (padrão: 1.0)"
+
+#: data/ui/page-gamescope.ui:386
+msgid "Steam Integration"
+msgstr "Integração da Steam"
+
+#: data/ui/page-gamescope.ui:387
+msgid "Steam-specific protocols and logic"
+msgstr "Usa protocolos e lógica específicos da Steam"
+
+#: data/ui/page-gamescope.ui:393
+msgid "Adaptive Sync"
+msgstr "Adaptive Sync"
+
+#: data/ui/page-gamescope.ui:394
+msgid "Enable VRR if supported"
+msgstr "Ativar VRR se suportado"
+
+#: data/ui/page-gamescope.ui:400
+msgid "Grab Keyboard"
+msgstr "Capturar Teclado"
+
+#: data/ui/page-gamescope.ui:401
+msgid "Grab keyboard input"
+msgstr "Capturar entrada do teclado"
+
+#: data/ui/page-gamescope.ui:407
+msgid "Force Grab Cursor"
+msgstr "Forçar Captura do Cursor"
+
+#: data/ui/page-gamescope.ui:408
+msgid "Always use relative mouse mode"
+msgstr "Sempre usar modo relativo do mouse"
+
+#: data/ui/page-gamescope.ui:414
+msgid "Expose Wayland"
+msgstr "Expor Wayland"
+
+#: data/ui/page-gamescope.ui:415
+msgid "Support Wayland clients via xdg-shell"
+msgstr "Suportar clientes Wayland via xdg-shell"
+
+#: data/ui/page-gamescope.ui:421
+msgid "MangoApp"
+msgstr "MangoApp"
+
+#: data/ui/page-gamescope.ui:422
+msgid "Launch with MangoHud overlay"
+msgstr "Iniciar com sobreposição do MangoHud integrada ao Gamescope"
+
+#: data/ui/page-gamescope.ui:428
+msgid "Force Orientation"
+msgstr "Forçar Orientação"
+
+#: data/ui/page-gamescope.ui:429
+msgid "Rotate the display"
+msgstr "Rotacionar a tela"
+
+#: data/ui/page-gamescope.ui:433
+msgid "Normal"
+msgstr "Normal"
+
+#: data/ui/page-gamescope.ui:434
+msgid "Left"
+msgstr "Esquerda"
+
+#: data/ui/page-gamescope.ui:435
+msgid "Right"
+msgstr "Direita"
+
+#: data/ui/page-gamescope.ui:436
+msgid "Upside Down"
+msgstr "Invertido"
+
+#: data/ui/page-gamescope.ui:445
+msgid "Prefer Output"
+msgstr "Preferir Saída"
+
+#: data/ui/page-gamescope.ui:446
+msgid "Connectors (ex: DP-1,HDMI-A-1)"
+msgstr "Conectores (ex: DP-1,HDMI-A-1)"
+
+#: data/ui/page-gamescope.ui:459
+msgid "Immediate Flips"
+msgstr "Flips Imediatos"
+
+#: data/ui/page-gamescope.ui:460
+msgid "May cause tearing"
+msgstr "Pode causar tearing"
+
+#: data/ui/page-gamescope.ui:466
+msgid "Keep Alive"
+msgstr "Manter Vivo"
+
+#: data/ui/page-gamescope.ui:467
+msgid "Keep running after game exits"
+msgstr "Manter rodando após o jogo sair"
+
+#: data/ui/page-gamescope.ui:473
+msgid "Cursor Scale Height"
+msgstr "Altura da Escala do Cursor"
+
+#: data/ui/page-gamescope.ui:495
+msgid "ReShade"
+msgstr "ReShade"
+
+#: data/ui/page-gamescope.ui:496
+msgid "ReShade shader effect path and technique selection."
+msgstr "Caminho do efeito shader ReShade e seleção de técnica."
+
+#: data/ui/page-gamescope.ui:499
+msgid "Effect Path"
+msgstr "Caminho do Efeito"
+
+#: data/ui/page-gamescope.ui:500
+msgid "Path to a .fx shader file"
+msgstr "Caminho para um arquivo .fx de shader"
+
+#: data/ui/page-gamescope.ui:513
+msgid "Technique Index"
+msgstr "Índice da Técnica"
+
+#: data/ui/page-gamescope.ui:514
+msgid "Technique index from the effect"
+msgstr "Índice da técnica do efeito"
+
+#: data/ui/page-gamescope.ui:558
+msgid "Load Saved"
+msgstr "Carregar Salvo"
+
+#: data/ui/page-gamescope.ui:571
+msgid "gamescope command will appear here"
+msgstr "comando do gamescope aparecerá aqui"
+
+#: data/ui/page-gamescope.ui:576
+msgid "Copy"
+msgstr "Copiar"
+
+#: data/ui/page-mangohud.ui:12
+msgid "MangoHud Configuration"
+msgstr "Configuração do MangoHud"
+
+#: data/ui/page-mangohud.ui:13
+msgid "Configure the MangoHud overlay for your games."
+msgstr "Configure a sobreposição MangoHud para seus jogos."
+
+#: data/ui/page-mangohud.ui:22
+msgid "Toggle Visibility"
+msgstr "Alternar Visibilidade"
+
+#: data/ui/page-mangohud.ui:23
+msgid "Choose which stats to display on the overlay."
+msgstr "Escolha quais estatísticas exibir na sobreposição."
+
+#: data/ui/page-mangohud.ui:26
+msgid "FPS Counter"
+msgstr "Contador de FPS"
+
+#: data/ui/page-mangohud.ui:27
+msgid "Display frames per second"
+msgstr "Exibir quadros por segundo"
+
+#: data/ui/page-mangohud.ui:33
+msgid "Frame Timing"
+msgstr "Tempo de Quadro"
+
+#: data/ui/page-mangohud.ui:34
+msgid "Show frame time graph"
+msgstr "Mostrar gráfico de tempo de quadro"
+
+#: data/ui/page-mangohud.ui:40
+msgid "CPU Stats"
+msgstr "Estatísticas da CPU"
+
+#: data/ui/page-mangohud.ui:41
+msgid "Show CPU usage per core"
+msgstr "Mostrar uso da CPU por núcleo"
+
+#: data/ui/page-mangohud.ui:47
+msgid "CPU Temperature"
+msgstr "Temperatura da CPU"
+
+#: data/ui/page-mangohud.ui:48
+msgid "Show CPU temperature reading"
+msgstr "Mostrar leitura de temperatura da CPU"
+
+#: data/ui/page-mangohud.ui:54
+msgid "GPU Stats"
+msgstr "Estatísticas da GPU"
+
+#: data/ui/page-mangohud.ui:55
+msgid "Show GPU usage"
+msgstr "Mostrar uso da GPU"
+
+#: data/ui/page-mangohud.ui:61
+msgid "GPU Temperature"
+msgstr "Temperatura da GPU"
+
+#: data/ui/page-mangohud.ui:62
+msgid "Show GPU temperature reading"
+msgstr "Mostrar leitura de temperatura da GPU"
+
+#: data/ui/page-mangohud.ui:68
+msgid "VRAM Usage"
+msgstr "Uso de VRAM"
+
+#: data/ui/page-mangohud.ui:69
+msgid "Show video memory usage"
+msgstr "Mostrar uso de memória de vídeo"
+
+#: data/ui/page-mangohud.ui:75
+msgid "RAM Usage"
+msgstr "Uso de RAM"
+
+#: data/ui/page-mangohud.ui:76
+msgid "Show system memory usage"
+msgstr "Mostrar uso de memória do sistema"
+
+#: data/ui/page-mangohud.ui:82
+msgid "Process Memory"
+msgstr "Memória do Processo"
+
+#: data/ui/page-mangohud.ui:83
+msgid "Show per-process memory usage"
+msgstr "Mostrar uso de memória por processo"
+
+#: data/ui/page-mangohud.ui:89
+msgid "I/O Stats"
+msgstr "Estatísticas de E/S"
+
+#: data/ui/page-mangohud.ui:90
+msgid "Show disk read/write stats"
+msgstr "Mostrar estatísticas de leitura/escrita do disco"
+
+#: data/ui/page-mangohud.ui:96
+msgid "Power Draw"
+msgstr "Consumo de Energia"
+
+#: data/ui/page-mangohud.ui:97
+msgid "Show GPU power consumption"
+msgstr "Mostrar consumo de energia da GPU"
+
+#: data/ui/page-mangohud.ui:103
+msgid "Engine Version"
+msgstr "Versão do Engine"
+
+#: data/ui/page-mangohud.ui:104
+msgid "Show game engine version"
+msgstr "Mostrar versão do engine do jogo"
+
+#: data/ui/page-mangohud.ui:110
+msgid "Vulkan Driver"
+msgstr "Driver Vulkan"
+
+#: data/ui/page-mangohud.ui:111
+msgid "Show Vulkan driver information"
+msgstr "Mostrar informações do driver Vulkan"
+
+#: data/ui/page-mangohud.ui:117
+msgid "Wine Info"
+msgstr "Info do Wine"
+
+#: data/ui/page-mangohud.ui:118
+msgid "Show Wine/Proton version"
+msgstr "Mostrar versão do Wine/Proton"
+
+#: data/ui/page-mangohud.ui:124
+msgid "Frame Time Histogram"
+msgstr "Histograma de Tempo de Quadro"
+
+#: data/ui/page-mangohud.ui:125
+msgid "Show frame time distribution"
+msgstr "Mostrar distribuição de tempo de quadro"
+
+#: data/ui/page-mangohud.ui:139
+msgid "Position and Layout"
+msgstr "Posição e Layout"
+
+#: data/ui/page-mangohud.ui:140
+msgid "HUD position, offset, font size and table columns."
+msgstr "Posição do HUD, offset, tamanho da fonte e colunas da tabela."
+
+#: data/ui/page-mangohud.ui:143
+msgid "Position"
+msgstr "Posição"
+
+#: data/ui/page-mangohud.ui:144
+msgid "HUD position on screen"
+msgstr "Posição do HUD na tela"
+
+#: data/ui/page-mangohud.ui:148
+msgid "Top-Left"
+msgstr "Canto Superior Esquerdo"
+
+#: data/ui/page-mangohud.ui:149
+msgid "Top-Right"
+msgstr "Canto Superior Direito"
+
+#: data/ui/page-mangohud.ui:150
+msgid "Bottom-Left"
+msgstr "Canto Inferior Esquerdo"
+
+#: data/ui/page-mangohud.ui:151
+msgid "Bottom-Right"
+msgstr "Canto Inferior Direito"
+
+#: data/ui/page-mangohud.ui:152
+msgid "Top-Center"
+msgstr "Centro Superior"
+
+#: data/ui/page-mangohud.ui:153
+msgid "Bottom-Center"
+msgstr "Centro Inferior"
+
+#: data/ui/page-mangohud.ui:154
+msgid "Middle-Left"
+msgstr "Meio Esquerdo"
+
+#: data/ui/page-mangohud.ui:155
+msgid "Middle-Right"
+msgstr "Meio Direito"
+
+#: data/ui/page-mangohud.ui:164
+msgid "Offset X"
+msgstr "Offset X"
+
+#: data/ui/page-mangohud.ui:165
+msgid "Horizontal offset in pixels"
+msgstr "Offset horizontal em pixels"
+
+#: data/ui/page-mangohud.ui:178
+msgid "Offset Y"
+msgstr "Offset Y"
+
+#: data/ui/page-mangohud.ui:179
+msgid "Vertical offset in pixels"
+msgstr "Offset vertical em pixels"
+
+#: data/ui/page-mangohud.ui:192
+msgid "Font Size"
+msgstr "Tamanho da Fonte"
+
+#: data/ui/page-mangohud.ui:193
+msgid "Text size in points"
+msgstr "Tamanho do texto em pontos"
+
+#: data/ui/page-mangohud.ui:206
+msgid "Table Columns"
+msgstr "Colunas da Tabela"
+
+#: data/ui/page-mangohud.ui:207
+msgid "Number of columns in table mode"
+msgstr "Número de colunas no modo tabela"
+
+#: data/ui/page-mangohud.ui:228 data/ui/page-settings.ui:69
+msgid "Appearance"
+msgstr "Aparência"
+
+#: data/ui/page-mangohud.ui:229
+msgid "Background opacity and transparency settings."
+msgstr "Configurações de opacidade e transparência do fundo."
+
+#: data/ui/page-mangohud.ui:232
+msgid "Background Opacity"
+msgstr "Opacidade do Fundo"
+
+#: data/ui/page-mangohud.ui:233
+msgid "Background transparency (0 = transparent, 100 = solid)"
+msgstr "Transparência do fundo (0 = transparente, 100 = sólido)"
+
+#: data/ui/page-mangohud.ui:254
+msgid "Custom Text"
+msgstr "Texto Personalizado"
+
+#: data/ui/page-mangohud.ui:255
+msgid "Custom text labels displayed on the overlay."
+msgstr "Rótulos de texto personalizados exibidos na sobreposição."
+
+#: data/ui/page-mangohud.ui:258
+msgid "Center Text"
+msgstr "Texto Central"
+
+#: data/ui/page-mangohud.ui:263
+msgid "Left Text"
+msgstr "Texto Esquerdo"
+
+#: data/ui/page-mangohud.ui:268
+msgid "Right Text"
+msgstr "Texto Direito"
+
+#: data/ui/page-mangohud.ui:282
+msgid "FPS limit and performance tuning."
+msgstr "Limite de FPS e ajuste de desempenho."
+
+#: data/ui/page-mangohud.ui:285
 msgid "FPS Limit"
 msgstr "Limite de FPS"
 
-#: src/pages/page-hardware.c
-msgid "Power Limit (max)"
-msgstr "Limite de Energia (máx)"
+#: data/ui/page-mangohud.ui:286
+msgid "Limit the frame rate (0 = unlimited)"
+msgstr "Limitar a taxa de quadros (0 = ilimitado)"
 
-#: src/pages/page-hardware.c
-msgid "Sets the maximum power consumption of the GPU in watts."
-msgstr "Define o consumo máximo de energia da GPU em watts."
+#: data/ui/page-cpu.ui:22
+msgid "CPU Control"
+msgstr "Controle da CPU"
 
-#: src/pages/page-hardware.c
-msgid "Zero RPM Fan"
-msgstr "Ventoinha Zero RPM"
+#: data/ui/page-cpu.ui:23
+msgid "Manage CPU governor, frequency scaling, and performance tuning."
+msgstr ""
+"Gerencie o governador da CPU, escala de frequência e ajuste de desempenho."
 
-#: src/pages/page-hardware.c
-msgid "Allows the GPU fan to stop completely when the temperature is below the threshold."
-msgstr "Permite que a ventoinha da GPU pare completamente quando a temperatura estiver abaixo do limite."
+#: data/ui/page-cpu.ui:29
+msgid "CPU Frequency Governor"
+msgstr "Governador de Frequência da CPU"
 
-#: src/pages/page-hardware.c
-msgid "Stop Temp"
-msgstr "Temp. de Parada"
+#: data/ui/page-cpu.ui:32
+msgid "Scaling Governor"
+msgstr "Governador de Escala"
 
-#: src/pages/page-hardware.c
-msgid "Variable Rate Shading"
-msgstr "Sombreamento de Taxa Variável"
+#: data/ui/page-cpu.ui:33
+msgid ""
+"Controls how the CPU scales its frequency. 'performance' runs at max, "
+"'powersave' at min, 'ondemand' ramps up on demand."
+msgstr ""
+"Controla como a CPU escala sua frequência. 'performance' roda no máximo, "
+"'powersave' no mínimo, 'ondemand' aumenta sob demanda."
 
-#: src/pages/page-hardware.c
-msgid "Reduces shading rate to boost performance (RDNA2+ GPU required)."
-msgstr "Reduz a taxa de sombreamento para aumentar o desempenho (GPU RDNA2+ necessária)."
+#: data/ui/page-cpu.ui:40
+msgid "powersave"
+msgstr "powersave"
 
-#: src/pages/page-hardware.c
-msgid "Shading Rate"
-msgstr "Taxa de Sombreamento"
+#: data/ui/page-cpu.ui:41
+msgid "ondemand"
+msgstr "ondemand"
 
-#: src/pages/page-hardware.c
-msgid "Select a device to view details"
-msgstr "Selecione um dispositivo para ver detalhes"
+#: data/ui/page-cpu.ui:42
+msgid "conservative"
+msgstr "conservative"
 
-#: src/pages/page-hardware.c
-msgid "Devices"
-msgstr "Dispositivos"
+#: data/ui/page-cpu.ui:43
+msgid "schedutil"
+msgstr "schedutil"
+
+#: data/ui/page-cpu.ui:44
+msgid "userspace"
+msgstr "userspace"
+
+#: data/ui/page-cpu.ui:54
+msgid "Current Governor"
+msgstr "Governador Atual"
+
+#: data/ui/page-cpu.ui:68
+msgid "Frequency Limits"
+msgstr "Limites de Frequência"
+
+#: data/ui/page-cpu.ui:71
+msgid "Minimum Frequency"
+msgstr "Frequência Mínima"
+
+#: data/ui/page-cpu.ui:72
+msgid ""
+"Lowest CPU frequency in kHz. Requires userspace governor for per-core "
+"control."
+msgstr ""
+"Frequência mínima da CPU em kHz. Requer governador userspace para controle "
+"por núcleo."
+
+#: data/ui/page-cpu.ui:89
+msgid "Maximum Frequency"
+msgstr "Frequência Máxima"
+
+#: data/ui/page-cpu.ui:90
+msgid "Highest CPU frequency in kHz. (e.g. 2200000 = 2.2 GHz)"
+msgstr "Frequência máxima da CPU em kHz. (ex: 2200000 = 2.2 GHz)"
+
+#: data/ui/page-cpu.ui:107
+msgid "Current Frequency"
+msgstr "Frequência Atual"
+
+#: data/ui/page-cpu.ui:121
+msgid "CPU Information"
+msgstr "Informações da CPU"
+
+#: data/ui/page-cpu.ui:124
+msgid "Logical Cores"
+msgstr "Núcleos Lógicos"
+
+#: data/ui/page-cpu.ui:135
+msgid "Architecture"
+msgstr "Arquitetura"
+
+#: data/ui/page-cpu.ui:159 data/ui/page-keyboard.ui:210
+#: data/ui/page-mouse.ui:139 data/ui/page-hardware.ui:210
+msgid "Lighting Controls"
+msgstr "Controles de Iluminação"
+
+#: data/ui/page-cpu.ui:194
+msgid "Save CPU Configuration"
+msgstr "Salvar Configuração da CPU"
+
+#: data/ui/page-keyboard.ui:22
+msgid "Keyboard Settings"
+msgstr "Configurações do Teclado"
+
+#: data/ui/page-keyboard.ui:23
+msgid ""
+"Configure keyboard layout, repeat rate, delay, and other input settings."
+msgstr ""
+"Configure o layout do teclado, taxa de repetição, atraso e outras "
+"configurações de entrada."
+
+#: data/ui/page-keyboard.ui:29
+msgid "Information"
+msgstr "Informações"
+
+#: data/ui/page-keyboard.ui:32
+msgid "Name"
+msgstr "Nome"
+
+#: data/ui/page-keyboard.ui:44 data/ui/page-hardware.ui:138
+msgid "Vendor"
+msgstr "Fabricante"
+
+#: data/ui/page-keyboard.ui:56
+msgid "Speed"
+msgstr "Velocidade"
+
+#: data/ui/page-keyboard.ui:67
+msgid "Driver"
+msgstr "Driver"
+
+#: data/ui/page-keyboard.ui:79
+msgid "Chipset"
+msgstr "Chipset"
+
+#: data/ui/page-keyboard.ui:94
+msgid "Settings"
+msgstr "Configurações"
+
+#: data/ui/page-keyboard.ui:97
+msgid "Enable NumLock at boot"
+msgstr "Habilitar NumLock ao iniciar"
+
+#: data/ui/page-keyboard.ui:98
+msgid "Enable NumLock when logging in."
+msgstr "Habilitar NumLock ao fazer login."
+
+#: data/ui/page-keyboard.ui:103
+msgid "Enable CapsLock at boot"
+msgstr "Habilitar CapsLock ao iniciar"
+
+#: data/ui/page-keyboard.ui:104
+msgid "Enable CapsLock when logging in."
+msgstr "Habilitar CapsLock ao fazer login."
+
+#: data/ui/page-keyboard.ui:109
+msgid "Enable ScrollLock at boot"
+msgstr "Habilitar ScrollLock ao iniciar"
+
+#: data/ui/page-keyboard.ui:110
+msgid "Enable ScrollLock when logging in."
+msgstr "Habilitar ScrollLock ao fazer login."
+
+#: data/ui/page-keyboard.ui:115
+msgid "Repeat Rate"
+msgstr "Taxa de Repetição"
+
+#: data/ui/page-keyboard.ui:116
+msgid "Characters per second when holding a key (via kbdrate)."
+msgstr "Caracteres por segundo ao segurar uma tecla (via kbdrate)."
+
+#: data/ui/page-keyboard.ui:117
+msgid ""
+"Controls how many times per second a key press is registered while holding "
+"it down. Higher values make key repeat faster."
+msgstr ""
+"Controla quantas vezes por segundo uma pressão de tecla é registrada ao "
+"segurá-la. Valores maiores tornam a repetição mais rápida."
+
+#: data/ui/page-keyboard.ui:137
+msgid "cps"
+msgstr "cps"
+
+#: data/ui/page-keyboard.ui:147
+msgid "Repeat Delay"
+msgstr "Atraso de Repetição"
+
+#: data/ui/page-keyboard.ui:148
+msgid "Delay in milliseconds before key repeat starts."
+msgstr "Atraso em milissegundos antes da repetição da tecla começar."
+
+#: data/ui/page-keyboard.ui:149
+msgid ""
+"How long a key must be held before it starts repeating. Lower values trigger "
+"repeat sooner."
+msgstr ""
+"Quanto tempo uma tecla deve ser segurada antes de começar a repetir. "
+"Valores menores ativam a repetição mais cedo."
+
+#: data/ui/page-keyboard.ui:169
+msgid "ms"
+msgstr "ms"
+
+#: data/ui/page-keyboard.ui:183
+msgid "Layout"
+msgstr "Layout"
+
+#: data/ui/page-keyboard.ui:186
+msgid "Current Layout"
+msgstr "Layout Atual"
+
+#: data/ui/page-keyboard.ui:221
+msgid "Toggle Keyboard Illumination"
+msgstr "Alternar Iluminação do Teclado"
+
+#: data/ui/page-keyboard.ui:222
+msgid ""
+"Experimental: attempts to control keyboard backlight via HID feature "
+"reports. May not work on all keyboards."
+msgstr ""
+"Experimental: tenta controlar a retroiluminação do teclado via relatórios "
+"de recursos HID. Pode não funcionar em todos os teclados."
+
+#: data/ui/page-keyboard.ui:241
+msgid "Apply Keyboard Settings"
+msgstr "Aplicar Configurações do Teclado"
+
+#: data/ui/page-mouse.ui:33
+msgid "Mouse"
+msgstr "Mouse"
+
+#: data/ui/page-mouse.ui:41
+msgid "Official Website"
+msgstr "Site Oficial"
+
+#: data/ui/page-mouse.ui:56
+msgid "Device Info"
+msgstr "Informações do Dispositivo"
+
+#: data/ui/page-mouse.ui:59
+msgid "Resolution (DPI)"
+msgstr "Resolução (DPI)"
+
+#: data/ui/page-mouse.ui:76
+msgid "Acceleration and Speed"
+msgstr "Aceleração e Velocidade"
+
+#: data/ui/page-mouse.ui:77
+msgid "Configure mouse acceleration, speed, and button mapping via libinput."
+msgstr ""
+"Configure a aceleração do mouse, velocidade e mapeamento de botões via "
+"libinput."
+
+#: data/ui/page-mouse.ui:80
+msgid "Pointer Speed"
+msgstr "Velocidade do Cursor"
+
+#: data/ui/page-mouse.ui:81
+msgid "Mouse cursor speed. Range -1 (slowest) to 1 (fastest). 0 = default."
+msgstr ""
+"Velocidade do cursor do mouse. Faixa -1 (mais lento) a 1 (mais rápido). 0 "
+"= padrão."
+
+#: data/ui/page-mouse.ui:101
+msgid "Acceleration Profile"
+msgstr "Perfil de Aceleração"
+
+#: data/ui/page-mouse.ui:102
+msgid "'flat' = no acceleration, 'adaptive' = standard, 'none' = raw."
+msgstr "'flat' = sem aceleração, 'adaptive' = padrão, 'none' = cru."
+
+#: data/ui/page-mouse.ui:108
+msgid "none"
+msgstr "none"
+
+#: data/ui/page-mouse.ui:109
+msgid "flat"
+msgstr "flat"
+
+#: data/ui/page-mouse.ui:110
+msgid "adaptive"
+msgstr "adaptive"
+
+#: data/ui/page-mouse.ui:120
+msgid "Natural Scrolling"
+msgstr "Rolagem Natural"
+
+#: data/ui/page-mouse.ui:121
+msgid "Reverse scroll direction (content follows fingers)."
+msgstr "Inverter direção de rolagem (conteúdo segue os dedos)."
+
+#: data/ui/page-mouse.ui:179
+msgid "Apply Mouse Settings"
+msgstr "Aplicar Configurações do Mouse"
+
+#: data/ui/page-mouse.ui:187
+msgid "Save to Hardware"
+msgstr "Salvar no Hardware"
+
+#: data/ui/page-settings.ui:38
+msgid "Version: 0.1.0"
+msgstr "Versão: 0.1.0"
+
+#: data/ui/page-settings.ui:72
+msgid "Color"
+msgstr "Cor"
+
+#: data/ui/page-settings.ui:73
+msgid "Chooses the interface accent color"
+msgstr "Escolhe a cor de destaque da interface"
+
+#: data/ui/page-settings.ui:78
+msgid "Follow GPU brand"
+msgstr "Seguir marca da GPU"
+
+#: data/ui/page-settings.ui:79
+msgid "AMD Red"
+msgstr "Vermelho AMD"
+
+#: data/ui/page-settings.ui:80
+msgid "Intel Blue"
+msgstr "Azul Intel"
+
+#: data/ui/page-settings.ui:81
+msgid "NVIDIA Green"
+msgstr "Verde NVIDIA"
+
+#: data/ui/page-settings.ui:82
+msgid "TUX Orange"
+msgstr "Laranja TUX"
+
+#: data/ui/page-settings.ui:91
+msgid "Apply theme to entire interface"
+msgstr "Aplicar tema para toda a interface"
+
+#: data/ui/page-settings.ui:92
+msgid "Applies a color palette based on the chosen accent color"
+msgstr "Aplica uma paleta de cores baseada na cor de destaque escolhida"
+
+#: data/ui/page-settings.ui:102
+msgid "Language"
+msgstr "Idioma"
+
+#: data/ui/page-settings.ui:105
+msgid "Application Language"
+msgstr "Idioma do Aplicativo"
+
+#: data/ui/page-settings.ui:106
+msgid "Choose the display language"
+msgstr "Escolha o idioma de exibição"
+
+#: data/ui/page-settings.ui:115
+msgid "About"
+msgstr "Sobre"
+
+#: data/ui/page-settings.ui:118
+msgid "Application Name"
+msgstr "Nome do Aplicativo"
+
+#: data/ui/page-settings.ui:125
+msgid "Version"
+msgstr "Versão"
+
+#: data/ui/page-settings.ui:126
+msgid "0.1.0"
+msgstr "0.1.0"
+
+#: data/ui/page-settings.ui:132
+msgid "Toolkit"
+msgstr "Ferramentas"
+
+#: data/ui/page-settings.ui:139
+msgid "License"
+msgstr "Licença"
+
+#: data/ui/page-settings.ui:140
+msgid "GNU General Public License v3.0"
+msgstr "GNU General Public License v3.0"
+
+#: data/ui/page-hardware.ui:80
+msgid "Official Page"
+msgstr "Página Oficial"
+
+#: data/ui/page-hardware.ui:95 data/ui/page-dashboard.ui:172
+msgid "Monitor"
+msgstr "Monitor"
+
+#: data/ui/page-hardware.ui:127
+msgid "GPU Management"
+msgstr "Gerenciamento da GPU"
+
+#: data/ui/page-hardware.ui:134
+msgid "Specs, Drivers and Features"
+msgstr "Especificações, Drivers e Recursos"
+
+#: data/ui/page-hardware.ui:144
+msgid "Software Driver"
+msgstr "Driver de Software"
+
+#: data/ui/page-hardware.ui:150
+msgid "Mesa Version"
+msgstr "Versão do Mesa"
+
+#: data/ui/page-hardware.ui:156
+msgid "OpenGL"
+msgstr "OpenGL"
+
+#: data/ui/page-hardware.ui:162
+msgid "Vulkan"
+msgstr "Vulkan"
+
+#: data/ui/page-hardware.ui:168
+msgid "VRAM"
+msgstr "VRAM"
+
+#: data/ui/page-hardware.ui:174
+msgid "Resizable BAR"
+msgstr "BAR Redimensionável"
+
+#: data/ui/page-hardware.ui:180
+msgid "Device ID"
+msgstr "ID do Dispositivo"
+
+#: data/ui/page-dashboard.ui:51
+msgid "Gaming Score"
+msgstr "Pontuação de Games"
+
+#: data/ui/page-dashboard.ui:60
+msgid "Check how your PC performs with modern gaming"
+msgstr "Verifique o desempenho do seu PC em jogos modernos"
+
+#: data/ui/page-dashboard.ui:118
+msgid "CPU"
+msgstr "CPU"
+
+#: data/ui/page-dashboard.ui:136
+msgid "GPU"
+msgstr "GPU"
+
+#: data/ui/page-dashboard.ui:154
+msgid "RAM"
+msgstr "RAM"
+
+#: data/ui/page-dashboard.ui:188
+msgid ""
+"This score is a reference and should not be taken without considering the "
+"context of which games will be played. More modest computers can also handle "
+"various types of games, when well configured :)"
+msgstr ""
+"Esta pontuação é uma referência e não deve ser considerada sem levar em "
+"conta o contexto de quais jogos serão jogados. Computadores mais modestos "
+"também podem lidar com vários tipos de jogos, quando bem configurados :)"
+
+#: data/ui/page-dashboard.ui:200
+msgid "Details"
+msgstr "Detalhes"
+
+#: data/ui/page-dashboard.ui:220
+msgid "Recent Games"
+msgstr "Jogos Recentes"
+
+#: data/ui/page-dashboard.ui:230
+msgid "Go to library"
+msgstr "Ir para a biblioteca"

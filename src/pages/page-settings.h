@@ -13,13 +13,6 @@ typedef enum
   ACCENT_TUX,
 } AccentChoice;
 
-typedef enum
-{
-  TEMA_SYSTEM = 0,
-  TEMA_LIBADWAITA,
-  TEMA_BREEZE,
-} TemaChoice;
-
 typedef struct
 {
   GtkWidget      *box;
@@ -27,9 +20,20 @@ typedef struct
   GtkWidget      *brand_version;
   AdwComboRow    *accent_combo;
   AdwSwitchRow   *apply_theme_row;
-  AdwComboRow    *language_combo;
-  AdwComboRow    *theme_combo;
+  AdwActionRow   *language_row;
+  AdwToggleGroup *language_group;
+  AdwComboRow    *graph_speed_combo;
+  AdwActionRow   *custom_speed_row;
+  GtkSpinButton  *custom_speed_spin;
 } SettingsPage;
+
+/* Graph speed presets (index into page-settings.ui combo) */
+#define GRAPH_SPEED_REALTIME_MS    25
+#define GRAPH_SPEED_BALANCED_MS   100
+#define GRAPH_SPEED_POWERSAVE_MS  250
+#define GRAPH_SPEED_CUSTOM_IDX      3
+
+extern int g_graph_speed_ms;
 
 void          settings_update_brand_icon (SettingsPage *page, AccentChoice choice);
 
@@ -39,10 +43,11 @@ void          settings_apply_full_theme (AccentChoice choice, gboolean enabled);
 AccentChoice  settings_load_accent (void);
 gboolean      settings_load_full_theme (void);
 AccentChoice  settings_detect_gpu_accent (void);
-int           settings_load_language (void);
-void          settings_save_language (int lang);
-TemaChoice    settings_load_tema (void);
-void          settings_save_tema (TemaChoice choice);
-void          settings_apply_tema (TemaChoice choice);
+char         *settings_load_language (void);
+void          settings_save_language (const char *lang_code);
+
+int           settings_load_graph_speed (void);
+void          settings_save_graph_speed (int speed_ms);
+void          settings_apply_graph_speed (void);
 
 G_END_DECLS

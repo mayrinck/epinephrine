@@ -142,6 +142,15 @@ Os arquivos de tradução estão em `po/` (gettext). Execute `meson compile -C _
 - Mantenha o padrão das páginas existentes (cada página tem `page-<nome>.c`/`.h` e um arquivo `.ui` em `data/ui/`).
 - Os INDEX files são parseados como recursos compilados (ver `load_controller_index` em `page-hardware.c` como referência).
 
+## Autor
+
+**Renan Mayrinck** — [renanmayrinck.com](https://www.renanmayrinck.com) — [Apoie via LiberaPay](https://liberapay.com/RenanMayrinck/)
+
 ## Licença
 
-MIT — veja o arquivo `meson.build` (`license: 'MIT'`).
+MIT — veja o arquivo `meson.build` (`license: 'MIT'`). 
+Creditos para: Renan Mayrinck, Emerson Lourenço.
+
+### AI notice
+
+This project was built with **Opencode**, an AI coding assistant. The code is fully functional, but may not follow the best practices adopted by professional developers. Contributions and suggestions are welcome via [pull requests or issues](https://github.com/mayrinck/epinephrine/issues).

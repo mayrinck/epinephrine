@@ -15,6 +15,7 @@ typedef struct
   char *workdir;
   char *source;   /* "steam", "heroic", "lutris", "bottles", "other", "local" */
   char *startup_cmd;
+  char *group;    /* category name; NULL = ungrouped */
   gboolean feral_gamemode;
   gboolean mangohud;
   int play_time_secs;
@@ -31,7 +32,7 @@ typedef struct
 
   GtkWidget *recent_box;
 
-  GtkFlowBox *games_grid;
+  GtkWidget *games_grid;
   GtkStack *games_stack;
 
   AdwActionRow *cpu_row;
@@ -40,7 +41,7 @@ typedef struct
   AdwActionRow *vram_row;
   AdwActionRow *vulkan_row;
   AdwActionRow *driver_row;
-  AdwPreferencesGroup *hw_group;
+  GtkWidget *hw_box;
   AdwActionRow *storage_rows[8];
   int n_storage_rows;
 
@@ -58,6 +59,16 @@ typedef struct
   GameShortcut *games;
   int n_games;
 
+  /* Game library edit / category state */
+  gboolean edit_mode;
+  gboolean *selected;      /* parallel to games[], NULL unless edit_mode */
+  char *active_group;      /* NULL = "All" */
+  char *active_service;    /* NULL = "All Services"; matches games[].source */
+  GtkWidget *edit_btn;
+  GtkWidget *category_bar; /* horizontal box of category chips */
+  GtkWidget *service_dropdown; /* filter dropdown of sources in use */
+  GtkWidget *edit_actions; /* box with Delete / Group / Ungroup while in edit */
+
   int running_game_idx;
   GPid game_pid;
   guint poll_timer_id;
@@ -69,7 +80,17 @@ typedef struct
 
   GtkWidget *gaming_score_box;
   GtkWidget *gaming_score_label;
+  GtkWidget *gaming_score_tier;
   GtkWidget *gaming_score_spinner;
+  GtkWidget *gaming_score_details_btn;
+  GtkWidget *gaming_score_details;
+  GtkWidget *gaming_score_footer;
+
+  /* Per-component score bars (details view) */
+  GtkWidget *gaming_score_cpu_bar;
+  GtkWidget *gaming_score_gpu_bar;
+  GtkWidget *gaming_score_ram_bar;
+  GtkWidget *gaming_score_monitor_bar;
 } DashboardPage;
 
 DashboardPage *dashboard_page_new (void);
@@ -80,6 +101,8 @@ int import_steam_games (DashboardPage *page);
 int import_heroic_games (DashboardPage *page);
 int import_lutris_games (DashboardPage *page);
 int import_bottles_games (DashboardPage *page);
+int import_hydra_games (DashboardPage *page);
+int import_hydra_classics_games (DashboardPage *page);
 void save_games_config (DashboardPage *page);
 void refresh_recent_games (DashboardPage *page);
 void open_edit_dialog (DashboardPage *page, int idx);

@@ -184,7 +184,7 @@
             </child>
             <child>
               <object class="GtkButton" id="mouse-save-g300-btn">
-                <property name="label" translatable="yes">Save to Mouse</property>
+                <property name="label" translatable="yes">Save to Hardware</property>
                 <property name="visible">False</property>
                 <style>
                   <class name="accent"/>

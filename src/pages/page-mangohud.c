@@ -1,5 +1,8 @@
 #include "page-mangohud.h"
 #include "page-dashboard.h"
+#include "epi-i18n.h"
+
+#define tr(x) epi_i18n_get (x)
 
 #include <string.h>
 
@@ -93,7 +96,7 @@ on_save_clicked (GtkButton *btn, MangoHudPage *page)
     }
   else
     {
-      char *msg = g_strdup_printf ("Saved to %s", cfg_path);
+      char *msg = g_strdup_printf (tr ("Saved to %s"), cfg_path);
       dashboard_show_toast (msg);
       g_free (msg);
     }

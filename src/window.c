@@ -1,4 +1,5 @@
 #include "window.h"
+#include "epi-i18n.h"
 #include "pages/page-dashboard.h"
 #include "pages/page-games.h"
 #include "pages/page-gamescope.h"
@@ -6,6 +7,8 @@
 #include "pages/page-utilities.h"
 #include "pages/page-settings.h"
 #include "pages/page-hardware.h"
+#include "pages/hw-monitor.h"
+#include "pages/page-cpu.h"
 #include "epi-privilege.h"
 
 typedef struct
@@ -14,6 +17,8 @@ typedef struct
 
   AdwViewStack    *view_stack;
   AdwToastOverlay *toast_overlay;
+
+  const char *tab_keys[5];
 
   DashboardPage   *dash_page;
   GtkWidget       *games_page;
@@ -47,6 +52,49 @@ dashboard_navigate_to_games (void)
     adw_view_stack_set_visible_child_name (g_epi->view_stack, "games");
 }
 
+void
+dashboard_navigate_to_hardware (void)
+{
+  if (g_epi)
+    adw_view_stack_set_visible_child_name (g_epi->view_stack, "hardware");
+}
+
+void
+epinephrine_retranslate (void)
+{
+  if (!g_epi)
+    return;
+
+  epi_i18n_apply_widgets (GTK_WIDGET (g_epi->win));
+
+  /* Tab titles are stored in the view stack pages, not in widgets. */
+  GtkSelectionModel *pages = adw_view_stack_get_pages (g_epi->view_stack);
+  guint n = g_list_model_get_n_items (G_LIST_MODEL (pages));
+  for (guint i = 0; i < n && i < G_N_ELEMENTS (g_epi->tab_keys); i++)
+    {
+      AdwViewStackPage *page =
+        ADW_VIEW_STACK_PAGE (g_list_model_get_item (G_LIST_MODEL (pages), i));
+      if (page)
+        {
+          adw_view_stack_page_set_title (page,
+            epi_i18n_get (g_epi->tab_keys[i]));
+          g_object_unref (page);
+        }
+    }
+}
+
+void
+eph_restart_monitors (void)
+{
+  if (!g_epi || !g_epi->hw_page)
+    return;
+
+  hw_monitor_restart (g_epi->hw_page);
+
+  if (g_epi->hw_page->cpu_page)
+    cpu_monitor_restart (g_epi->hw_page->cpu_page);
+}
+
 GtkWindow *
 epinephrine_window_new (EpinephrineApplication *app)
 {
@@ -61,39 +109,51 @@ epinephrine_window_new (EpinephrineApplication *app)
   epi->toast_overlay = ADW_TOAST_OVERLAY (gtk_builder_get_object (builder, "toast-overlay"));
 
   epi->dash_page     = dashboard_page_new ();
+
+  /* Load graph speed BEFORE creating hardware page so monitors start with correct speed */
+  extern int g_graph_speed_ms;
+  g_graph_speed_ms = settings_load_graph_speed ();
+
   epi->hw_page       = hardware_page_new ();
   epi->util_page     = utilidades_page_new ();
   epi->settings_page = settings_page_new ();
 
   /* Overview tab */
+  epi->tab_keys[0] = "Overview";
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->dash_page->box, "dashboard",
-    g_dgettext (GETTEXT_PACKAGE, "Overview"), "computer-symbolic");
+    epi_i18n_get ("Overview"), "computer-symbolic");
 
   /* Games tab */
+  epi->tab_keys[1] = "Game Library";
   epi->games_page = games_page_new (epi->dash_page);
   refresh_games_grid (epi->dash_page);
   games_page_register_actions (G_ACTION_MAP (epi->win), epi->dash_page);
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->games_page, "games",
-    g_dgettext (GETTEXT_PACKAGE, "Game Library"), "input-gaming-symbolic");
+    epi_i18n_get ("Game Library"), "input-gaming-symbolic");
 
   /* Hardware tab */
+  epi->tab_keys[2] = "Hardware Control";
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->hw_page->box, "hardware",
-    g_dgettext (GETTEXT_PACKAGE, "Hardware Control"), "chip-symbolic");
+    epi_i18n_get ("Hardware Control"), "chip-symbolic");
 
   /* utilities tab */
+  epi->tab_keys[3] = "Utilities";
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->util_page->box, "utilities",
-    g_dgettext (GETTEXT_PACKAGE, "Utilities"), "pocket-knife-symbolic");
+    epi_i18n_get ("Utilities"), "pocket-knife-symbolic");
 
   /* Settings tab */
+  epi->tab_keys[4] = "Settings";
   adw_view_stack_add_titled_with_icon (epi->view_stack,
     epi->settings_page->box, "settings",
-    g_dgettext (GETTEXT_PACKAGE, "Settings"), "emblem-system-symbolic");
+    epi_i18n_get ("Settings"), "emblem-system-symbolic");
 
   adw_view_stack_set_visible_child_name (epi->view_stack, "dashboard");
+
+  epi_i18n_apply_widgets (GTK_WIDGET (epi->win));
 
   g_object_unref (builder);
 

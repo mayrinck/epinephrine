@@ -4,6 +4,10 @@
 
 gboolean epi_privilege_init (GError **error);
 
+gboolean epi_privilege_is_available (void);
+
+const char *epi_privilege_get_error (void);
+
 gboolean epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
                                   char **out_stdout, GError **error);
 

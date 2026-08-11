@@ -1,5 +1,8 @@
 #include "page-utilities.h"
 #include "epi-privilege.h"
+#include "epi-i18n.h"
+
+#define tr(x) epi_i18n_get (x)
 
 static const char *
 detect_pm (void)
@@ -64,7 +67,7 @@ create_empty_state (const char *icon_name, const char *title, const char *pkg_na
   gtk_widget_add_css_class (title_label, "title-2");
   gtk_box_append (GTK_BOX (box), title_label);
 
-  char *desc = g_strdup_printf ("%s is not installed on your system.", title);
+  char *desc = g_strdup_printf (tr ("%s is not installed on your system."), title);
   GtkWidget *desc_label = gtk_label_new (desc);
   g_free (desc);
   gtk_label_set_wrap (GTK_LABEL (desc_label), TRUE);
@@ -84,7 +87,7 @@ create_empty_state (const char *icon_name, const char *title, const char *pkg_na
     }
   else
     {
-      char *no_pm_text = g_strdup_printf ("No package manager detected.\nPlease install %s manually.", pkg_name);
+      char *no_pm_text = g_strdup_printf (tr ("No package manager detected.\nPlease install %s manually."), pkg_name);
       GtkWidget *no_pm = gtk_label_new (no_pm_text);
       g_free (no_pm_text);
       gtk_widget_set_halign (no_pm, GTK_ALIGN_CENTER);

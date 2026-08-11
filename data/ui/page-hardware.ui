@@ -121,108 +121,105 @@
               </object>
             </child>
 
-            <!-- ===== GPU Management (rows added programmatically) ===== -->
+            <!-- ===== GPU Management (collapsible) ===== -->
             <child>
-              <object class="AdwPreferencesGroup" id="gpu_mgt_group">
-                <property name="title" translatable="yes">GPU Management</property>
+              <object class="AdwPreferencesGroup">
+                <child>
+                  <object class="AdwExpanderRow" id="gpu-mgt-toggle">
+                    <property name="title" translatable="yes">GPU Management</property>
+                    <property name="subtitle" translatable="yes">Power, clocks, fan and more</property>
+                  </object>
+                </child>
               </object>
             </child>
 
-            <!-- ===== Specs, Drivers and Features ===== -->
+            <!-- ===== Specs, Drivers and Features (collapsible) ===== -->
             <child>
-              <object class="AdwPreferencesGroup" id="specs_group">
-                <property name="title" translatable="yes">Specs, Drivers and Features</property>
-
+              <object class="AdwPreferencesGroup">
                 <child>
-                  <object class="AdwActionRow" id="gpu_vendor_row">
-                    <property name="title" translatable="yes">Vendor</property>
-                  </object>
-                </child>
+                  <object class="AdwExpanderRow" id="gpu-specs-toggle">
+                    <property name="title" translatable="yes">Specs, Drivers and Features</property>
+                    <property name="subtitle" translatable="yes">Hardware information and capabilities</property>
 
-                <child>
-                  <object class="AdwActionRow" id="gpu_swdriver_row">
-                    <property name="title" translatable="yes">Software Driver</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_mesa_row">
-                    <property name="title" translatable="yes">Mesa Version</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_opengl_row">
-                    <property name="title" translatable="yes">OpenGL</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_vk_row">
-                    <property name="title" translatable="yes">Vulkan</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_vram_specs_row">
-                    <property name="title" translatable="yes">VRAM</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_resizable_bar_row">
-                    <property name="title" translatable="yes">Resizable BAR</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="AdwActionRow" id="gpu_deviceid_row">
-                    <property name="title" translatable="yes">Device ID</property>
-                  </object>
-                </child>
-
-                <child>
-                  <object class="GtkBox" id="gpu_specs_container">
-                    <property name="orientation">vertical</property>
-                    <property name="spacing">2</property>
-                    <property name="margin-start">12</property>
-                    <property name="margin-end">12</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                  </object>
-                </child>
-
-              </object>
-            </child>
-
-            <!-- ===== Lighting Controls ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="lighting_group">
-                <child>
-                  <object class="GtkBox" id="lighting_header">
-                    <property name="orientation">horizontal</property>
-                    <property name="spacing">8</property>
-                    <property name="margin-start">8</property>
-                    <property name="margin-end">8</property>
-                    <property name="margin-top">4</property>
                     <child>
-                      <object class="GtkLabel" id="lighting_title">
-                        <property name="label" translatable="yes">Lighting Controls</property>
-                        <property name="halign">start</property>
-                        <property name="hexpand">True</property>
-                        <style>
-                          <class name="heading"/>
-                        </style>
+                      <object class="AdwActionRow" id="gpu_vendor_row">
+                        <property name="title" translatable="yes">Vendor</property>
                       </object>
                     </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_swdriver_row">
+                        <property name="title" translatable="yes">Software Driver</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_mesa_row">
+                        <property name="title" translatable="yes">Mesa Version</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_opengl_row">
+                        <property name="title" translatable="yes">OpenGL</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_vk_row">
+                        <property name="title" translatable="yes">Vulkan</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_vram_specs_row">
+                        <property name="title" translatable="yes">VRAM</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_resizable_bar_row">
+                        <property name="title" translatable="yes">Resizable BAR</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="AdwActionRow" id="gpu_deviceid_row">
+                        <property name="title" translatable="yes">Device ID</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkBox" id="gpu_specs_container">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">2</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                      </object>
+                    </child>
+
                   </object>
                 </child>
+              </object>
+            </child>
+
+            <!-- ===== Lighting Controls (collapsible) ===== -->
+            <child>
+              <object class="AdwPreferencesGroup">
                 <child>
-                  <object class="GtkLabel" id="gpu_lighting_status">
-                    <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="wrap">True</property>
-                    <property name="max-width-chars">60</property>
+                  <object class="AdwExpanderRow" id="gpu-lighting-toggle">
+                    <property name="title" translatable="yes">Lighting Controls</property>
+                    <property name="subtitle" translatable="yes">RGB and LED management</property>
+                    <child>
+                      <object class="GtkLabel" id="gpu_lighting_status">
+                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
+                        <property name="wrap">True</property>
+                        <property name="max-width-chars">60</property>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
