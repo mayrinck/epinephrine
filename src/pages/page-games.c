@@ -869,7 +869,7 @@ game_in_active_service (DashboardPage *page, int idx)
 void
 refresh_games_grid (DashboardPage *page)
 {
-  if (!page->games_grid || !GTK_IS_FLOW_BOX (page->games_grid)) return;
+  if (!page->games_grid || !GTK_IS_GRID (page->games_grid)) return;
 
   /* Remove all children from the flow box */
   GtkWidget *child;
