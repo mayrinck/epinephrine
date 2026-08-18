@@ -18,6 +18,7 @@
 | %d min ago | há %d min |
 | %d months ago | há %d meses |
 | %d weeks ago | há %d semanas |
+| %d selected | %d selecionado(s) |
 | %d years ago | há %d anos |
 | %ld MB Total | %ld MB Total |
 | %s is not installed on your system. | %s não está instalado no seu sistema. |
@@ -45,7 +46,9 @@
 | Add Game | Adicionar Jogo |
 | Administrator session is unavailable. Features that need admin access won't work. | A sessão de administrador não está disponível. Recursos que precisam de acesso de administrador não funcionarão. |
 | Advanced | Avançado |
+| All | Todos |
 | All 3 profiles saved to G300s | Todos os 3 perfis salvos no G300s |
+| All Services | Todos os Serviços |
 | Allows real-time processes to use a larger CPU slice. Useful for audio/PipeWire and Wine. | Permite que processos em tempo real usem uma fatia maior da CPU. Útil para áudio/PipeWire e Wine. |
 | Allows the GPU fan to stop completely when below the temperature threshold. | Permite que o ventilador da GPU pare completamente quando estiver abaixo do limite de temperatura. |
 | Always use relative mouse mode | Sempre usar modo relativo do mouse |
@@ -79,12 +82,16 @@
 | Brightness of SDR in HDR mode (default: 400) | Brilho de SDR no modo HDR (padrão: 400) |
 | Button Mapping | Mapeamento de Botões |
 | Cancel | Cancelar |
+| Are you sure you want to delete %d game(s)? This cannot be undone. | Tem certeza de que deseja excluir %d jogo(s)? Isso não pode ser desfeito. |
 | Cannot access /dev/input for key capture | Não foi possível acessar /dev/input para captura de tecla |
 | Capture Key | Capturar Tecla |
+| Category name: | Nome da categoria: |
+| Hydra Classics | Hydra Clássicos |
 | Center Text | Texto Central |
 | Characters per second when holding a key (via kbdrate). | Caracteres por segundo ao segurar uma tecla (via kbdrate). |
 | Check how your PC performs with modern gaming | Veja como seu PC se sai em jogos modernos |
 | Chipset | Chipset |
+| Close | Fechar |
 | Choose the display language | Escolha o idioma de exibição |
 | Chooses the interface accent color | Escolhe a cor de destaque da interface |
 | Color | Cor |
@@ -108,6 +115,7 @@
 | Core Clock | Core Clock |
 | Could not find keyboard hidraw device | Não foi possível encontrar o dispositivo hidraw do teclado |
 | Could not open URL | Não foi possível abrir o URL |
+| Could not find the game prefix. | Não foi possível encontrar o prefixo do jogo. |
 | cps | cps |
 | CPU | CPU |
 | CPU Control | Controle da CPU |
@@ -139,6 +147,7 @@
 | Defines the visual style of the interface | Define o estilo visual da interface |
 | Delay in milliseconds before key repeat starts. | Atraso em milissegundos antes de iniciar a repetição de tecla. |
 | Delete | Excluir |
+| Delete games | Excluir jogos |
 | Details | Detalhes |
 | Detected | Detectado |
 | Device ID | ID do Dispositivo |
@@ -157,10 +166,14 @@
 | Display Index | Índice de Exibição |
 | DPI Settings | Configurações de DPI |
 | Driver | Driver |
+| Done | Concluir |
 | DRM | DRM |
 | Dynamically regulates your game's frame rate based on your movements. | Regula dinamicamente a taxa de quadros do seu jogo com base nos seus movimentos. |
 | e.g. gamemoderun %command% | ex.: gamemoderun %command% |
+| e.g. Emulators, RPG... | ex.: Emuladores, RPG... |
 | Edit Game | Editar Jogo |
+| Edit games | Editar jogos |
+| Edit Mode | Modo de edição |
 | Edit on OpenRGB | Editar no OpenRGB |
 | Effect Path | Caminho do Efeito |
 | EFI PK | EFI PK |
@@ -188,6 +201,8 @@
 | Failed to create temp file | Falha ao criar arquivo temporário |
 | Failed to create temp file for elevation | Falha ao criar arquivo temporário para elevação |
 | Failed to launch pkexec | Falha ao iniciar pkexec |
+| Failed to launch Protontricks: %s | Falha ao iniciar o Protontricks: %s |
+| Failed to launch Winetricks: %s | Falha ao iniciar o Winetricks: %s |
 | Failed to save (elevation denied) | Falha ao salvar (elevação negada) |
 | Failed to save (permission denied) | Falha ao salvar (permissão negada) |
 | Failed to save configuration | Falha ao salvar a configuração |
@@ -228,6 +243,8 @@
 | Game Width | Largura do Jogo |
 | GameMode Settings | Configurações do GameMode |
 | Games | Jogos |
+| Games grouped | Jogos agrupados |
+| Games removed | Jogos removidos |
 | gamescope command will appear here | o comando gamescope aparecerá aqui |
 | Gamescope Manager | Gerenciador Gamescope |
 | Gaming Components | Componentes de Jogos |
@@ -236,6 +253,10 @@
 | GNU General Public License v3.0 | GNU General Public License v3.0 |
 | Go to library | Ir para a biblioteca |
 | Good | Boa |
+| Group... | Agrupar... |
+| Group | Agrupar |
+| Group games | Agrupar jogos |
+| Group name cannot be empty | O nome do grupo não pode estar vazio |
 | GPU | GPU |
 | GPU frequency scaling policy. Default: performance | Política de escalonamento de frequência da GPU. Padrão: performance |
 | GPU Governor | Governador da GPU |
@@ -274,15 +295,19 @@
 | Ideal | Ideal |
 | Idle | Inativo |
 | Immediate Flips | Flips Imediatos |
+| Import | Importar |
 | Import Games | Importar Jogos |
 | Imported %d game from Bottles | %d jogo importado do Bottles |
 | Imported %d game from Heroic | %d jogo importado do Heroic |
+| Imported %d game from Hydra | %d jogo importado do Hydra |
 | Imported %d game from Lutris | %d jogo importado do Lutris |
 | Imported %d game from Steam | %d jogo importado do Steam |
 | Imported %d games from Bottles | %d jogos importados do Bottles |
 | Imported %d games from Heroic | %d jogos importados do Heroic |
+| Imported %d games from Hydra | %d jogos importados do Hydra |
 | Imported %d games from Lutris | %d jogos importados do Lutris |
 | Imported %d games from Steam | %d jogos importados do Steam |
+| Imported %d game(s) from %s | %d jogo(s) importado(s) de %s |
 | Inactive | Inativo |
 | Increase scheduler limit | Aumentar limite do agendador |
 | Increase timer frequency | Aumentar frequência do timer |
@@ -312,6 +337,7 @@
 | Kill background indexers | Encerrar indexadores em segundo plano |
 | Language | Idioma |
 | Launch Command | Comando de Inicialização |
+| Launch the game once through Steam to create its prefix. | Rode o jogo uma vez pela Steam para criar o prefixo dele. |
 | Launch with MangoHud overlay | Iniciar com a sobreposição MangoHud |
 | Layout | Layout |
 | Leave 0 for default (1280) | Deixe 0 para usar o valor padrão (1280) |
@@ -374,19 +400,23 @@
 | NIS | Escalonamento de Imagens NVIDIA (NIS) |
 | No | Não |
 | No Bottles games found | Nenhum jogo do Bottles encontrado |
+| No groups yet | Nenhum grupo ainda |
 | No compatible HID report found for backlight | Nenhum relatório HID compatível encontrado para a retroiluminação |
 | No extra buttons detected. This controller does not have programmable buttons. | Nenhum botão extra detectado. Este controle não possui botões programáveis. |
 | No Heroic games found | Nenhum jogo do Heroic encontrado |
 | No keyboard found for key capture | Nenhum teclado encontrado para captura de tecla |
 | No Lutris games found | Nenhum jogo do Lutris encontrado |
+| No games found in %s | Nenhum jogo encontrado em %s |
 | No package manager detected.\nPlease install %s manually. | Nenhum gerenciador de pacotes detectado.\nInstale %s manualmente. |
 | No saved configuration found | Nenhuma configuração salva encontrada |
+| No services yet | Nenhum serviço ainda |
 | No settings available yet. | Nenhuma configuração disponível ainda. |
 | No specification data available. | Nenhum dado de especificação disponível. |
 | No Steam games found | Nenhum jogo da Steam encontrado |
 | No supported config tool found (gsettings or xinput) | Nenhuma ferramenta de configuração compatível encontrada (gsettings ou xinput) |
 | No XInput devices found. Are you on Wayland? | Nenhum dispositivo XInput encontrado. Você está no Wayland? |
 | None | Nenhum |
+| Not found | Não encontrado |
 | none | nenhum |
 | Normal | Normal |
 | Not installed | Não instalado |
@@ -440,6 +470,9 @@
 | Process scheduler priority (-20 to 19). Default: 0 | Prioridade do agendador de processo (-20 a 19). Padrão: 0 |
 | Processor | Processador |
 | Profiles (Onboard Memory) | Perfis (Memória Integrada) |
+| Protontricks is not installed. | Protontricks não está instalado. |
+| Protontricks started. | Protontricks iniciado. |
+| Protontricks... | Protontricks... |
 | Provider | Provedor |
 | Radeon Anti-Lag | Radeon Anti-Lag |
 | Radeon Chill | Radeon Chill |
@@ -451,6 +484,8 @@
 | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. | O monitoramento em tempo real requer nvidia-smi, que não foi encontrado neste sistema. Instale as ferramentas do driver NVIDIA para habilitar métricas ao vivo da GPU. |
 | Realtime | Tempo real |
 | Recent Games | Jogos Recentes |
+| Remove from Group | Remover do Grupo |
+| Removed from group | Removido do grupo |
 | Reduce swappiness | Reduzir swappiness |
 | Reduce write cache | Reduzir cache de escrita |
 | Reduces input lag by pacing GPU frames. | Reduz a latência de entrada sincronizando os quadros da GPU. |
@@ -493,6 +528,14 @@
 | SDR input luminance (default: 100) | Luminância de entrada SDR (padrão: 100) |
 | SDR to HDR inverse tone mapping | Mapeamento de tom inverso de SDR para HDR |
 | Select a device to view details | Selecione um dispositivo para ver detalhes |
+| Search games... | Pesquisar jogos... |
+| Select All | Selecionar todos |
+| Select a launcher to import games from: | Selecione um launcher para importar jogos: |
+| Select group | Selecionar grupo |
+| Select Group... | Selecionar grupo... |
+| Select None | Selecionar nenhum |
+| Select service | Selecionar serviço |
+| Select Service... | Selecionar serviço... |
 | Selects the clock and power switching heuristic for the GPU. | Seleciona a heurística de comutação de clock e energia da GPU. |
 | Sets a maximum frame rate cap for all 3D applications via MangoHud. | Define um limite máximo de taxa de quadros para todos os aplicativos 3D via MangoHud. |
 | Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi). | Define a energia máxima em watts para a GPU NVIDIA (via nvidia-smi). |
@@ -593,6 +636,9 @@
 | Vulkan Driver | Driver Vulkan |
 | Wayland | Wayland |
 | Wine Info | Informações do Wine |
+| Winetricks is not installed. | Winetricks não está instalado. |
+| Winetricks... | Winetricks... |
+| Winetricks started. | Winetricks iniciado. |
 | Working Directory | Diretório de Trabalho |
 | Yes | Sim |
 | Your game library | Sua biblioteca de jogos |

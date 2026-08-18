@@ -45,6 +45,10 @@
 | Add Game | Add Game |
 | Administrator session is unavailable. Features that need admin access won't work. | Administrator session is unavailable. Features that need admin access won't work. |
 | Advanced | Advanced |
+| %d selected | %d selected |
+| All | All |
+| All Services | All Services |
+| Are you sure you want to delete %d game(s)? This cannot be undone. | Are you sure you want to delete %d game(s)? This cannot be undone. |
 | All 3 profiles saved to G300s | All 3 profiles saved to G300s |
 | Allows real-time processes to use a larger CPU slice. Useful for audio/PipeWire and Wine. | Allows real-time processes to use a larger CPU slice. Useful for audio/PipeWire and Wine. |
 | Allows the GPU fan to stop completely when below the temperature threshold. | Allows the GPU fan to stop completely when below the temperature threshold. |
@@ -84,7 +88,9 @@
 | Center Text | Center Text |
 | Characters per second when holding a key (via kbdrate). | Characters per second when holding a key (via kbdrate). |
 | Check how your PC performs with modern gaming | Check how your PC performs with modern gaming |
+| Category name: | Category name: |
 | Chipset | Chipset |
+| Close | Close |
 | Choose the display language | Choose the display language |
 | Chooses the interface accent color | Chooses the interface accent color |
 | Color | Color |
@@ -108,6 +114,7 @@
 | Core Clock | Core Clock |
 | Could not find keyboard hidraw device | Could not find keyboard hidraw device |
 | Could not open URL | Could not open URL |
+| Could not find the game prefix. | Could not find the game prefix. |
 | cps | cps |
 | CPU | CPU |
 | CPU Control | CPU Control |
@@ -139,6 +146,7 @@
 | Defines the visual style of the interface | Defines the visual style of the interface |
 | Delay in milliseconds before key repeat starts. | Delay in milliseconds before key repeat starts. |
 | Delete | Delete |
+| Delete games | Delete games |
 | Details | Details |
 | Detected | Detected |
 | Device ID | Device ID |
@@ -157,10 +165,14 @@
 | Display Index | Display Index |
 | DPI Settings | DPI Settings |
 | Driver | Driver |
+| Done | Done |
 | DRM | DRM |
 | Dynamically regulates your game's frame rate based on your movements. | Dynamically regulates your game's frame rate based on your movements. |
+| e.g. Emulators, RPG... | e.g. Emulators, RPG... |
 | e.g. gamemoderun %command% | e.g. gamemoderun %command% |
 | Edit Game | Edit Game |
+| Edit games | Edit games |
+| Edit Mode | Edit Mode |
 | Edit on OpenRGB | Edit on OpenRGB |
 | Effect Path | Effect Path |
 | EFI PK | EFI PK |
@@ -188,6 +200,8 @@
 | Failed to create temp file | Failed to create temp file |
 | Failed to create temp file for elevation | Failed to create temp file for elevation |
 | Failed to launch pkexec | Failed to launch pkexec |
+| Failed to launch Protontricks: %s | Failed to launch Protontricks: %s |
+| Failed to launch Winetricks: %s | Failed to launch Winetricks: %s |
 | Failed to save (elevation denied) | Failed to save (elevation denied) |
 | Failed to save (permission denied) | Failed to save (permission denied) |
 | Failed to save configuration | Failed to save configuration |
@@ -228,6 +242,14 @@
 | Game Width | Game Width |
 | GameMode Settings | GameMode Settings |
 | Games | Games |
+| Games grouped | Games grouped |
+| Games removed | Games removed |
+| Group | Group |
+| Group games | Group games |
+| Group name cannot be empty | Group name cannot be empty |
+| Group... | Group... |
+| Remove from Group | Remove from Group |
+| Removed from group | Removed from group |
 | gamescope command will appear here | gamescope command will appear here |
 | Gamescope Manager | Gamescope Manager |
 | Gaming Components | Gaming Components |
@@ -274,7 +296,10 @@
 | Ideal | Ideal |
 | Idle | Idle |
 | Immediate Flips | Immediate Flips |
+| Import | Import |
 | Import Games | Import Games |
+| Imported %d game(s) from %s | Imported %d game(s) from %s |
+| No games found in %s | No games found in %s |
 | Imported %d game from Bottles | Imported %d game from Bottles |
 | Imported %d game from Heroic | Imported %d game from Heroic |
 | Imported %d game from Lutris | Imported %d game from Lutris |
@@ -312,6 +337,7 @@
 | Kill background indexers | Kill background indexers |
 | Language | Language |
 | Launch Command | Launch Command |
+| Launch the game once through Steam to create its prefix. | Launch the game once through Steam to create its prefix. |
 | Launch with MangoHud overlay | Launch with MangoHud overlay |
 | Layout | Layout |
 | Leave 0 for default (1280) | Leave 0 for default (1280) |
@@ -374,6 +400,7 @@
 | NIS | NIS |
 | No | No |
 | No Bottles games found | No Bottles games found |
+| No groups yet | No groups yet |
 | No compatible HID report found for backlight | No compatible HID report found for backlight |
 | No extra buttons detected. This controller does not have programmable buttons. | No extra buttons detected. This controller does not have programmable buttons. |
 | No Heroic games found | No Heroic games found |
@@ -381,6 +408,7 @@
 | No Lutris games found | No Lutris games found |
 | No package manager detected.\nPlease install %s manually. | No package manager detected.\nPlease install %s manually. |
 | No saved configuration found | No saved configuration found |
+| No services yet | No services yet |
 | No settings available yet. | No settings available yet. |
 | No specification data available. | No specification data available. |
 | No Steam games found | No Steam games found |
@@ -389,6 +417,7 @@
 | None | None |
 | none | none |
 | Normal | Normal |
+| Not found | Not found |
 | Not installed | Not installed |
 | Number of columns in table mode | Number of columns in table mode |
 | NVIDIA Fan Speed | NVIDIA Fan Speed |
@@ -440,6 +469,9 @@
 | Process scheduler priority (-20 to 19). Default: 0 | Process scheduler priority (-20 to 19). Default: 0 |
 | Processor | Processor |
 | Profiles (Onboard Memory) | Profiles (Onboard Memory) |
+| Protontricks is not installed. | Protontricks is not installed. |
+| Protontricks started. | Protontricks started. |
+| Protontricks... | Protontricks... |
 | Provider | Provider |
 | Radeon Anti-Lag | Radeon Anti-Lag |
 | Radeon Chill | Radeon Chill |
@@ -492,7 +524,15 @@
 | SDR Gamut Wideness | SDR Gamut Wideness |
 | SDR input luminance (default: 100) | SDR input luminance (default: 100) |
 | SDR to HDR inverse tone mapping | SDR to HDR inverse tone mapping |
+| Search games... | Search games... |
 | Select a device to view details | Select a device to view details |
+| Select a launcher to import games from: | Select a launcher to import games from: |
+| Select All | Select All |
+| Select group | Select group |
+| Select Group... | Select Group... |
+| Select None | Select None |
+| Select service | Select service |
+| Select Service... | Select Service... |
 | Selects the clock and power switching heuristic for the GPU. | Selects the clock and power switching heuristic for the GPU. |
 | Sets a maximum frame rate cap for all 3D applications via MangoHud. | Sets a maximum frame rate cap for all 3D applications via MangoHud. |
 | Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi). | Sets maximum power in watts for the NVIDIA GPU (via nvidia-smi). |
@@ -593,6 +633,9 @@
 | Vulkan Driver | Vulkan Driver |
 | Wayland | Wayland |
 | Wine Info | Wine Info |
+| Winetricks is not installed. | Winetricks is not installed. |
+| Winetricks... | Winetricks... |
+| Winetricks started. | Winetricks started. |
 | Working Directory | Working Directory |
 | Yes | Yes |
 | Your game library | Your game library |
