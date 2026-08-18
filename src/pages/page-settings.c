@@ -641,6 +641,8 @@ flag_emoji_for_code (const char *code)
     return "\xf0\x9f\x87\xa7\xf0\x9f\x87\xb7";  /* 🇧🇷 */
   if (g_strcmp0 (code, "en_US") == 0)
     return "\xf0\x9f\x87\xba\xf0\x9f\x87\xb8";  /* 🇺🇸 */
+  if (g_strcmp0 (code, "es_ES") == 0)
+    return "\xf0\x9f\x87\xaa\xf0\x9f\x87\xb8";  /* 🇪🇸 */
   return "\xf0\x9f\x8f\xb3\xef\xb8\x8f";        /* 🏳️  (white flag) */
 }
 

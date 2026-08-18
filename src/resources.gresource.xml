@@ -23,6 +23,7 @@
     <file>icons/launchers/heroic.png</file>
     <file>icons/launchers/lutris.png</file>
     <file>icons/launchers/bottles.png</file>
+    <file preprocess="xml-stripblanks">icons/launchers/hydra.svg</file>
     <file>icons/generic-ps2.svg</file>
     <file>icons/brand-default.svg</file>
     <file>icons/brand-blue.svg</file>
@@ -62,5 +63,6 @@
     <file alias="database/MICE_INDEX.md">../database/MICE_INDEX.md</file>
     <file alias="lang/pt_BR.md">../lang/pt_BR.md</file>
     <file alias="lang/en_US.md">../lang/en_US.md</file>
+    <file alias="lang/es_ES.md">../lang/es_ES.md</file>
   </gresource>
 </gresources>

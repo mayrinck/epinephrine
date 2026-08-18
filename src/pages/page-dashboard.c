@@ -3,9 +3,11 @@
 #include "window.h"
 #include "epi-privilege.h"
 #include "../epi-i18n.h"
+#include "../hydra-ldb.h"
 
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <sys/wait.h>
 
 #define tr(x) epi_i18n_get (x)
@@ -265,10 +267,16 @@ free_games (DashboardPage *page)
       g_free (page->games[i].workdir);
       g_free (page->games[i].source);
       g_free (page->games[i].startup_cmd);
+      g_free (page->games[i].group);
     }
   g_free (page->games);
   page->games = NULL;
   page->n_games = 0;
+  g_free (page->selected);
+  page->selected = NULL;
+  page->edit_mode = FALSE;
+  g_clear_pointer (&page->active_group, g_free);
+  g_clear_pointer (&page->active_service, g_free);
 }
 
 const char *
@@ -278,6 +286,8 @@ detect_source_from_command (const char *cmd)
     return "local";
   if (g_str_has_prefix (cmd, "steam steam://rungameid/"))
     return "steam";
+  if (g_str_has_prefix (cmd, "xdg-open hydralauncher://"))
+    return "hydra";
   return "local";
 }
 
@@ -303,6 +313,7 @@ load_games_config (DashboardPage *page)
   char **groups = g_key_file_get_groups (keyfile, &num_games);
 
   page->games = g_new0 (GameShortcut, num_games);
+  page->selected = g_new0 (gboolean, num_games);
   page->n_games = 0;
 
   for (gsize i = 0; i < num_games; i++)
@@ -331,6 +342,7 @@ load_games_config (DashboardPage *page)
                 }
               page->games[page->n_games].source = source ? source : g_strdup ("local");
               page->games[page->n_games].startup_cmd = g_key_file_get_string (keyfile, groups[i], "startup_cmd", NULL);
+              page->games[page->n_games].group = g_key_file_get_string (keyfile, groups[i], "group", NULL);
               page->games[page->n_games].feral_gamemode = g_key_file_get_boolean (keyfile, groups[i], "feral_gamemode", NULL);
               page->games[page->n_games].mangohud = g_key_file_get_boolean (keyfile, groups[i], "mangohud", NULL);
               page->games[page->n_games].play_time_secs = play_time;
@@ -378,6 +390,8 @@ save_games_config (DashboardPage *page)
       g_key_file_set_int64 (keyfile, group, "last_played", page->games[i].last_played);
       if (page->games[i].startup_cmd)
         g_key_file_set_string (keyfile, group, "startup_cmd", page->games[i].startup_cmd);
+      if (page->games[i].group)
+        g_key_file_set_string (keyfile, group, "group", page->games[i].group);
       g_key_file_set_boolean (keyfile, group, "feral_gamemode", page->games[i].feral_gamemode);
       g_key_file_set_boolean (keyfile, group, "mangohud", page->games[i].mangohud);
     }
@@ -784,7 +798,17 @@ gamemode_available (void)
 {
   static gint cached = -1;
   if (cached < 0)
-    cached = g_file_test ("/usr/bin/gamemoderun", G_FILE_TEST_EXISTS) ? 1 : 0;
+    {
+      cached = 0;
+      if (g_find_program_in_path ("gamemoderun"))
+        cached = 1;
+      else if (g_file_test ("/usr/bin/gamemoderun", G_FILE_TEST_EXISTS))
+        cached = 1;
+      else if (g_file_test ("/usr/local/bin/gamemoderun", G_FILE_TEST_EXISTS))
+        cached = 1;
+      else if (g_find_program_in_path ("gamemoded"))
+        cached = 1;
+    }
   return (gboolean) cached;
 }
 
@@ -792,6 +816,701 @@ gboolean
 mangohud_available (void)
 {
   return g_find_program_in_path ("mangohud") != NULL;
+}
+
+/* ---- Winetricks / Protontricks (Wine prefix tools) ----
+ *
+ * Protontricks only understands Steam prefixes (it deliberately ignores
+ * WINEPREFIX and reads Steam's config to locate them).  The other launchers
+ * (Heroic, Hydra, Lutris, Bottles) manage their own Wine prefixes, so for
+ * those we run winetricks directly against the per-game prefix — each
+ * launcher "in its own way".
+ */
+
+gboolean
+winetricks_available (void)
+{
+  static gint cached = -1;
+  if (cached < 0)
+    cached = (g_find_program_in_path ("winetricks") != NULL) ? 1 : 0;
+  return (gboolean) cached;
+}
+
+gboolean
+protontricks_available (void)
+{
+  static gint cached = -1;
+  if (cached >= 0) return (gboolean) cached;
+
+  cached = 0;
+  if (g_find_program_in_path ("protontricks"))
+    {
+      /* Native protontricks still needs a winetricks on PATH to run commands. */
+      cached = winetricks_available () ? 1 : 0;
+      return (gboolean) cached;
+    }
+
+  /* Flatpak installation bundles its own winetricks, so only the app matters. */
+  if (g_find_program_in_path ("flatpak"))
+    {
+      GError *err = NULL;
+      gint status = 0;
+      g_spawn_sync (NULL,
+        (char *[]) { "flatpak", "info", "com.github.Matoking.protontricks", NULL },
+        NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &status, &err);
+      if (err)
+        g_error_free (err);
+      else if (status == 0)
+        cached = 1;
+    }
+  return (gboolean) cached;
+}
+
+static char *
+extract_steam_appid (const char *cmd)
+{
+  if (!cmd || !cmd[0]) return NULL;
+
+  const char *p = strstr (cmd, "rungameid/");
+  if (!p) p = strstr (cmd, "launch/");
+  if (!p) return NULL;
+
+  p = strchr (p, '/');
+  if (!p) return NULL;
+  p++;
+
+  const char *start = p;
+  while (g_ascii_isdigit (*p)) p++;
+  if (p == start) return NULL;
+
+  return g_strndup (start, (gsize) (p - start));
+}
+
+/* ---- Launcher key extraction (from the stored launch command) ---- */
+
+static char *
+extract_heroic_app_name (const char *cmd)
+{
+  gchar **argv = NULL;
+  if (!g_shell_parse_argv (cmd, NULL, &argv, NULL))
+    return NULL;
+  char *res = NULL;
+  if (argv && argv[0] && argv[1] && argv[2]
+      && g_strcmp0 (argv[0], "heroic") == 0
+      && g_strcmp0 (argv[1], "launch") == 0)
+    res = g_strdup (argv[2]);
+  g_strfreev (argv);
+  return res;
+}
+
+static char *
+extract_hydra_object_id (const char *cmd)
+{
+  gchar **argv = NULL;
+  if (!g_shell_parse_argv (cmd, NULL, &argv, NULL))
+    return NULL;
+  char *res = NULL;
+  if (argv && argv[1])
+    {
+      const char *p = strstr (argv[1], "objectId=");
+      if (p)
+        {
+          p += strlen ("objectId=");
+          const char *end = strchr (p, '&');
+          if (!end) end = p + strlen (p);
+          if (end > p)
+            res = g_strndup (p, (gsize) (end - p));
+        }
+    }
+  g_strfreev (argv);
+  return res;
+}
+
+static char *
+extract_bottle_name (const char *cmd)
+{
+  gchar **argv = NULL;
+  if (!g_shell_parse_argv (cmd, NULL, &argv, NULL))
+    return NULL;
+  char *res = NULL;
+  if (argv)
+    for (int i = 0; argv[i]; i++)
+      if (g_strcmp0 (argv[i], "-b") == 0 && argv[i + 1])
+        { res = g_strdup (argv[i + 1]); break; }
+  g_strfreev (argv);
+  return res;
+}
+
+static char *
+extract_lutris_name (const char *cmd)
+{
+  gchar **argv = NULL;
+  if (!g_shell_parse_argv (cmd, NULL, &argv, NULL))
+    return NULL;
+  char *res = NULL;
+  if (argv && argv[0] && argv[1] && argv[2]
+      && g_strcmp0 (argv[0], "lutris") == 0
+      && g_strcmp0 (argv[1], "-L") == 0)
+    res = g_strdup (argv[2]);
+  g_strfreev (argv);
+  return res;
+}
+
+/* ---- Steam prefix discovery ---- */
+
+/* Locate <steam_root>/steamapps/compatdata/<appid>/pfx across every Steam
+ * installation (native + Flatpak, plus libraryfolders.vdf libraries).
+ * On success *prefix_out is the prefix dir and *flatpak_out reports whether
+ * the Steam installation lives under the Flatpak data directory. */
+static gboolean
+find_steam_prefix (const char *appid, char **prefix_out, gboolean *flatpak_out)
+{
+  const char *home = g_get_home_dir ();
+  GPtrArray *roots = g_ptr_array_new_with_free_func (g_free);
+  g_autofree char *flatpak_steam = g_build_filename (home, ".var", "app",
+    "com.valvesoftware.Steam", "data", "Steam", NULL);
+
+  g_ptr_array_add (roots, g_build_filename (home, ".steam", "steam", NULL));
+  g_ptr_array_add (roots, g_build_filename (home, ".local", "share", "Steam", NULL));
+  g_ptr_array_add (roots, g_strdup (flatpak_steam));
+
+  /* Parse libraryfolders.vdf for additional Steam library paths */
+  char *vdf = g_build_filename (home, ".steam", "steam", "steamapps",
+    "libraryfolders.vdf", NULL);
+  char *vdf_content = NULL;
+  if (g_file_get_contents (vdf, &vdf_content, NULL, NULL))
+    {
+      char **lines = g_strsplit (vdf_content, "\n", -1);
+      for (int i = 0; lines[i]; i++)
+        {
+          const char *p = strstr (lines[i], "\"path\"");
+          if (!p) continue;
+          p = strchr (p + 6, '"');
+          if (!p) continue;
+          p++;
+          const char *end = strchr (p, '"');
+          if (!end) continue;
+          g_ptr_array_add (roots, g_strndup (p, (gsize) (end - p)));
+        }
+      g_strfreev (lines);
+    }
+  g_free (vdf_content);
+  g_free (vdf);
+
+  g_autofree char *want = g_strdup_printf ("steamapps/compatdata/%s/pfx", appid);
+  gboolean found = FALSE;
+  gboolean is_flatpak = FALSE;
+  char *pfx = NULL;
+
+  for (guint i = 0; i < roots->len; i++)
+    {
+      const char *root = g_ptr_array_index (roots, i);
+      pfx = g_build_filename (root, want, NULL);
+      if (g_file_test (pfx, G_FILE_TEST_IS_DIR))
+        {
+          is_flatpak = (g_str_has_prefix (root, flatpak_steam) != FALSE);
+          found = TRUE;
+          break;
+        }
+      g_free (pfx);
+      pfx = NULL;
+    }
+
+  g_ptr_array_unref (roots);
+
+  if (!found)
+    {
+      g_free (pfx);
+      return FALSE;
+    }
+
+  if (prefix_out)
+    *prefix_out = pfx;
+  else
+    g_free (pfx);
+  if (flatpak_out)
+    *flatpak_out = is_flatpak;
+  return TRUE;
+}
+
+/* ---- Non-Steam prefix discovery ---- */
+
+/* Naive JSON string extractor: finds "key" : "value". */
+static char *
+json_get_string (const char *json, const char *key)
+{
+  if (!json) return NULL;
+  g_autofree char *needle = g_strdup_printf ("\"%s\"", key);
+  const char *p = strstr (json, needle);
+  if (!p) return NULL;
+  const char *q = strchr (p + strlen (needle), '"');
+  if (!q) return NULL;
+  q++;
+  const char *end = strchr (q, '"');
+  if (!end) return NULL;
+  return g_strndup (q, (gsize) (end - q));
+}
+
+/* Extract a string key, but only looking shortly after `scope` appears
+ * (e.g. "name"/"type" inside the "wineVersion" object). */
+static char *
+json_get_scoped_string (const char *json, const char *scope, const char *key)
+{
+  if (!json) return NULL;
+  const char *s = strstr (json, scope);
+  if (!s) return NULL;
+  g_autofree char *needle = g_strdup_printf ("\"%s\"", key);
+  const char *json_end = json + strlen (json);
+  const char *limit = s + strlen (scope) + 400;
+  if (limit > json_end) limit = json_end;
+  const char *p = s + strlen (scope);
+  while (p && p < limit)
+    {
+      const char *hit = strstr (p, needle);
+      if (!hit || hit >= limit) break;
+      const char *q = strchr (hit + strlen (needle), '"');
+      if (q)
+        {
+          q++;
+          const char *end = strchr (q, '"');
+          if (end) return g_strndup (q, (gsize) (end - q));
+        }
+      p = hit + 1;
+    }
+  return NULL;
+}
+
+/* Best-effort: locate the Wine/Proton binary a launcher downloaded under
+ * ~/.config/heroic/tools.  Returns NULL to let winetricks use PATH wine. */
+static char *
+heroic_wine_binary (const char *version_name, const char *version_type)
+{
+  if (!version_name || !version_name[0]) return NULL;
+  const char *home = g_get_home_dir ();
+  const char *stem = strstr (version_name, "- ");
+  stem = stem ? stem + 2 : version_name;
+
+  if (g_strcmp0 (version_type, "proton") == 0)
+    {
+      g_autofree char *w = g_build_filename (home, ".config", "heroic",
+        "tools", "proton", stem, "files", "bin", "wine", NULL);
+      if (g_file_test (w, G_FILE_TEST_IS_EXECUTABLE)) return g_strdup (w);
+      /* Proton installations managed by Steam itself */
+      g_autofree char *w2 = g_build_filename (home, ".local", "share", "Steam",
+        "steamapps", "common", stem, "files", "bin", "wine", NULL);
+      if (g_file_test (w2, G_FILE_TEST_IS_EXECUTABLE)) return g_strdup (w2);
+      g_autofree char *w3 = g_build_filename (home, ".steam", "steam",
+        "steamapps", "common", stem, "files", "bin", "wine", NULL);
+      if (g_file_test (w3, G_FILE_TEST_IS_EXECUTABLE)) return g_strdup (w3);
+    }
+  else
+    {
+      g_autofree char *w = g_build_filename (home, ".config", "heroic",
+        "tools", "wine", stem, "bin", "wine", NULL);
+      if (g_file_test (w, G_FILE_TEST_IS_EXECUTABLE)) return g_strdup (w);
+    }
+  return NULL;
+}
+
+/* Resolve the Wine prefix a launcher manages for a given game key.
+ * Returns TRUE on success; *wine_out may be NULL (system wine is fine). */
+static gboolean
+resolve_nonsteam_prefix (const char *source, const char *key,
+                         char **prefix_out, char **wine_out)
+{
+  const char *home = g_get_home_dir ();
+  *wine_out = NULL;
+
+  if (g_strcmp0 (source, "heroic") == 0)
+    {
+      char *json_path = NULL;
+      char *content = NULL;
+      const char *dirs[] = { "GamesConfig", "games" };
+      for (int i = 0; i < 2 && !content; i++)
+        {
+          json_path = g_build_filename (home, ".config", "heroic",
+            dirs[i], key, NULL);
+          if (!g_str_has_suffix (json_path, ".json"))
+            {
+              char *jp = g_strdup_printf ("%s.json", json_path);
+              g_free (json_path);
+              json_path = jp;
+            }
+          if (g_file_test (json_path, G_FILE_TEST_EXISTS))
+            g_file_get_contents (json_path, &content, NULL, NULL);
+          else
+            { g_free (json_path); json_path = NULL; }
+        }
+      if (!content) return FALSE;
+
+      char *wp = json_get_string (content, "winePrefix");
+      char *ver_type = json_get_scoped_string (content, "wineVersion", "type");
+      if (!wp || !wp[0])
+        {
+          g_free (wp);
+          wp = g_build_filename (home, "Games", "Heroic", "Prefixes", key, NULL);
+        }
+
+      if (g_strcmp0 (ver_type, "proton") == 0)
+        {
+          /* For Proton, winePrefix is the compat data dir; pfx lives inside. */
+          char *pfx = g_build_filename (wp, "pfx", NULL);
+          g_free (wp);
+          if (!g_file_test (pfx, G_FILE_TEST_IS_DIR))
+            { g_free (pfx); g_free (content); g_free (json_path); return FALSE; }
+          *prefix_out = pfx;
+          g_autofree char *vname = json_get_scoped_string (content,
+            "wineVersion", "name");
+          *wine_out = heroic_wine_binary (vname, ver_type);
+        }
+      else
+        {
+          if (!g_file_test (wp, G_FILE_TEST_IS_DIR))
+            { g_free (wp); g_free (content); g_free (json_path); return FALSE; }
+          *prefix_out = g_strdup (wp);
+          g_autofree char *vname = json_get_scoped_string (content,
+            "wineVersion", "name");
+          *wine_out = heroic_wine_binary (vname, ver_type);
+        }
+
+      g_free (ver_type);
+      g_free (content);
+      g_free (json_path);
+      return TRUE;
+    }
+
+  if (g_strcmp0 (source, "hydra") == 0)
+    {
+      g_autofree char *base = g_build_filename (home, ".config",
+        "hydralauncher", "wine-prefixes", NULL);
+      g_autofree char *p1 = g_build_filename (base, key, NULL);
+      if (g_file_test (p1, G_FILE_TEST_IS_DIR))
+        { *prefix_out = g_strdup (p1); return TRUE; }
+      g_autofree char *p2 = g_build_filename (home, ".config",
+        "hydralauncher", "wine-prefix", key, NULL);
+      if (g_file_test (p2, G_FILE_TEST_IS_DIR))
+        { *prefix_out = g_strdup (p2); return TRUE; }
+      return FALSE;
+    }
+
+  if (g_strcmp0 (source, "bottles") == 0)
+    {
+      const char *cands[] = {
+        ".var/app/org.usebottles.bottles/data/bottles/bottles",
+        ".local/share/bottles/bottles",
+        NULL
+      };
+      for (int i = 0; cands[i]; i++)
+        {
+          g_autofree char *b = g_build_filename (home, cands[i], key, NULL);
+          if (g_file_test (b, G_FILE_TEST_IS_DIR))
+            {
+              /* Each bottle has a 'wine' symlink to its runner. */
+              g_autofree char *w = g_build_filename (b, "wine", NULL);
+              if (g_file_test (w, G_FILE_TEST_IS_EXECUTABLE))
+                *wine_out = g_strdup (w);
+              else
+                {
+                  g_autofree char *w2 = g_build_filename (b, "wine", "bin", "wine", NULL);
+                  if (g_file_test (w2, G_FILE_TEST_IS_EXECUTABLE))
+                    *wine_out = g_strdup (w2);
+                }
+              *prefix_out = g_strdup (b);
+              return TRUE;
+            }
+        }
+      return FALSE;
+    }
+
+  if (g_strcmp0 (source, "lutris") == 0)
+    {
+      g_autofree char *conf = g_build_filename (home, ".config",
+        "lutris", "games", NULL);
+      GDir *d = g_dir_open (conf, 0, NULL);
+      if (d)
+        {
+          const char *entry;
+          while ((entry = g_dir_read_name (d)))
+            {
+              if (!g_str_has_suffix (entry, ".yml")) continue;
+              g_autofree char *fp = g_build_filename (conf, entry, NULL);
+              char *content = NULL;
+              if (g_file_get_contents (fp, &content, NULL, NULL))
+                {
+                  char **lines = g_strsplit (content, "\n", -1);
+                  char *name = NULL, *wine_prefix = NULL;
+                  for (int i = 0; lines[i]; i++)
+                    {
+                      char *l = g_strstrip (lines[i]);
+                      if (g_str_has_prefix (l, "name:"))
+                        { g_free (name); name = g_strdup (g_strstrip (l + 5)); }
+                      else if (g_str_has_prefix (l, "wine_prefix:"))
+                        { g_free (wine_prefix); wine_prefix = g_strdup (g_strstrip (l + 13)); }
+                      if (name && wine_prefix) break;
+                    }
+                  g_strfreev (lines);
+                  g_free (content);
+                  if (name && wine_prefix && wine_prefix[0]
+                      && g_strcmp0 (name, key) == 0)
+                    {
+                      g_free (name);
+                      g_dir_close (d);
+                      if (g_file_test (wine_prefix, G_FILE_TEST_IS_DIR))
+                        {
+                          *prefix_out = g_strdup (wine_prefix);
+                          g_free (wine_prefix);
+                          return TRUE;
+                        }
+                      g_free (wine_prefix);
+                      return FALSE;
+                    }
+                  g_free (name);
+                  g_free (wine_prefix);
+                }
+            }
+          g_dir_close (d);
+        }
+      return FALSE;
+    }
+
+  return FALSE;
+}
+
+/* ---- Spawning the prefix tool with visible diagnostics ---- */
+
+typedef struct
+{
+  gboolean is_steam;
+  GString *out;
+  GString *err;
+  gint out_fd;
+  gint err_fd;
+} TricksCtx;
+
+static void
+drain_fd (gint fd, GString *buf)
+{
+  char tmp[1024];
+  for (;;)
+    {
+      ssize_t n = read (fd, tmp, sizeof tmp);
+      if (n <= 0) break;
+      g_string_append_len (buf, tmp, (gsize) n);
+    }
+}
+
+static void
+on_tricks_child_exited (GPid pid, gint status, gpointer user_data)
+{
+  TricksCtx *ctx = user_data;
+  g_spawn_close_pid (pid);
+
+  if (ctx->out_fd >= 0)
+    { drain_fd (ctx->out_fd, ctx->out); close (ctx->out_fd); }
+  if (ctx->err_fd >= 0)
+    { drain_fd (ctx->err_fd, ctx->err); close (ctx->err_fd); }
+
+  if (status == 0)
+    {
+      dashboard_show_toast (ctx->is_steam
+        ? tr ("Protontricks started.")
+        : tr ("Winetricks started."));
+    }
+  else
+    {
+      const char *raw = (ctx->err && ctx->err->str && ctx->err->str[0])
+        ? ctx->err->str
+        : (ctx->out && ctx->out->str ? ctx->out->str : "");
+      char *one_line = g_strdup (raw);
+      g_strstrip (one_line);
+      char *nl = strchr (one_line, '\n');
+      if (nl) *nl = '\0';
+      if (strlen (one_line) > 200) one_line[200] = '\0';
+      char *toast = g_strdup_printf (
+        ctx->is_steam
+          ? tr ("Failed to launch Protontricks: %s")
+          : tr ("Failed to launch Winetricks: %s"),
+        one_line[0] ? one_line : "?");
+      dashboard_show_toast (toast);
+      g_free (toast);
+      g_free (one_line);
+    }
+
+  g_string_free (ctx->out, TRUE);
+  g_string_free (ctx->err, TRUE);
+  g_free (ctx);
+}
+
+static void
+launch_tricks_process (gboolean is_steam, char *argv[],
+                       const char *steam_root, const char *prefix,
+                       const char *wine)
+{
+  gchar **envp = g_get_environ ();
+  if (steam_root && steam_root[0])
+    envp = g_environ_setenv (envp, "STEAM_DIR", steam_root, TRUE);
+  if (prefix && prefix[0])
+    envp = g_environ_setenv (envp, "WINEPREFIX", prefix, TRUE);
+  if (wine && wine[0])
+    envp = g_environ_setenv (envp, "WINE", wine, TRUE);
+
+  TricksCtx *ctx = g_new0 (TricksCtx, 1);
+  ctx->is_steam = is_steam;
+  ctx->out = g_string_new ("");
+  ctx->err = g_string_new ("");
+  ctx->out_fd = -1;
+  ctx->err_fd = -1;
+
+  GError *err = NULL;
+  gint in_fd = -1, out_fd = -1, err_fd = -1;
+  GPid pid = 0;
+
+  if (!g_spawn_async_with_pipes (NULL, argv, envp,
+        G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
+        NULL, NULL, &in_fd, &out_fd, &err_fd, &pid, &err))
+    {
+      char *toast = g_strdup_printf (is_steam
+          ? tr ("Failed to launch Protontricks: %s")
+          : tr ("Failed to launch Winetricks: %s"),
+        err && err->message ? err->message : "?");
+      dashboard_show_toast (toast);
+      g_free (toast);
+      g_clear_error (&err);
+      g_strfreev (envp);
+      if (in_fd >= 0) close (in_fd);
+      if (out_fd >= 0) close (out_fd);
+      if (err_fd >= 0) close (err_fd);
+      g_string_free (ctx->out, TRUE);
+      g_string_free (ctx->err, TRUE);
+      g_free (ctx);
+      return;
+    }
+
+  g_strfreev (envp);
+  if (in_fd >= 0) close (in_fd);
+  ctx->out_fd = out_fd;
+  ctx->err_fd = err_fd;
+  g_child_watch_add (pid, on_tricks_child_exited, ctx);
+}
+
+static void
+on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
+{
+  (void) btn;
+  int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (btn), "game-idx")) - 1;
+  if (idx < 0 || idx >= page->n_games) return;
+
+  const char *source = page->games[idx].source;
+  const char *cmd = page->games[idx].command;
+  gboolean is_steam = (g_strcmp0 (source, "steam") == 0);
+
+  if (is_steam)
+    {
+      if (!protontricks_available ())
+        {
+          dashboard_show_toast (tr ("Protontricks is not installed."));
+          return;
+        }
+
+      g_autofree char *appid = extract_steam_appid (cmd);
+      if (!appid)
+        {
+          dashboard_show_toast (tr ("Could not find the game prefix."));
+          return;
+        }
+
+      g_autofree char *prefix = NULL;
+      gboolean is_flatpak_steam = FALSE;
+      if (!find_steam_prefix (appid, &prefix, &is_flatpak_steam))
+        {
+          dashboard_show_toast (tr ("Launch the game once through Steam to create its prefix."));
+          return;
+        }
+
+      g_autofree char *pt_bin = g_find_program_in_path ("protontricks");
+      if (pt_bin)
+        {
+          /* Native protontricks. Flatpak Steam cannot be auto-detected, so
+             point STEAM_DIR at its data dir on the host. */
+          g_autofree char *steam_dir = NULL;
+          if (is_flatpak_steam)
+            {
+              const char *home = g_get_home_dir ();
+              steam_dir = g_build_filename (home, ".var", "app",
+                "com.valvesoftware.Steam", "data", "Steam", NULL);
+            }
+          char *argv[] = { pt_bin, appid, "--gui", NULL };
+          launch_tricks_process (TRUE, argv, steam_dir, NULL, NULL);
+        }
+      else
+        {
+          /* Flatpak protontricks bundles winetricks. Grant access to the
+             game's Steam library so prefixes on other drives also work. */
+          GPtrArray *args = g_ptr_array_new ();
+          g_ptr_array_add (args, (gpointer) "flatpak");
+          g_ptr_array_add (args, (gpointer) "run");
+          if (prefix)
+            {
+              const char *apps = strstr (prefix, "/steamapps/");
+              g_autofree char *libroot = apps
+                ? g_strndup (prefix, (gsize) (apps - prefix))
+                : g_strdup (prefix);
+              g_autofree char *fs = g_strdup_printf ("--filesystem=%s", libroot);
+              g_ptr_array_add (args, (gpointer) g_steal_pointer (&fs));
+            }
+          g_ptr_array_add (args, (gpointer) "com.github.Matoking.protontricks");
+          g_ptr_array_add (args, (gpointer) appid);
+          g_ptr_array_add (args, (gpointer) "--gui");
+          g_ptr_array_add (args, NULL);
+
+          char **argv = (char **) g_ptr_array_free (args, FALSE);
+          launch_tricks_process (TRUE, argv, NULL, NULL, NULL);
+          g_free (argv);
+        }
+      return;
+    }
+
+  /* Non-Steam launchers: winetricks against the launcher's own prefix. */
+  if (!winetricks_available ())
+    {
+      dashboard_show_toast (tr ("Winetricks is not installed."));
+      return;
+    }
+
+  char *key = NULL;
+  if (g_strcmp0 (source, "heroic") == 0)
+    key = extract_heroic_app_name (cmd);
+  else if (g_strcmp0 (source, "hydra") == 0)
+    key = extract_hydra_object_id (cmd);
+  else if (g_strcmp0 (source, "bottles") == 0)
+    key = extract_bottle_name (cmd);
+  else if (g_strcmp0 (source, "lutris") == 0)
+    key = extract_lutris_name (cmd);
+
+  if (!key)
+    {
+      dashboard_show_toast (tr ("Could not find the game prefix."));
+      return;
+    }
+
+  g_autofree char *prefix = NULL;
+  g_autofree char *wine = NULL;
+  if (!resolve_nonsteam_prefix (source, key, &prefix, &wine))
+    {
+      g_free (key);
+      dashboard_show_toast (tr ("Could not find the game prefix."));
+      return;
+    }
+  g_free (key);
+
+  char *winetricks = g_find_program_in_path ("winetricks");
+  if (!winetricks)
+    {
+      dashboard_show_toast (tr ("Winetricks is not installed."));
+      return;
+    }
+  char *argv[] = { winetricks, NULL };
+  launch_tricks_process (FALSE, argv, NULL, prefix, wine);
 }
 
 void
@@ -960,9 +1679,13 @@ on_delete_game_clicked (GtkButton *btn, gpointer user_data)
   g_free (page->games[idx].workdir);
   g_free (page->games[idx].source);
   g_free (page->games[idx].startup_cmd);
+  g_free (page->games[idx].group);
 
   for (int i = idx; i < page->n_games - 1; i++)
-    page->games[i] = page->games[i + 1];
+    {
+      page->games[i] = page->games[i + 1];
+      page->selected[i] = page->selected[i + 1];
+    }
 
   page->n_games--;
   if (page->n_games > 0)
@@ -1079,9 +1802,9 @@ on_edit_confirm (GtkButton *btn, gpointer user_data)
   if (!name || name[0] == '\0' || !cmd || cmd[0] == '\0')
     return;
 
-  static const char *source_keys[] = { "local", "steam", "heroic", "lutris", "bottles", "other" };
+  static const char *source_keys[] = { "local", "steam", "heroic", "lutris", "bottles", "hydra", "other" };
   guint src_idx = gtk_drop_down_get_selected (source_drop);
-  const char *source = (src_idx < 6) ? source_keys[src_idx] : "local";
+  const char *source = (src_idx < 7) ? source_keys[src_idx] : "local";
 
   g_free (page->games[idx].name);
   g_free (page->games[idx].command);
@@ -1090,8 +1813,7 @@ on_edit_confirm (GtkButton *btn, gpointer user_data)
   g_free (page->games[idx].source);
   g_free (page->games[idx].startup_cmd);
 
-  page->games[idx].name = g_strdup (name);
-  page->games[idx].command = g_strdup (cmd);
+  page->games[idx].name = g_strdup (name);  page->games[idx].command = g_strdup (cmd);
   page->games[idx].icon = (icon_text && icon_text[0] != '\0')
     ? g_strdup (icon_text)
     : g_strdup ("input-gaming-symbolic");
@@ -1189,14 +1911,14 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_widget_set_halign (source_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (source_label, "dim-label");
   gtk_box_append (GTK_BOX (right), source_label);
-  const char *sources[] = { tr ("Local"), "Steam", "Heroic", "Lutris", "Bottles", tr ("Other"), NULL };
+  const char *sources[] = { tr ("Local"), "Steam", "Heroic", "Lutris", "Bottles", "Hydra", tr ("Other"), NULL };
   GtkStringList *source_list = gtk_string_list_new (sources);
   GtkDropDown *source_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (source_list), NULL));
   g_object_unref (source_list);
   /* Map current source to index */
-  static const char *source_keys[] = { "local", "steam", "heroic", "lutris", "bottles", "other" };
+  static const char *source_keys[] = { "local", "steam", "heroic", "lutris", "bottles", "hydra", "other" };
   guint src_sel = 0;
-  for (int s = 0; s < 6; s++)
+  for (int s = 0; s < 7; s++)
     {
       if (g_strcmp0 (page->games[idx].source, source_keys[s]) == 0)
         { src_sel = s; break; }
@@ -1273,6 +1995,29 @@ open_edit_dialog (DashboardPage *page, int idx)
   gtk_widget_set_halign (tweaks_label, GTK_ALIGN_START);
   gtk_widget_add_css_class (tweaks_label, "heading");
   gtk_box_append (GTK_BOX (right), tweaks_label);
+
+  /* Protontricks (Steam) / Winetricks (other launchers) on the game prefix. */
+  gboolean pt_is_steam = (g_strcmp0 (page->games[idx].source, "steam") == 0);
+  GtkWidget *pt_btn = gtk_button_new_with_label (pt_is_steam
+    ? tr ("Protontricks...") : tr ("Winetricks..."));
+  gtk_widget_set_margin_top (pt_btn, 4);
+  gtk_widget_add_css_class (pt_btn, "flat");
+  gtk_widget_add_css_class (pt_btn, "accent-btn");
+  gtk_widget_set_halign (pt_btn, GTK_ALIGN_START);
+  g_object_set_data (G_OBJECT (pt_btn), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (pt_btn, "clicked", G_CALLBACK (on_protontricks_clicked), page);
+
+  {
+    gboolean tool_ok = pt_is_steam ? protontricks_available () : winetricks_available ();
+    if (!tool_ok)
+      {
+        gtk_widget_set_sensitive (pt_btn, FALSE);
+        gtk_widget_set_tooltip_text (pt_btn, pt_is_steam
+          ? tr ("Protontricks is not installed.")
+          : tr ("Winetricks is not installed."));
+      }
+  }
+  gtk_box_append (GTK_BOX (right), pt_btn);
 
   GtkWidget *startup_label = gtk_label_new (tr ("Startup commands"));
   gtk_widget_set_halign (startup_label, GTK_ALIGN_START);
@@ -1381,6 +2126,9 @@ add_game_entry (DashboardPage *page, const char *name, const char *cmd,
   page->n_games++;
   page->games = g_realloc (page->games,
     page->n_games * sizeof (GameShortcut));
+  page->selected = g_realloc (page->selected,
+    page->n_games * sizeof (gboolean));
+  page->selected[page->n_games - 1] = FALSE;
 
   GameShortcut *g = &page->games[page->n_games - 1];
   g->name = g_strdup (name);
@@ -1389,6 +2137,7 @@ add_game_entry (DashboardPage *page, const char *name, const char *cmd,
   g->workdir = NULL;
   g->source = g_strdup (source ? source : "local");
   g->startup_cmd = NULL;
+  g->group = NULL;
   g->feral_gamemode = FALSE;
   g->mangohud = FALSE;
   g->play_time_secs = 0;
@@ -1800,6 +2549,152 @@ import_lutris_games (DashboardPage *page)
   g_dir_close (dir);
   g_free (lutris_dir);
   return count;
+}
+
+/* ---- Hydra Launcher import ---- */
+
+typedef struct
+{
+  DashboardPage *page;
+  int count;
+  gboolean classics; /* TRUE: only emulator (launchbox) games; FALSE: skip them */
+} HydraImportCtx;
+
+static void
+on_hydra_game (const HydraGame *g, void *user_data)
+{
+  HydraImportCtx *ctx = user_data;
+
+  /* Classics = emulator ROMs imported via Hydra's "launchbox" shop.  The
+   * main import skips them (they get their own "Classics" option); the
+   * classics-only pass imports nothing else. */
+  gboolean is_emu = (g_strcmp0 (g->shop, "launchbox") == 0);
+  if (ctx->classics != is_emu) return;
+
+  /* Deep-link into Hydra: hydralauncher://run?shop=<shop>&objectId=<oid>.
+   * xdg-open resolves the x-scheme-handler/hydralauncher handler (registered
+   * by hydra.desktop), falling back to launching the AppImage.  This is the
+   * primary path; game launches themselves are handled by Hydra, so per-game
+   * mangohud/gamemode wrapping from this app does not apply. */
+  g_autofree char *uri = g_strdup_printf (
+    "hydralauncher://run?shop=%s&objectId=%s", g->shop, g->object_id);
+  g_autofree char *q_uri = g_shell_quote (uri);
+  g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
+
+  add_game_entry (ctx->page, g->title, cmd, NULL, "hydra");
+  ctx->count++;
+}
+
+static int
+hydra_import_from_python (DashboardPage *page, const char *db_dir,
+                          gboolean classics)
+{
+  g_autofree char *script = g_build_filename (
+    DATADIR, "epinephrine", "scripts", "hydra_games.py", NULL);
+  if (!g_file_test (script, G_FILE_TEST_IS_REGULAR)) return 0;
+
+  g_autofree char *python = g_find_program_in_path ("python3");
+  if (!python) return 0;
+
+  g_autofree char *stdout_str = NULL;
+  g_autoptr(GError) err = NULL;
+  char *argv[] = { python, script, (char *) db_dir,
+                   classics ? "classics" : "all", NULL };
+  if (!g_spawn_sync (NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
+                     NULL, NULL, &stdout_str, NULL, NULL, &err))
+    return 0;
+
+  HydraImportCtx ctx = { .page = page, .count = 0, .classics = classics };
+  char **lines = g_strsplit (stdout_str, "\n", -1);
+  for (int i = 0; lines[i]; i++)
+    {
+      g_strstrip (lines[i]);
+      if (!lines[i][0]) continue;
+      char **f = g_strsplit (lines[i], "\t", 5);
+      if (g_strv_length (f) >= 3)
+        {
+          gboolean is_emu = (g_strcmp0 (f[2], "launchbox") == 0);
+          if (ctx.classics == is_emu)
+            {
+              g_autofree char *uri = g_strdup_printf (
+                "hydralauncher://run?shop=%s&objectId=%s", f[2], f[1]);
+              g_autofree char *q_uri = g_shell_quote (uri);
+              g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
+              add_game_entry (page, f[0], cmd, NULL, "hydra");
+              ctx.count++;
+            }
+        }
+      g_strfreev (f);
+    }
+  g_strfreev (lines);
+  return ctx.count;
+}
+
+static int
+import_hydra_filtered (DashboardPage *page, gboolean classics)
+{
+  const char *home = g_get_home_dir ();
+  g_autofree char *db_dir = g_build_filename (
+    home, ".config", "hydralauncher", "hydra-db", NULL);
+
+  if (!g_file_test (db_dir, G_FILE_TEST_IS_DIR))
+    return 0;
+
+  GDir *dir = g_dir_open (db_dir, 0, NULL);
+  if (!dir)
+    return 0;
+
+  GPtrArray *ldb_files = g_ptr_array_new_with_free_func (g_free);
+  const char *entry;
+  while ((entry = g_dir_read_name (dir)) != NULL)
+    if (g_str_has_suffix (entry, ".ldb"))
+      g_ptr_array_add (ldb_files, g_strdup (entry));
+  g_dir_close (dir);
+
+  /* Newest .ldb first so overlapping entries prefer fresh data */
+  g_ptr_array_sort (ldb_files, (GCompareFunc) g_strcmp0);
+  for (guint i = 0, j = ldb_files->len - 1; i < j; i++, j--)
+    {
+      gpointer tmp = g_ptr_array_index (ldb_files, i);
+      g_ptr_array_index (ldb_files, i) = g_ptr_array_index (ldb_files, j);
+      g_ptr_array_index (ldb_files, j) = tmp;
+    }
+
+  HydraImportCtx ctx = { .page = page, .count = 0, .classics = classics };
+  for (guint i = 0; i < ldb_files->len; i++)
+    {
+      g_autofree char *full = g_build_filename (
+        db_dir, g_ptr_array_index (ldb_files, i), NULL);
+      g_autofree char *content = NULL;
+      gsize len = 0;
+      if (g_file_get_contents (full, &content, &len, NULL))
+        {
+          int n = hydra_ldb_parse ((const uint8_t *) content, len,
+                                   on_hydra_game, &ctx);
+          if (n > 0)
+            break; /* newest table yielded games — stop */
+        }
+    }
+  g_ptr_array_unref (ldb_files);
+
+  /* Fallback: if the native parser found nothing (format drift), use the
+   * bundled Python reader. */
+  if (ctx.count == 0)
+    ctx.count = hydra_import_from_python (page, db_dir, classics);
+
+  return ctx.count;
+}
+
+int
+import_hydra_games (DashboardPage *page)
+{
+  return import_hydra_filtered (page, FALSE);
+}
+
+int
+import_hydra_classics_games (DashboardPage *page)
+{
+  return import_hydra_filtered (page, TRUE);
 }
 
 /* ---- Install ---- */

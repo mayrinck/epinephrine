@@ -15,6 +15,7 @@ typedef struct
   char *workdir;
   char *source;   /* "steam", "heroic", "lutris", "bottles", "other", "local" */
   char *startup_cmd;
+  char *group;    /* category name; NULL = ungrouped */
   gboolean feral_gamemode;
   gboolean mangohud;
   int play_time_secs;
@@ -58,6 +59,16 @@ typedef struct
   GameShortcut *games;
   int n_games;
 
+  /* Game library edit / category state */
+  gboolean edit_mode;
+  gboolean *selected;      /* parallel to games[], NULL unless edit_mode */
+  char *active_group;      /* NULL = "All" */
+  char *active_service;    /* NULL = "All Services"; matches games[].source */
+  GtkWidget *edit_btn;
+  GtkWidget *category_bar; /* horizontal box of category chips */
+  GtkWidget *service_dropdown; /* filter dropdown of sources in use */
+  GtkWidget *edit_actions; /* box with Delete / Group / Ungroup while in edit */
+
   int running_game_idx;
   GPid game_pid;
   guint poll_timer_id;
@@ -90,6 +101,8 @@ int import_steam_games (DashboardPage *page);
 int import_heroic_games (DashboardPage *page);
 int import_lutris_games (DashboardPage *page);
 int import_bottles_games (DashboardPage *page);
+int import_hydra_games (DashboardPage *page);
+int import_hydra_classics_games (DashboardPage *page);
 void save_games_config (DashboardPage *page);
 void refresh_recent_games (DashboardPage *page);
 void open_edit_dialog (DashboardPage *page, int idx);
