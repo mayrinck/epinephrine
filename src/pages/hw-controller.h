@@ -26,6 +26,16 @@ struct _ControllerState
   int lx, ly, rx, ry;
   gboolean thumb_l_pressed;
   gboolean thumb_r_pressed;
+  /* Stick axis calibration ranges */
+  int lx_min, lx_max, ly_min, ly_max;
+  int rx_min, rx_max, ry_min, ry_max;
+  /* Dynamic axis mapping: which evdev code maps to which function.
+     Detected at calibration time by checking axis ranges.
+     Sticks have min < 0 (centered), triggers have min >= 0. */
+  int abs_left_x, abs_left_y;     /* evdev codes for left stick */
+  int abs_right_x, abs_right_y;   /* evdev codes for right stick */
+  int abs_left_trigger;            /* evdev code for left trigger */
+  int abs_right_trigger;           /* evdev code for right trigger */
 };
 
 /* Build the controller detail page (branding + settings/test views). */

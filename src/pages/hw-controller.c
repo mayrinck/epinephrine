@@ -12,8 +12,24 @@
 #include <string.h>
 #include <unistd.h>
 #include <glib-unix.h>
+#include <linux/input.h>
 
 #define tr(x) epi_i18n_get (x)
+
+/* Bit manipulation helpers for evdev capability queries */
+#ifndef BITS_PER_LONG
+#define BITS_PER_LONG (sizeof (unsigned long) * 8)
+#endif
+#ifndef NLONGS
+#define NLONGS(x) (((x) + BITS_PER_LONG - 1) / BITS_PER_LONG)
+#endif
+#ifndef test_bit
+static inline gboolean
+test_bit (int nr, const unsigned long *addr)
+{
+  return (addr[nr / BITS_PER_LONG] >> (nr % BITS_PER_LONG)) & 1;
+}
+#endif
 
 /* ── Controller Name Database (USB VID:PID → proper name) ── */
 
@@ -215,6 +231,170 @@ calibrate_axis (int fd, int axis, int *out_min, int *out_max)
     }
 }
 
+/* Detect which evdev axes are sticks vs triggers.
+   Sticks have min < 0 (centered at 0), triggers have min >= 0 (rest at 0).
+   This handles non-standard mappings like the GameSir T3 Lite where
+   ABS_Z/ABS_RX are the right stick instead of ABS_RX/ABS_RY. */
+static void
+detect_axis_mapping (int fd, ControllerState *state)
+{
+  unsigned long abs_bits[NLONGS (ABS_MAX)] = {0};
+  if (ioctl (fd, EVIOCGBIT (EV_ABS, sizeof (abs_bits)), abs_bits) < 0)
+    {
+      /* Fallback to standard mapping */
+      state->abs_left_x = ABS_X;
+      state->abs_left_y = ABS_Y;
+      state->abs_right_x = ABS_RX;
+      state->abs_right_y = ABS_RY;
+      state->abs_left_trigger = ABS_Z;
+      state->abs_right_trigger = ABS_RZ;
+      return;
+    }
+
+  /* Collect all supported axes with their ranges */
+  struct { int code; int min; int max; int flat; } axes[32];
+  int n_axes = 0;
+
+  for (int i = 0; i < ABS_MAX && n_axes < 32; i++)
+    {
+      if (!test_bit (i, abs_bits))
+        continue;
+      struct input_absinfo absinfo;
+      if (ioctl (fd, EVIOCGABS (i), &absinfo) < 0)
+        continue;
+      axes[n_axes].code = i;
+      axes[n_axes].min = absinfo.minimum;
+      axes[n_axes].max = absinfo.maximum;
+      axes[n_axes].flat = absinfo.flat;
+      n_axes++;
+    }
+
+  /* Classify: sticks have min < 0 (centered), triggers have min >= 0 */
+  int stick_x[2] = {-1, -1};   /* left_x, right_x */
+  int stick_y[2] = {-1, -1};   /* left_y, right_y */
+  int trigger[2] = {-1, -1};   /* left_trigger, right_trigger */
+
+  for (int i = 0; i < n_axes; i++)
+    {
+      /* Skip HAT axes — these are digital d-pad, not analog sticks.
+         ABS_HAT0X=0x10 through ABS_HAT3Y=0x17. */
+      if (axes[i].code >= ABS_HAT0X && axes[i].code <= ABS_HAT3Y)
+        continue;
+
+      int mid = (axes[i].min + axes[i].max) / 2;
+      gboolean centered = (axes[i].min < 0 && abs (mid) <= axes[i].flat + 1000);
+
+      if (centered)
+        {
+          /* This is a stick axis — pair X and Y */
+          if (axes[i].code == ABS_X || axes[i].code == ABS_Y ||
+              axes[i].code == ABS_RX || axes[i].code == ABS_RY ||
+              axes[i].code == ABS_Z)
+            {
+              /* Standard or near-standard stick codes */
+            }
+          /* Assign to left or right stick based on code.
+             Only fill empty slots to avoid overwriting. */
+          if (axes[i].code == ABS_X && stick_x[0] < 0)
+            stick_x[0] = ABS_X;
+          else if (axes[i].code == ABS_Y && stick_y[0] < 0)
+            stick_y[0] = ABS_Y;
+          else if (axes[i].code == ABS_RX)
+            {
+              /* ABS_RX is usually right stick X, but T3 Lite uses it as Y.
+                 If right X is already taken, put it as right Y. */
+              if (stick_x[1] < 0) stick_x[1] = ABS_RX;
+              else if (stick_y[1] < 0) stick_y[1] = ABS_RX;
+            }
+          else if (axes[i].code == ABS_RY)
+            {
+              /* ABS_RY is usually right stick Y, but T3 Lite uses it as trigger.
+                 If right Y is empty, assign it. */
+              if (stick_y[1] < 0) stick_y[1] = ABS_RY;
+            }
+          else if (axes[i].code == ABS_Z)
+            {
+              /* ABS_Z as stick = right stick X on some controllers (T3 Lite).
+                 Only fill if right X slot is empty. */
+              if (stick_x[1] < 0) stick_x[1] = ABS_Z;
+            }
+          else
+            {
+              /* Unknown centered axis — could be right stick */
+              if (stick_x[1] < 0) stick_x[1] = axes[i].code;
+              else if (stick_y[1] < 0) stick_y[1] = axes[i].code;
+            }
+        }
+      else
+        {
+          /* This is a trigger axis — min >= 0. Only fill empty slots. */
+          if (axes[i].code == ABS_Z && trigger[0] < 0)
+            trigger[0] = ABS_Z;
+          else if (axes[i].code == ABS_RZ && trigger[1] < 0)
+            trigger[1] = ABS_RZ;
+          else if (axes[i].code == ABS_BRAKE && trigger[0] < 0)
+            trigger[0] = ABS_BRAKE;
+          else if (axes[i].code == ABS_GAS && trigger[1] < 0)
+            trigger[1] = ABS_GAS;
+          else if (axes[i].code == ABS_RY && trigger[1] < 0)
+            {
+              /* ABS_RY as trigger = right trigger on some controllers (T3 Lite) */
+              trigger[1] = ABS_RY;
+            }
+          else if (axes[i].code == ABS_RX && trigger[0] < 0)
+            {
+              /* ABS_RX as trigger = left trigger on some controllers */
+              trigger[0] = ABS_RX;
+            }
+          else
+            {
+              /* Unknown non-centered axis — likely a trigger */
+              if (trigger[0] < 0) trigger[0] = axes[i].code;
+              else if (trigger[1] < 0) trigger[1] = axes[i].code;
+            }
+        }
+    }
+
+  /* If right stick Y wasn't found as a separate axis, look for it */
+  if (stick_y[1] < 0 && stick_x[1] >= 0)
+    {
+      /* T3 Lite: ABS_RX is right stick Y */
+      for (int i = 0; i < n_axes; i++)
+        {
+          if (axes[i].code == ABS_RX &&
+              (axes[i].min < 0) &&
+              axes[i].code != stick_x[1])
+            {
+              stick_y[1] = ABS_RX;
+              break;
+            }
+        }
+    }
+
+  /* Assign detected mappings */
+  state->abs_left_x = stick_x[0] >= 0 ? stick_x[0] : ABS_X;
+  state->abs_left_y = stick_y[0] >= 0 ? stick_y[0] : ABS_Y;
+  state->abs_right_x = stick_x[1] >= 0 ? stick_x[1] : ABS_RX;
+  state->abs_right_y = stick_y[1] >= 0 ? stick_y[1] : ABS_RY;
+  state->abs_left_trigger = trigger[0] >= 0 ? trigger[0] : ABS_Z;
+  state->abs_right_trigger = trigger[1] >= 0 ? trigger[1] : ABS_RZ;
+
+  g_debug ("detect_axis_mapping: LX=%d LY=%d RX=%d RY=%d LTrigger=%d RTrigger=%d",
+    state->abs_left_x, state->abs_left_y,
+    state->abs_right_x, state->abs_right_y,
+    state->abs_left_trigger, state->abs_right_trigger);
+
+  /* Calibrate all detected axes */
+  calibrate_axis (fd, state->abs_left_x,
+    &state->lx_min, &state->lx_max);
+  calibrate_axis (fd, state->abs_left_y,
+    &state->ly_min, &state->ly_max);
+  calibrate_axis (fd, state->abs_right_x,
+    &state->rx_min, &state->rx_max);
+  calibrate_axis (fd, state->abs_right_y,
+    &state->ry_min, &state->ry_max);
+}
+
 gboolean
 hw_controller_event (gint fd, GIOCondition condition, gpointer user_data)
 {
@@ -293,6 +473,11 @@ hw_controller_event (gint fd, GIOCondition condition, gpointer user_data)
               case BTN_TRIGGER_HAPPY2: idx = IND_M2; break;
               case BTN_TRIGGER_HAPPY3: idx = IND_M3; break;
               case BTN_TRIGGER_HAPPY4: idx = IND_M4; break;
+              /* BTN_0-9 used by some controllers for back buttons */
+              case BTN_0:      idx = IND_M1; break;
+              case BTN_1:      idx = IND_M2; break;
+              case BTN_2:      idx = IND_M3; break;
+              case BTN_3:      idx = IND_M4; break;
               /* D-pad via KEY_* codes (some controllers report these) */
               case KEY_UP:          idx = IND_DPAD_UP; break;
               case KEY_DOWN:        idx = IND_DPAD_DOWN; break;
@@ -325,14 +510,51 @@ hw_controller_event (gint fd, GIOCondition condition, gpointer user_data)
         }
       else if (ev.type == EV_ABS)
         {
-          switch (ev.code)
+          /* Use dynamic axis mapping — which evdev code maps to which function
+             is detected at calibration time. Handles non-standard controllers
+             like the GameSir T3 Lite. */
+          if (ev.code == pg->ctrl_state->abs_left_x)
+            pg->ctrl_state->lx = ev.value;
+          else if (ev.code == pg->ctrl_state->abs_left_y)
+            pg->ctrl_state->ly = ev.value;
+          else if (ev.code == pg->ctrl_state->abs_right_x)
+            pg->ctrl_state->rx = ev.value;
+          else if (ev.code == pg->ctrl_state->abs_right_y)
+            pg->ctrl_state->ry = ev.value;
+          else if (ev.code == pg->ctrl_state->abs_left_trigger)
             {
-              case ABS_X:  pg->ctrl_state->lx = ev.value; break;
-              case ABS_Y:  pg->ctrl_state->ly = ev.value; break;
-              case ABS_RX: pg->ctrl_state->rx = ev.value; break;
-              case ABS_RY: pg->ctrl_state->ry = ev.value; break;
-              /* D-pad as HAT axes (many controllers) */
-              case ABS_HAT0X:
+              /* Left trigger — light up L2 indicator */
+              int threshold = pg->ctrl_state->lx_min +
+                (pg->ctrl_state->lx_max - pg->ctrl_state->lx_min) / 10;
+              int pressed = ev.value > threshold;
+              int old = pg->ctrl_state->buttons[ABS_Z];
+              pg->ctrl_state->buttons[ABS_Z] = pressed;
+              if (old != pressed)
+                {
+                  if (pressed) gtk_widget_add_css_class (pg->indicators[IND_L2], "ctrl-indicator-active");
+                  else gtk_widget_remove_css_class (pg->indicators[IND_L2], "ctrl-indicator-active");
+                }
+            }
+          else if (ev.code == pg->ctrl_state->abs_right_trigger)
+            {
+              /* Right trigger — light up R2 indicator */
+              int threshold = pg->ctrl_state->rx_min +
+                (pg->ctrl_state->rx_max - pg->ctrl_state->rx_min) / 10;
+              int pressed = ev.value > threshold;
+              int old = pg->ctrl_state->buttons[ABS_RZ];
+              pg->ctrl_state->buttons[ABS_RZ] = pressed;
+              if (old != pressed)
+                {
+                  if (pressed) gtk_widget_add_css_class (pg->indicators[IND_R2], "ctrl-indicator-active");
+                  else gtk_widget_remove_css_class (pg->indicators[IND_R2], "ctrl-indicator-active");
+                }
+            }
+          else
+            {
+              switch (ev.code)
+                {
+                  /* D-pad as HAT axes (many controllers) */
+                  case ABS_HAT0X:
                 {
                   int old_l = pg->ctrl_state->buttons[ABS_HAT0X];
                   int new_l = ev.value == -1;
@@ -370,40 +592,6 @@ hw_controller_event (gint fd, GIOCondition condition, gpointer user_data)
                     }
                   break;
                 }
-              /* Analog triggers: use dynamic threshold based on axis range */
-              case ABS_Z:
-              case ABS_BRAKE:
-                {
-                  static int z_min = 0, z_max = 255;
-                  static gboolean z_calibrated = FALSE;
-                  if (!z_calibrated) calibrate_axis (fd, ABS_Z, &z_min, &z_max);
-                  int threshold = z_min + (z_max - z_min) / 10;
-                  int pressed = ev.value > threshold;
-                  int old = pg->ctrl_state->buttons[ev.code];
-                  pg->ctrl_state->buttons[ev.code] = pressed;
-                  if (old != pressed)
-                    {
-                      if (pressed) gtk_widget_add_css_class (pg->indicators[IND_L2], "ctrl-indicator-active");
-                      else gtk_widget_remove_css_class (pg->indicators[IND_L2], "ctrl-indicator-active");
-                    }
-                  break;
-                }
-              case ABS_RZ:
-              case ABS_GAS:
-                {
-                  static int rz_min = 0, rz_max = 255;
-                  static gboolean rz_calibrated = FALSE;
-                  if (!rz_calibrated) calibrate_axis (fd, ABS_RZ, &rz_min, &rz_max);
-                  int threshold = rz_min + (rz_max - rz_min) / 10;
-                  int pressed = ev.value > threshold;
-                  int old = pg->ctrl_state->buttons[ev.code];
-                  pg->ctrl_state->buttons[ev.code] = pressed;
-                  if (old != pressed)
-                    {
-                      if (pressed) gtk_widget_add_css_class (pg->indicators[IND_R2], "ctrl-indicator-active");
-                      else gtk_widget_remove_css_class (pg->indicators[IND_R2], "ctrl-indicator-active");
-                    }
-                  break;
                 }
             }
           char stick[64];
@@ -591,9 +779,21 @@ on_stick_draw (GtkDrawingArea *area, cairo_t *cr, int w, int h, gpointer user_da
   cairo_line_to (cr, cx, cy + radius);
   cairo_stroke (cr);
 
-  /* Stick position dot */
-  double nx = sx / 32767.0;
-  double ny = sy / 32767.0;
+  /* Stick position dot — normalize using calibrated axis range */
+  int smin_x, smax_x, smin_y, smax_y;
+  if (stick == STICK_RIGHT)
+    {
+      smin_x = page->ctrl_state->rx_min; smax_x = page->ctrl_state->rx_max;
+      smin_y = page->ctrl_state->ry_min; smax_y = page->ctrl_state->ry_max;
+    }
+  else
+    {
+      smin_x = page->ctrl_state->lx_min; smax_x = page->ctrl_state->lx_max;
+      smin_y = page->ctrl_state->ly_min; smax_y = page->ctrl_state->ly_max;
+    }
+  /* Map raw value to [-1.0, 1.0] using actual axis range */
+  double nx = (smax_x != smin_x) ? (2.0 * (sx - smin_x) / (smax_x - smin_x)) - 1.0 : 0.0;
+  double ny = (smax_y != smin_y) ? (2.0 * (sy - smin_y) / (smax_y - smin_y)) - 1.0 : 0.0;
   double dx = cx + nx * (radius - 6);
   double dy = cy + ny * (radius - 6);
 
@@ -1049,14 +1249,6 @@ hw_controller_build_detail (HardwarePage *page)
     adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Extra Buttons"));
     adw_expander_row_set_subtitle (toggle, tr ("Programmable buttons and macros"));
 
-    page->extra_buttons_none = gtk_label_new (
-      tr ("No extra buttons detected. "
-        "This controller does not have programmable buttons."));
-    gtk_widget_add_css_class (page->extra_buttons_none, "dim-label");
-    gtk_widget_set_halign (page->extra_buttons_none, GTK_ALIGN_START);
-    gtk_widget_set_hexpand (page->extra_buttons_none, TRUE);
-    adw_expander_row_add_row (toggle, page->extra_buttons_none);
-
     page->extra_buttons_group = toggle;
     gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
   }
@@ -1131,40 +1323,66 @@ hw_controller_close (HardwarePage *page)
 void
 hw_controller_update_extra_buttons (HardwarePage *page)
 {
-  /* Remove all previous rows from the group (except "none" label which we
-     will remove and re-add as needed). We unparent every child first. */
-  GtkWidget *child = gtk_widget_get_first_child (GTK_WIDGET (page->extra_buttons_group));
-  while (child)
-    {
-      GtkWidget *next = gtk_widget_get_next_sibling (child);
-      gtk_widget_unparent (child);
-      child = next;
-    }
-
   if (page->controller_fd < 0)
     {
-      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
-      gtk_widget_set_visible (page->extra_buttons_none, TRUE);
+      GtkWidget *none = gtk_label_new (
+        tr ("No extra buttons detected. "
+          "This controller does not have programmable buttons."));
+      gtk_widget_add_css_class (none, "dim-label");
+      gtk_widget_set_halign (none, GTK_ALIGN_START);
+      gtk_widget_set_hexpand (none, TRUE);
+      adw_expander_row_add_row (page->extra_buttons_group, none);
       return;
     }
 
   unsigned long key_bits[KEY_MAX / (8 * sizeof (unsigned long)) + 1] = {0};
   if (ioctl (page->controller_fd, EVIOCGBIT (EV_KEY, sizeof (key_bits)), key_bits) < 0)
     {
-      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
-      gtk_widget_set_visible (page->extra_buttons_none, TRUE);
+      GtkWidget *none = gtk_label_new (
+        tr ("No extra buttons detected. "
+          "This controller does not have programmable buttons."));
+      gtk_widget_add_css_class (none, "dim-label");
+      gtk_widget_set_halign (none, GTK_ALIGN_START);
+      gtk_widget_set_hexpand (none, TRUE);
+      adw_expander_row_add_row (page->extra_buttons_group, none);
       return;
     }
 
+  /* Check all possible extra button codes that controllers may use.
+     The GameSir T3 Lite and similar controllers can map back buttons to
+     various evdev codes. We check a wide range to ensure detection. */
   static const struct { int code; const char *label; } btns[] = {
-    { BTN_TRIGGER_HAPPY1, "M1" },
-    { BTN_TRIGGER_HAPPY2, "M2" },
-    { BTN_TRIGGER_HAPPY3, "M3" },
-    { BTN_TRIGGER_HAPPY4, "M4" },
+    { BTN_TRIGGER_HAPPY1,  "M1" },
+    { BTN_TRIGGER_HAPPY2,  "M2" },
+    { BTN_TRIGGER_HAPPY3,  "M3" },
+    { BTN_TRIGGER_HAPPY4,  "M4" },
+    { BTN_TRIGGER_HAPPY5,  "M5" },
+    { BTN_TRIGGER_HAPPY6,  "M6" },
+    { BTN_TRIGGER_HAPPY7,  "M7" },
+    { BTN_TRIGGER_HAPPY8,  "M8" },
+    { BTN_BASE3,           "Base 3" },
+    { BTN_BASE4,           "Base 4" },
+    { BTN_BASE5,           "Base 5" },
+    { BTN_BASE6,           "Base 6" },
+    { BTN_GRIPL,           "Grip L" },
+    { BTN_GRIPR,           "Grip R" },
+    { BTN_GRIPL2,          "Grip L2" },
+    { BTN_GRIPR2,          "Grip R2" },
+    { BTN_MISC,            "Misc" },
+    { BTN_0,               "Btn 0" },
+    { BTN_1,               "Btn 1" },
+    { BTN_2,               "Btn 2" },
+    { BTN_3,               "Btn 3" },
+    { BTN_4,               "Btn 4" },
+    { BTN_5,               "Btn 5" },
+    { BTN_6,               "Btn 6" },
+    { BTN_7,               "Btn 7" },
+    { BTN_8,               "Btn 8" },
+    { BTN_9,               "Btn 9" },
   };
   int found = 0;
 
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < (int) G_N_ELEMENTS (btns); i++)
     {
       if (TEST_BIT (btns[i].code, key_bits))
         {
@@ -1182,8 +1400,13 @@ hw_controller_update_extra_buttons (HardwarePage *page)
 
   if (found == 0)
     {
-      adw_expander_row_add_row (page->extra_buttons_group, page->extra_buttons_none);
-      gtk_widget_set_visible (page->extra_buttons_none, TRUE);
+      GtkWidget *none = gtk_label_new (
+        tr ("No extra buttons detected. "
+          "This controller does not have programmable buttons."));
+      gtk_widget_add_css_class (none, "dim-label");
+      gtk_widget_set_halign (none, GTK_ALIGN_START);
+      gtk_widget_set_hexpand (none, TRUE);
+      adw_expander_row_add_row (page->extra_buttons_group, none);
     }
 }
 
@@ -1247,6 +1470,10 @@ hw_controller_show (HardwarePage *page)
   if (page->controller_fd >= 0)
     {
       page->ctrl_state = g_new0 (ControllerState, 1);
+
+      /* Detect axis mapping — which evdev codes are sticks vs triggers */
+      detect_axis_mapping (page->controller_fd, page->ctrl_state);
+
       page->controller_watch_id = g_unix_fd_add (page->controller_fd,
         G_IO_IN, hw_controller_event, page);
     }

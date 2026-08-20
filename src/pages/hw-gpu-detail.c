@@ -580,15 +580,17 @@ hw_gpu_detail_build (HardwarePage *page)
       page->monitor_avail[i] = FALSE;
     }
 
-  /* Conditionally add OpenRGB button to lighting header */
+  /* Conditionally add OpenRGB button to lighting section */
   if (g_find_program_in_path ("openrgb"))
     {
-      GtkWidget *lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "lighting_header"));
+      AdwExpanderRow *lighting_toggle = ADW_EXPANDER_ROW (
+        gtk_builder_get_object (builder, "gpu-lighting-toggle"));
       GtkWidget *openrgb_btn = gtk_button_new_with_label (
         tr ("Edit on OpenRGB"));
       gtk_widget_add_css_class (openrgb_btn, "accent");
       gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (lighting_header), openrgb_btn);
+      if (lighting_toggle)
+        adw_expander_row_add_row (lighting_toggle, openrgb_btn);
       g_signal_connect (openrgb_btn, "clicked",
         G_CALLBACK (hw_openrgb_launch), NULL);
     }

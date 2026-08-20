@@ -161,9 +161,9 @@ create_game_card_grid (DashboardPage *page, int idx)
   gtk_check_button_set_active (GTK_CHECK_BUTTON (check),
     page->selected && page->selected[idx]);
   gtk_widget_add_css_class (check, "game-select-check");
-  gtk_widget_set_halign (check, GTK_ALIGN_END);
+  gtk_widget_set_halign (check, GTK_ALIGN_START);
   gtk_widget_set_valign (check, GTK_ALIGN_START);
-  gtk_widget_set_margin_end (check, 4);
+  gtk_widget_set_margin_start (check, 4);
   gtk_widget_set_margin_top (check, 4);
   g_object_set_data (G_OBJECT (check), "game-idx", GINT_TO_POINTER (idx + 1));
   g_signal_connect (check, "toggled", G_CALLBACK (on_select_toggled), page);
@@ -274,7 +274,7 @@ refresh_edit_actions (DashboardPage *page)
       gtk_label_set_text (GTK_LABEL (count_lbl), s);
       g_free (s);
     }
-  gtk_widget_set_visible (page->edit_actions, page->edit_mode);
+  gtk_widget_set_visible (page->edit_actions, page->edit_mode && any);
 }
 
 static void
@@ -869,7 +869,7 @@ game_in_active_service (DashboardPage *page, int idx)
 void
 refresh_games_grid (DashboardPage *page)
 {
-  if (!page->games_grid || !GTK_IS_GRID (page->games_grid)) return;
+  if (!page->games_grid || !GTK_IS_FLOW_BOX (page->games_grid)) return;
 
   /* Remove all children from the flow box */
   GtkWidget *child;
@@ -1345,7 +1345,7 @@ games_page_new (DashboardPage *dash_page)
 
   /* Search entry */
   GtkWidget *search_entry = gtk_search_entry_new ();
-  gtk_entry_set_placeholder_text (GTK_ENTRY (search_entry), tr ("Search games..."));
+  gtk_search_entry_set_placeholder_text (GTK_SEARCH_ENTRY (search_entry), tr ("Search games..."));
   gtk_widget_add_css_class (search_entry, "game-search-bar");
   gtk_widget_set_hexpand (search_entry, TRUE);
   g_signal_connect (search_entry, "search-changed", G_CALLBACK (on_search_changed), dash_page);

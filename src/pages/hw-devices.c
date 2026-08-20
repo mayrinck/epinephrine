@@ -234,8 +234,8 @@ type_to_subtitle (const char *type)
 static void
 process_input_device (HardwarePage *page, GHashTable *seen,
                       const char *target, const char *from_name,
-                      const char *from_type, GHashTable *kbd_phys,
-                      GHashTable *joy_phys)
+                       const char *from_type, GHashTable *kbd_phys,
+                       GHashTable *joy_phys, GHashTable *all_phys)
 {
   char *devpath = NULL;
   {
@@ -250,6 +250,28 @@ process_input_device (HardwarePage *page, GHashTable *seen,
       return;
     }
   g_hash_table_add (seen, g_strdup (devpath));
+
+  /* Cross-type deduplication: if same physical device already added as
+     any type (joystick, keyboard, mouse), skip duplicate interfaces.
+     This prevents composite USB devices (e.g. GameSir T3 Lite) from
+     appearing as joystick + mouse + keyboard. */
+  if (all_phys)
+    {
+      char *phys = read_evdev_phys (devpath);
+      if (phys)
+        {
+          char *inp = strstr (phys, "/input");
+          if (inp) *inp = '\0';
+          if (g_hash_table_contains (all_phys, phys))
+            {
+              g_free (phys);
+              g_free (devpath);
+              return;
+            }
+          g_hash_table_add (all_phys, g_strdup (phys));
+          g_free (phys);
+        }
+    }
 
   const char *type = from_type;
   char *real_name = read_evdev_name (devpath);
@@ -763,6 +785,7 @@ hw_devices_detect (HardwarePage *page)
     GHashTable *seen = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     GHashTable *kbd_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     GHashTable *joy_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+    GHashTable *all_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 
     const char *scan_dirs[] = { "/dev/input/by-id", "/dev/input/by-path" };
     for (size_t scan = 0; scan < G_N_ELEMENTS (scan_dirs); scan++)
@@ -795,7 +818,7 @@ hw_devices_detect (HardwarePage *page)
               continue;
 
             char *from_name = (scan == 0) ? extract_byid_name (entry) : g_strdup ("");
-            process_input_device (page, seen, target, from_name, type, kbd_phys, joy_phys);
+            process_input_device (page, seen, target, from_name, type, kbd_phys, joy_phys, all_phys);
             g_free (from_name);
           }
         g_dir_close (dir);
@@ -884,5 +907,6 @@ hw_devices_detect (HardwarePage *page)
     g_hash_table_destroy (seen);
     g_hash_table_destroy (kbd_phys);
     g_hash_table_destroy (joy_phys);
+    g_hash_table_destroy (all_phys);
   }
 }

@@ -181,7 +181,6 @@ typedef struct
 
   /* Extra buttons settings group */
   AdwExpanderRow *extra_buttons_group;
-  GtkWidget *extra_buttons_none;
 
   /* Motherboard info */
   char *mobo_vendor;
