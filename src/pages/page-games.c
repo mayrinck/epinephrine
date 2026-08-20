@@ -20,7 +20,6 @@ static void on_select_all_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_none_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_group_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_service_clicked (GtkButton *btn, DashboardPage *page);
-static void on_edit_mode_toggled (GtkToggleButton *toggle, DashboardPage *page);
 
 static const char *
 get_source_icon (const char *source)
@@ -285,17 +284,8 @@ set_edit_mode (DashboardPage *page, gboolean on)
   if (page->selected && !on)
     memset (page->selected, 0, page->n_games * sizeof (gboolean));
 
-  GtkWidget *mode_toggle = g_object_get_data (G_OBJECT (page->edit_btn), "mode-toggle");
-  if (mode_toggle)
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (mode_toggle), on);
   refresh_edit_actions (page);
   refresh_games_grid (page);
-}
-
-static void
-on_edit_mode_toggled (GtkToggleButton *toggle, DashboardPage *page)
-{
-  set_edit_mode (page, gtk_toggle_button_get_active (toggle));
 }
 
 static void
@@ -1360,24 +1350,6 @@ games_page_new (DashboardPage *dash_page)
   gtk_box_append (GTK_BOX (toolbar), service_dd);
   dash_page->service_dropdown = service_dd;
 
-  /* Edit mode toggle button */
-  GtkWidget *edit_btn = gtk_toggle_button_new ();
-  GtkWidget *edit_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
-  GtkWidget *edit_icon = gtk_image_new_from_icon_name ("document-edit-symbolic");
-  gtk_image_set_pixel_size (GTK_IMAGE (edit_icon), 16);
-  gtk_box_append (GTK_BOX (edit_box), edit_icon);
-  GtkWidget *edit_lbl = gtk_label_new (tr ("Edit Mode"));
-  gtk_box_append (GTK_BOX (edit_box), edit_lbl);
-  gtk_button_set_child (GTK_BUTTON (edit_btn), edit_box);
-  gtk_widget_add_css_class (edit_btn, "flat");
-  gtk_widget_add_css_class (edit_btn, "accent-btn");
-  gtk_widget_set_tooltip_text (edit_btn, tr ("Edit games"));
-  gtk_widget_set_valign (edit_btn, GTK_ALIGN_CENTER);
-  g_signal_connect (edit_btn, "toggled", G_CALLBACK (on_edit_mode_toggled), dash_page);
-  gtk_box_append (GTK_BOX (toolbar), edit_btn);
-  dash_page->edit_btn = edit_btn;
-  g_object_set_data (G_OBJECT (edit_btn), "mode-toggle", edit_btn);
-
   /* Import button */
   GtkWidget *import_btn = gtk_button_new_with_label (tr ("Import Games"));
   gtk_widget_add_css_class (import_btn, "flat");
@@ -1397,6 +1369,8 @@ games_page_new (DashboardPage *dash_page)
   GtkWidget *category_bar = gtk_flow_box_new ();
   gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (category_bar), GTK_SELECTION_NONE);
   gtk_flow_box_set_homogeneous (GTK_FLOW_BOX (category_bar), FALSE);
+  gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (category_bar), 8);
+  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (category_bar), 8);
   gtk_widget_set_margin_bottom (category_bar, 8);
   gtk_widget_set_hexpand (category_bar, TRUE);
   gtk_widget_set_halign (category_bar, GTK_ALIGN_FILL);

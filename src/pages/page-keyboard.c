@@ -333,7 +333,49 @@ apply_kb_led (const char *setting, gboolean enable)
   g_free (cmd);
 }
 
-/* ---- hidraw backlight control ---- */
+/* ---- Keyboard backlight control ---- */
+
+/* Find a keyboard backlight LED in /sys/class/leds/.
+ * Skips lock-key indicators (::numlock, ::capslock, ::scrolllock). */
+static char *
+find_kbd_backlight_led (void)
+{
+  GDir *dir = g_dir_open ("/sys/class/leds", 0, NULL);
+  if (!dir) return NULL;
+
+  const char *entry;
+  while ((entry = g_dir_read_name (dir)))
+    {
+      if (g_str_has_suffix (entry, "::numlock") ||
+          g_str_has_suffix (entry, "::capslock") ||
+          g_str_has_suffix (entry, "::scrolllock"))
+        continue;
+
+      if (strstr (entry, "kbd_backlight") ||
+          strstr (entry, "keyboard") ||
+          strstr (entry, "kbd"))
+        {
+          char *bp = g_build_filename ("/sys/class/leds", entry, "brightness", NULL);
+          if (g_file_test (bp, G_FILE_TEST_EXISTS))
+            { g_dir_close (dir); return bp; }
+          g_free (bp);
+        }
+    }
+  g_dir_close (dir);
+  return NULL;
+}
+
+static gboolean
+sysfs_set_brightness (const char *path, int value)
+{
+  int fd = open (path, O_WRONLY);
+  if (fd < 0) return FALSE;
+  char buf[16];
+  int len = g_snprintf (buf, sizeof (buf), "%d", value);
+  ssize_t n = write (fd, buf, len);
+  close (fd);
+  return n == len;
+}
 
 static char *
 find_keyboard_hidraw (void)
@@ -506,14 +548,37 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
   (void) page;
   gboolean want_on = adw_switch_row_get_active (sw);
 
+  /* --- Method 1: sysfs /sys/class/leds/ (standard Linux backlight) --- */
+  char *led_path = find_kbd_backlight_led ();
+  if (led_path)
+    {
+      char *max_path = g_strdup_printf ("%s/../max_brightness", led_path);
+      char *max_str = read_sysfs (max_path);
+      g_free (max_path);
+      int max_val = max_str ? atoi (max_str) : 1;
+      if (max_val < 1) max_val = 1;
+      g_free (max_str);
+
+      gboolean ok = sysfs_set_brightness (led_path, want_on ? max_val : 0);
+      g_free (led_path);
+
+      if (ok)
+        {
+          dashboard_show_toast (want_on
+            ? tr ("Keyboard illumination enabled")
+            : tr ("Keyboard illumination disabled"));
+          return;
+        }
+    }
+
+  /* --- Method 2: HID feature reports (fallback, device-specific) --- */
   char *hidraw_path = find_keyboard_hidraw ();
   if (!hidraw_path)
     {
-      dashboard_show_toast (tr ("Could not find keyboard hidraw device"));
+      dashboard_show_toast (tr ("Could not find keyboard backlight device"));
       return;
     }
 
-  /* Separate patterns for ON and OFF */
   static const unsigned char on_patterns[][3] = {
     {0x03, 0x01, 0x00},
     {0x03, 0x02, 0x00},
@@ -533,17 +598,13 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
 
   gboolean ok = FALSE;
 
-  /* 1) Try directly (works when the user already has device access) */
   int fd = open (hidraw_path, O_RDWR);
   if (fd >= 0)
     {
       for (size_t i = 0; i < n_patterns; i++)
         {
           if (ioctl (fd, HIDIOCSFEATURE (3), patterns[i]) >= 0)
-            {
-              ok = TRUE;
-              break;
-            }
+            { ok = TRUE; break; }
         }
 
       if (!ok)
@@ -551,14 +612,12 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
           static const unsigned char raw_on[] = {0x03, 0x01};
           static const unsigned char raw_off[] = {0x03, 0x00};
           const unsigned char *raw = want_on ? raw_on : raw_off;
-          size_t raw_len = sizeof (raw_on);
-          if (write (fd, raw, raw_len) == (ssize_t) raw_len)
+          if (write (fd, raw, sizeof (raw_on)) == (ssize_t) sizeof (raw_on))
             ok = TRUE;
         }
       close (fd);
     }
 
-  /* 2) Otherwise retry through the persistent admin session */
   if (!ok)
     {
       for (size_t i = 0; i < n_patterns && !ok; i++)
@@ -573,8 +632,7 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
           static const unsigned char raw_on[] = {0x03, 0x01};
           static const unsigned char raw_off[] = {0x03, 0x00};
           const unsigned char *raw = want_on ? raw_on : raw_off;
-          size_t raw_len = sizeof (raw_on);
-          char *hex = bytes_to_hex (raw, raw_len);
+          char *hex = bytes_to_hex (raw, sizeof (raw_on));
           ok = run_epi_hidraw (hidraw_path, "write", hex, NULL);
           g_free (hex);
         }
@@ -587,7 +645,7 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
       ? tr ("Keyboard illumination enabled (experimental)")
       : tr ("Keyboard illumination disabled (experimental)"));
   else
-    dashboard_show_toast (tr ("No compatible HID report found for backlight"));
+    dashboard_show_toast (tr ("No compatible backlight control found"));
 }
 
 static void
