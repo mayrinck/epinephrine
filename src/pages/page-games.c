@@ -1,5 +1,6 @@
 #include "page-games.h"
 #include "page-dashboard.h"
+#include "page-settings.h"
 
 #include "../epi-i18n.h"
 
@@ -721,7 +722,7 @@ refresh_service_dropdown (DashboardPage *page)
   if (!page->service_dropdown) return;
 
   /* Collect unique sources in deterministic order */
-  static const char *pref[] = { "steam", "heroic", "lutris", "bottles", "hydra", "local", NULL };
+  static const char *pref[] = { "steam", "heroic", "lutris", "bottles", "hydra", "linux", "local", NULL };
   GPtrArray *srcs = g_ptr_array_new_with_free_func (g_free);
   for (int p = 0; pref[p]; p++)
     {
@@ -903,7 +904,9 @@ on_import_launcher_clicked (GtkButton *btn, gpointer user_data)
   AdwDialog *dialog = g_object_get_data (G_OBJECT (btn), "dialog");
 
   int count = 0;
-  if (g_ascii_strcasecmp (launcher, "steam") == 0)
+  if (g_strcmp0 (launcher, "Linux Games") == 0)
+    count = import_desktop_games (page);
+  else if (g_ascii_strcasecmp (launcher, "steam") == 0)
     count = import_steam_games (page);
   else if (g_ascii_strcasecmp (launcher, "heroic") == 0)
     count = import_heroic_games (page);
@@ -971,24 +974,31 @@ on_import_games_clicked (GtkButton *btn, DashboardPage *page)
   gtk_widget_add_css_class (desc, "dim-label");
   gtk_box_append (GTK_BOX (box), desc);
 
-  /* Launcher entries */
+  /* Launcher entries — Linux Games always first, Hydra only if enabled */
   struct {
     const char *name;
     const char *binary;
     const char *config_subpath;
     const char *icon;
+    gboolean always_detected;  /* Linux Games: always available */
   } launchers[] = {
-    { "Steam",   "steam",   ".steam/steam",   "icons/launchers/steam.png" },
-    { "Heroic",  "heroic",  ".config/heroic", "icons/launchers/heroic.png" },
-    { "Lutris",  "lutris",  ".local/share/lutris", "icons/launchers/lutris.png" },
-    { "Bottles", "bottles", ".local/share/bottles", "icons/launchers/bottles.png" },
-    { "Hydra",   NULL,      ".config/hydralauncher/hydra-db", "icons/launchers/hydra.svg" },
-    { "Hydra Classics", NULL, ".config/hydralauncher/hydra-db", "icons/launchers/hydra.svg" },
+    { "Linux Games",     NULL,       NULL,                                         "input-gaming-symbolic",  TRUE },
+    { "Steam",           "steam",    ".steam/steam",                                "icons/launchers/steam.png", FALSE },
+    { "Heroic",          "heroic",   ".config/heroic",                              "icons/launchers/heroic.png", FALSE },
+    { "Lutris",          "lutris",   ".local/share/lutris",                         "icons/launchers/lutris.png", FALSE },
+    { "Bottles",         "bottles",  ".local/share/bottles",                        "icons/launchers/bottles.png", FALSE },
+    { "Hydra",           NULL,       ".config/hydralauncher/hydra-db",              "icons/launchers/hydra.svg", FALSE },
+    { "Hydra Classics",  NULL,       ".config/hydralauncher/hydra-db",              "icons/launchers/hydra.svg", FALSE },
   };
 
-  for (int i = 0; i < 6; i++)
+  int n_launchers = 5; /* Linux Games + Steam + Heroic + Lutris + Bottles */
+  if (settings_load_untrusted_launchers ())
+    n_launchers = 7; /* + Hydra + Hydra Classics */
+
+  for (int i = 0; i < n_launchers; i++)
     {
-      gboolean installed = check_launcher_installed (launchers[i].binary)
+      gboolean installed = launchers[i].always_detected
+                        || check_launcher_installed (launchers[i].binary)
                         || check_launcher_config (launchers[i].config_subpath);
 
       GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
@@ -998,9 +1008,16 @@ on_import_games_clicked (GtkButton *btn, DashboardPage *page)
       /* Icon */
       GtkWidget *icon_img = gtk_image_new ();
       gtk_image_set_pixel_size (GTK_IMAGE (icon_img), 32);
-      char *icon_path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launchers[i].icon);
-      gtk_image_set_from_resource (GTK_IMAGE (icon_img), icon_path);
-      g_free (icon_path);
+      if (g_str_has_prefix (launchers[i].icon, "icons/"))
+        {
+          char *icon_path = g_strdup_printf ("/io/github/mayrinck/epinephrine/%s", launchers[i].icon);
+          gtk_image_set_from_resource (GTK_IMAGE (icon_img), icon_path);
+          g_free (icon_path);
+        }
+      else
+        {
+          gtk_image_set_from_icon_name (GTK_IMAGE (icon_img), launchers[i].icon);
+        }
       gtk_box_append (GTK_BOX (row), icon_img);
 
       /* Name + status */
@@ -1013,7 +1030,7 @@ on_import_games_clicked (GtkButton *btn, DashboardPage *page)
       const char *status = installed ? tr ("Detected") : tr ("Not found");
       GtkWidget *status_label = gtk_label_new (status);
       gtk_widget_set_halign (status_label, GTK_ALIGN_START);
-      gtk_widget_add_css_class (status_label, installed ? "dim-label" : "dim-label");
+      gtk_widget_add_css_class (status_label, "dim-label");
       if (installed)
         gtk_widget_add_css_class (status_label, "accent-label");
       gtk_box_append (GTK_BOX (info_box), status_label);
@@ -1062,6 +1079,7 @@ on_add_confirm (GtkButton *btn, gpointer user_data)
   GtkWidget *cmd_entry = g_object_get_data (G_OBJECT (btn), "cmd-entry");
   GtkWidget *workdir_entry = g_object_get_data (G_OBJECT (btn), "workdir-entry");
   GtkDropDown *source_drop = g_object_get_data (G_OBJECT (btn), "source-drop");
+  GtkDropDown *cat_drop = g_object_get_data (G_OBJECT (btn), "cat-drop");
   GtkWidget *startup_entry = g_object_get_data (G_OBJECT (btn), "startup-entry");
   GtkWidget *gamemode_switch = g_object_get_data (G_OBJECT (btn), "gamemode-switch");
   GtkWidget *mangohud_switch = g_object_get_data (G_OBJECT (btn), "mangohud-switch");
@@ -1109,7 +1127,18 @@ on_add_confirm (GtkButton *btn, gpointer user_data)
   g->source = g_strdup (source);
   g->startup_cmd = (startup_text && startup_text[0] != '\0')
     ? g_strdup (startup_text) : NULL;
-  g->group = NULL;
+
+  /* Category from dropdown */
+  guint cat_idx = cat_drop ? gtk_drop_down_get_selected (cat_drop) : 0;
+  if (cat_idx == 0)
+    g->group = NULL;  /* "None" */
+  else
+    {
+      GtkStringList *cat_model = GTK_STRING_LIST (gtk_drop_down_get_model (cat_drop));
+      const char *cat_name = gtk_string_list_get_string (cat_model, cat_idx);
+      g->group = g_strdup (cat_name);
+    }
+
   g->feral_gamemode = gamemode_switch ?
     gtk_switch_get_active (GTK_SWITCH (gamemode_switch)) : FALSE;
   g->mangohud = mangohud_switch ?
@@ -1217,6 +1246,31 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   g_signal_connect (icon_browse, "clicked", G_CALLBACK (on_browse_file_clicked), icon_entry);
   g_signal_connect (workdir_browse, "clicked", G_CALLBACK (on_browse_folder_clicked), workdir_entry);
 
+  /* Category */
+  GtkWidget *cat_label = gtk_label_new (tr ("Category"));
+  gtk_widget_set_halign (cat_label, GTK_ALIGN_START);
+  gtk_widget_add_css_class (cat_label, "dim-label");
+  gtk_box_append (GTK_BOX (box), cat_label);
+
+  /* Build category list: "None" + "Nativo" + unique existing groups */
+  GtkStringList *cat_list = gtk_string_list_new (NULL);
+  gtk_string_list_append (cat_list, tr ("None"));
+  gtk_string_list_append (cat_list, "Nativo");
+  for (int ci = 0; ci < page->n_games; ci++)
+    {
+      const char *grp = page->games[ci].group;
+      if (!grp || !grp[0]) continue;
+      gboolean dup = FALSE;
+      for (int cj = 0; cj < ci; cj++)
+        if (g_strcmp0 (page->games[cj].group, grp) == 0) { dup = TRUE; break; }
+      if (!dup)
+        gtk_string_list_append (cat_list, grp);
+    }
+  GtkDropDown *cat_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (cat_list), NULL));
+  g_object_unref (cat_list);
+  gtk_widget_set_hexpand (GTK_WIDGET (cat_drop), TRUE);
+  gtk_box_append (GTK_BOX (box), GTK_WIDGET (cat_drop));
+
   /* ---- Tweaks ---- */
   GtkWidget *sep = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_widget_set_margin_top (sep, 8);
@@ -1289,6 +1343,7 @@ on_add_game_clicked (GtkButton *btn, DashboardPage *page)
   g_object_set_data (G_OBJECT (add_btn), "cmd-entry", cmd_entry);
   g_object_set_data (G_OBJECT (add_btn), "workdir-entry", workdir_entry);
   g_object_set_data (G_OBJECT (add_btn), "source-drop", source_drop);
+  g_object_set_data (G_OBJECT (add_btn), "cat-drop", cat_drop);
   g_object_set_data (G_OBJECT (add_btn), "startup-entry", startup_entry);
   if (gamemode_switch)
     g_object_set_data (G_OBJECT (add_btn), "gamemode-switch", gamemode_switch);

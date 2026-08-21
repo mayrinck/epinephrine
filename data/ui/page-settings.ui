@@ -158,6 +158,19 @@
 
             <child>
               <object class="AdwPreferencesGroup">
+                <property name="title" translatable="yes">Game Import</property>
+                <child>
+                  <object class="AdwSwitchRow" id="untrusted-launchers-row">
+                    <property name="title" translatable="yes">Enable untrusted launchers</property>
+                    <property name="subtitle" translatable="yes">Enables access to Hydra and Hydra Classic, known for pirated or untrusted products</property>
+                    <property name="active">False</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
+            <child>
+              <object class="AdwPreferencesGroup">
                 <property name="title" translatable="yes">About</property>
                 <child>
                   <object class="AdwActionRow">

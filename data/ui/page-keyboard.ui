@@ -17,103 +17,17 @@
             <property name="margin-top">12</property>
             <property name="margin-bottom">24</property>
 
-            <child>
-              <object class="AdwPreferencesGroup">
-                <property name="title" translatable="yes">Keyboard Settings</property>
-                <property name="description" translatable="yes">Configure keyboard layout, repeat rate, delay, and other input settings.</property>
-              </object>
-            </child>
+            <!-- Branding is built programmatically in C code -->
 
-            <child>
-              <object class="AdwPreferencesGroup" id="kb-info-section">
-                <property name="title" translatable="yes">Information</property>
-                <child>
-                  <object class="AdwActionRow" id="kb-name-row">
-                    <property name="title" translatable="yes">Name</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="kb-name-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                        <property name="selectable">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow" id="kb-vendor-row">
-                    <property name="title" translatable="yes">Vendor</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="kb-vendor-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                        <property name="selectable">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow" id="kb-speed-row">
-                    <property name="title" translatable="yes">Speed</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="kb-speed-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow" id="kb-driver-row">
-                    <property name="title" translatable="yes">Driver</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="kb-driver-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                        <property name="selectable">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwActionRow" id="kb-chipset-row">
-                    <property name="title" translatable="yes">Chipset</property>
-                    <child type="widget">
-                      <object class="GtkLabel" id="kb-chipset-label">
-                        <property name="halign">end</property>
-                        <property name="hexpand">True</property>
-                        <property name="selectable">True</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-
+            <!-- ===== Keyboard Settings ===== -->
             <child>
               <object class="AdwPreferencesGroup" id="kb-settings-section">
-                <property name="title" translatable="yes">Settings</property>
-                <child>
-                  <object class="AdwSwitchRow" id="kb-numlock-row">
-                    <property name="title" translatable="yes">Enable NumLock at boot</property>
-                    <property name="subtitle" translatable="yes">Enable NumLock when logging in.</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwSwitchRow" id="kb-capslock-row">
-                    <property name="title" translatable="yes">Enable CapsLock at boot</property>
-                    <property name="subtitle" translatable="yes">Enable CapsLock when logging in.</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="AdwSwitchRow" id="kb-scrolllock-row">
-                    <property name="title" translatable="yes">Enable ScrollLock at boot</property>
-                    <property name="subtitle" translatable="yes">Enable ScrollLock when logging in.</property>
-                  </object>
-                </child>
+                <property name="title" translatable="yes">Keyboard Settings</property>
+                <property name="description" translatable="yes">Configure repeat rate, delay, and other input settings.</property>
                 <child>
                   <object class="AdwActionRow" id="kb-repeat-rate-row">
                     <property name="title" translatable="yes">Repeat Rate</property>
-                    <property name="subtitle" translatable="yes">Characters per second when holding a key (via kbdrate).</property>
+                    <property name="subtitle" translatable="yes">Characters per second when holding a key</property>
                     <property name="tooltip-text" translatable="yes">Controls how many times per second a key press is registered while holding it down. Higher values make key repeat faster.</property>
                     <child type="widget">
                       <object class="GtkBox">
@@ -145,7 +59,7 @@
                 <child>
                   <object class="AdwActionRow" id="kb-repeat-delay-row">
                     <property name="title" translatable="yes">Repeat Delay</property>
-                    <property name="subtitle" translatable="yes">Delay in milliseconds before key repeat starts.</property>
+                    <property name="subtitle" translatable="yes">Delay before key repeat starts</property>
                     <property name="tooltip-text" translatable="yes">How long a key must be held before it starts repeating. Lower values trigger repeat sooner.</property>
                     <child type="widget">
                       <object class="GtkBox">
@@ -174,13 +88,6 @@
                     </child>
                   </object>
                 </child>
-              </object>
-            </child>
-
-            <!-- ===== Layout ===== -->
-            <child>
-              <object class="AdwPreferencesGroup" id="kb-layout-section">
-                <property name="title" translatable="yes">Layout</property>
                 <child>
                   <object class="AdwActionRow" id="kb-layout-row">
                     <property name="title" translatable="yes">Current Layout</property>
@@ -195,23 +102,52 @@
               </object>
             </child>
 
-            <!-- ===== Lighting Controls ===== -->
+            <!-- ===== Lock Key Boot Options ===== -->
             <child>
-              <object class="AdwPreferencesGroup" id="kb-lighting-section">
+              <object class="AdwPreferencesGroup" id="kb-lock-section">
+                <property name="title" translatable="yes">Lock Keys at Boot</property>
+                <property name="description" translatable="yes">Set default state for lock keys when logging in.</property>
                 <child>
-                  <object class="AdwExpanderRow" id="kb-section-lighting-toggle">
-                    <property name="title" translatable="yes">Lighting Controls</property>
-                    <property name="subtitle" translatable="yes">Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards.</property>
-                    <child>
-                      <object class="AdwSwitchRow" id="kb-backlight-switch-row">
-                        <property name="title" translatable="yes">Toggle Keyboard Illumination</property>
-                        <property name="subtitle" translatable="yes">Enable or disable keyboard backlight control.</property>
-                      </object>
-                    </child>
+                  <object class="AdwSwitchRow" id="kb-numlock-row">
+                    <property name="title" translatable="yes">NumLock</property>
+                    <property name="subtitle" translatable="yes">Enable NumLock at login</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-capslock-row">
+                    <property name="title" translatable="yes">CapsLock</property>
+                    <property name="subtitle" translatable="yes">Enable CapsLock at login</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-scrolllock-row">
+                    <property name="title" translatable="yes">ScrollLock</property>
+                    <property name="subtitle" translatable="yes">Enable ScrollLock at login</property>
                   </object>
                 </child>
               </object>
             </child>
+
+            <!-- ===== Lighting Controls ===== -->
+            <child>
+              <object class="AdwPreferencesGroup" id="kb-lighting-section">
+                <property name="title" translatable="yes">Lighting Controls</property>
+                <property name="description" translatable="yes">Manipule a iluminacao do seu teclado (caso tenha).</property>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-backlight-switch-row">
+                    <property name="title" translatable="yes">Keyboard Backlight</property>
+                    <property name="subtitle" translatable="yes">Control keyboard backlight via system LED interface</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="AdwSwitchRow" id="kb-lock-led-switch-row">
+                    <property name="title" translatable="yes">Lock Key LEDs</property>
+                    <property name="subtitle" translatable="yes">Control CapsLock, NumLock and ScrollLock indicator lights via HID</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+
           </object>
         </child>
       </object>

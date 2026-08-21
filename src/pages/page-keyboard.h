@@ -8,24 +8,25 @@ typedef struct
 {
   GtkWidget *box;
 
-  /* Info section */
-  GtkWidget *name_label;
-  GtkWidget *vendor_label;
-  GtkWidget *speed_label;
-  GtkWidget *driver_label;
-  GtkWidget *chipset_label;
+  /* Branding section (built programmatically) */
+  GtkWidget *branding_box;
+  GtkWidget *brand_name_label;
+  GtkWidget *brand_vendor_label;
 
   /* Settings section */
+  GtkWidget *repeat_rate_spin;
+  GtkWidget *repeat_delay_spin;
+  GtkWidget *layout_label;
+
+  /* Lock key boot options */
   AdwSwitchRow *numlock_switch;
   AdwSwitchRow *capslock_switch;
   AdwSwitchRow *scrolllock_switch;
-  GtkWidget *repeat_rate_spin;
-  GtkWidget *repeat_delay_spin;
 
-  /* Lighting Controls section */
+  /* Lighting Controls */
   AdwSwitchRow *backlight_switch;
+  AdwSwitchRow *lock_led_switch;
 
-  GtkWidget *layout_label;
   GtkWidget *save_btn;
 } KeyboardPage;
 

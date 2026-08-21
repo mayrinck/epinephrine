@@ -288,6 +288,12 @@ detect_source_from_command (const char *cmd)
     return "steam";
   if (g_str_has_prefix (cmd, "xdg-open hydralauncher://"))
     return "hydra";
+  if (g_str_has_prefix (cmd, "heroic "))
+    return "heroic";
+  if (g_str_has_prefix (cmd, "lutris "))
+    return "lutris";
+  if (g_str_has_prefix (cmd, "bottles"))
+    return "bottles";
   return "local";
 }
 
@@ -2684,6 +2690,196 @@ import_hydra_filtered (DashboardPage *page, gboolean classics)
 
   return ctx.count;
 }
+
+/* ---- Linux Games (from .desktop files) ---- */
+
+static gboolean
+categories_contain_game (const char *categories)
+{
+  if (!categories)
+    return FALSE;
+  if (strstr (categories, "Game;"))
+    return TRUE;
+  if (strstr (categories, "ActionGame;"))
+    return TRUE;
+  if (strstr (categories, "AdventureGame;"))
+    return TRUE;
+  if (strstr (categories, "ArcadeGame;"))
+    return TRUE;
+  if (strstr (categories, "BoardGame;"))
+    return TRUE;
+  if (strstr (categories, "BlocksGame;"))
+    return TRUE;
+  if (strstr (categories, "CardGame;"))
+    return TRUE;
+  if (strstr (categories, "KidsGame;"))
+    return TRUE;
+  if (strstr (categories, "LogicGame;"))
+    return TRUE;
+  if (strstr (categories, "RolePlaying;"))
+    return TRUE;
+  if (strstr (categories, "Simulation;"))
+    return TRUE;
+  if (strstr (categories, "SportsGame;"))
+    return TRUE;
+  if (strstr (categories, "StrategyGame;"))
+    return TRUE;
+  if (strstr (categories, "Emulator;"))
+    return TRUE;
+  return FALSE;
+}
+
+static gboolean
+is_launcher_binary (const char *exec)
+{
+  if (!exec || exec[0] == '\0')
+    return FALSE;
+  const char *launchers[] = {
+    "steam", "steam-native", "steam-runtime",
+    "heroic", "lutris", "bottles",
+    "mangohud", "gamemoderun", "gamescope", "protontricks",
+    NULL
+  };
+  for (int i = 0; launchers[i]; i++)
+    {
+      size_t len = strlen (launchers[i]);
+      if (g_ascii_strncasecmp (exec, launchers[i], len) == 0 &&
+          (exec[len] == '\0' || exec[len] == ' '))
+        return TRUE;
+    }
+  return FALSE;
+}
+
+static void
+strip_exec_field_codes (char *exec)
+{
+  if (!exec)
+    return;
+  char *src = exec, *dst = exec;
+  while (*src)
+    {
+      if (*src == '%' && (src[1] == 'f' || src[1] == 'F' ||
+                          src[1] == 'u' || src[1] == 'U' ||
+                          src[1] == 'd' || src[1] == 'D' ||
+                          src[1] == 'n' || src[1] == 'N' ||
+                          src[1] == 'i' || src[1] == 'c' ||
+                          src[1] == 'k'))
+        {
+          src += 2;
+        }
+      else if (*src == '%' && src[1] == '%')
+        {
+          *dst++ = '%';
+          src += 2;
+        }
+      else
+        {
+          *dst++ = *src++;
+        }
+    }
+  *dst = '\0';
+}
+
+static void
+scan_desktop_dir (const char *dir_path, DashboardPage *page, int *count)
+{
+  GDir *dir = g_dir_open (dir_path, 0, NULL);
+  if (!dir)
+    return;
+
+  const char *name;
+  while ((name = g_dir_read_name (dir)) != NULL)
+    {
+      if (!g_str_has_suffix (name, ".desktop"))
+        continue;
+
+      g_autofree char *full_path = g_build_filename (dir_path, name, NULL);
+
+      GKeyFile *kf = g_key_file_new ();
+      GError *err = NULL;
+      if (!g_key_file_load_from_file (kf, full_path, G_KEY_FILE_NONE, &err))
+        {
+          g_error_free (err);
+          g_key_file_free (kf);
+          continue;
+        }
+
+      /* Skip hidden/deleted entries */
+      if (g_key_file_get_boolean (kf, "Desktop Entry", "Hidden", NULL))
+        { g_key_file_free (kf); continue; }
+      if (g_key_file_get_boolean (kf, "Desktop Entry", "NoDisplay", NULL))
+        { g_key_file_free (kf); continue; }
+
+      /* Only Application type */
+      g_autofree char *type = g_key_file_get_string (kf, "Desktop Entry", "Type", NULL);
+      if (!type || g_strcmp0 (type, "Application") != 0)
+        { g_key_file_free (kf); continue; }
+
+      /* Must have Game category */
+      g_autofree char *categories = g_key_file_get_string (kf, "Desktop Entry", "Categories", NULL);
+      if (!categories_contain_game (categories))
+        { g_key_file_free (kf); continue; }
+
+      /* Must have Exec */
+      g_autofree char *exec = g_key_file_get_string (kf, "Desktop Entry", "Exec", NULL);
+      if (!exec || exec[0] == '\0')
+        { g_key_file_free (kf); continue; }
+
+      /* Skip if Exec is a launcher binary */
+      if (is_launcher_binary (exec))
+        { g_key_file_free (kf); continue; }
+
+      /* Clean field codes */
+      strip_exec_field_codes (exec);
+
+      /* Get name and icon */
+      g_autofree char *display_name = g_key_file_get_locale_string (kf, "Desktop Entry", "Name", NULL, NULL);
+      g_autofree char *icon = g_key_file_get_string (kf, "Desktop Entry", "Icon", NULL);
+
+      if (!display_name || display_name[0] == '\0')
+        { g_key_file_free (kf); continue; }
+
+      add_game_entry (page, display_name, exec, icon, "linux");
+      page->games[page->n_games - 1].group = g_strdup ("Nativo");
+      (*count)++;
+
+      g_key_file_free (kf);
+    }
+  g_dir_close (dir);
+}
+
+int
+import_desktop_games (DashboardPage *page)
+{
+  int count = 0;
+
+  /* User data dir */
+  g_autofree char *user_data = g_build_filename (g_get_user_data_dir (), "applications", NULL);
+  scan_desktop_dir (user_data, page, &count);
+
+  /* System data dirs */
+  const gchar * const *sys_dirs = g_get_system_data_dirs ();
+  for (int i = 0; sys_dirs[i]; i++)
+    {
+      g_autofree char *app_dir = g_build_filename (sys_dirs[i], "applications", NULL);
+      scan_desktop_dir (app_dir, page, &count);
+    }
+
+  /* Flatpak system exports */
+  scan_desktop_dir ("/var/lib/flatpak/exports/share/applications", page, &count);
+
+  /* Flatpak user exports */
+  g_autofree char *flatpak_user = g_build_filename (g_get_home_dir (),
+    ".local", "share", "flatpak", "exports", "share", "applications", NULL);
+  scan_desktop_dir (flatpak_user, page, &count);
+
+  /* Snap */
+  scan_desktop_dir ("/var/lib/snapd/desktop/applications", page, &count);
+
+  return count;
+}
+
+/* ---- Hydra ---- */
 
 int
 import_hydra_games (DashboardPage *page)

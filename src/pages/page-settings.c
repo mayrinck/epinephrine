@@ -314,6 +314,34 @@ settings_save_graph_speed (int speed_ms)
   g_free (path);
 }
 
+/* ---- Untrusted Launchers ---- */
+
+gboolean
+settings_load_untrusted_launchers (void)
+{
+  char *path = get_config_file_path ("untrusted-launchers");
+  char *contents = file_read_all (path);
+  g_free (path);
+
+  if (contents)
+    {
+      gboolean val = (g_strcmp0 (contents, "1") == 0);
+      g_free (contents);
+      return val;
+    }
+  return FALSE;
+}
+
+void
+settings_save_untrusted_launchers (gboolean enabled)
+{
+  char *path = get_config_file_path ("untrusted-launchers");
+  char *data = g_strdup_printf ("%d", enabled ? 1 : 0);
+  g_file_set_contents (path, data, -1, NULL);
+  g_free (data);
+  g_free (path);
+}
+
 void
 settings_apply_graph_speed (void)
 {
@@ -632,6 +660,15 @@ on_language_changed (AdwToggleGroup *group, GParamSpec *pspec, SettingsPage *pag
   epinephrine_retranslate ();
 }
 
+static void
+on_untrusted_launchers_toggled (AdwSwitchRow *row, GParamSpec *pspec, SettingsPage *page)
+{
+  (void) pspec;
+  (void) page;
+  gboolean active = adw_switch_row_get_active (row);
+  settings_save_untrusted_launchers (active);
+}
+
 /* ---- Language toggle group ---- */
 
 static const char *
@@ -713,6 +750,8 @@ settings_page_new (void)
   page->custom_speed_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "custom-speed-row"));
   page->custom_speed_spin = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "custom-speed-spin"));
 
+  AdwSwitchRow *untrusted_row = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "untrusted-launchers-row"));
+
   page->language_group = ADW_TOGGLE_GROUP (adw_toggle_group_new ());
   adw_toggle_group_set_homogeneous (page->language_group, TRUE);
   gtk_widget_add_css_class (GTK_WIDGET (page->language_group),
@@ -734,9 +773,12 @@ settings_page_new (void)
     G_CALLBACK (on_graph_speed_changed), page);
   g_signal_connect (page->custom_speed_spin, "value-changed",
     G_CALLBACK (on_custom_speed_changed), page);
+  g_signal_connect (untrusted_row, "notify::active",
+    G_CALLBACK (on_untrusted_launchers_toggled), page);
 
   adw_combo_row_set_selected (page->accent_combo, saved);
   adw_switch_row_set_active (page->apply_theme_row, theme_saved);
+  adw_switch_row_set_active (untrusted_row, settings_load_untrusted_launchers ());
 
   language_group_rebuild (page);
   adw_toggle_group_set_active (page->language_group,

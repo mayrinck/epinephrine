@@ -19,74 +19,6 @@
 
 #define tr(x) epi_i18n_get (x)
 
-/* ---- Admin session helpers ---- */
-
-static char *
-epi_hidraw_program (void)
-{
-  char linkbuf[4096];
-  ssize_t n = readlink ("/proc/self/exe", linkbuf, sizeof (linkbuf) - 1);
-  if (n > 0)
-    {
-      linkbuf[n] = '\0';
-      char *slash = strrchr (linkbuf, '/');
-      if (slash)
-        {
-          *slash = '\0';
-          char *cand = g_build_filename (linkbuf, "epi-hidraw", NULL);
-          if (g_file_test (cand, G_FILE_TEST_IS_EXECUTABLE))
-            return cand;
-          g_free (cand);
-        }
-    }
-  return g_strdup ("epi-hidraw");
-}
-
-/* Run epi-hidraw through the persistent admin session; returns TRUE and
-   (optionally) the captured stdout on success. */
-static gboolean
-run_epi_hidraw (const char *dev, const char *op, const char *arg, char **out)
-{
-  char *prog = epi_hidraw_program ();
-  char *cmd;
-  if (arg)
-    cmd = g_strdup_printf ("'%s' '%s' %s %s 2>/dev/null", prog, dev, op, arg);
-  else
-    cmd = g_strdup_printf ("'%s' '%s' %s", prog, dev, op);
-  g_free (prog);
-
-  int exit_code = -1;
-  char *stdout = NULL;
-  GError *err = NULL;
-  gboolean ok = epi_privilege_exec_sync (cmd, &exit_code, &stdout, &err);
-  g_free (cmd);
-  g_clear_error (&err);
-
-  if (!ok || exit_code != 0 || !stdout)
-    {
-      g_free (stdout);
-      return FALSE;
-    }
-
-  if (out)
-    {
-      g_strstrip (stdout);
-      *out = stdout;
-    }
-  else
-    g_free (stdout);
-  return TRUE;
-}
-
-static char *
-bytes_to_hex (const unsigned char *data, size_t len)
-{
-  GString *s = g_string_new (NULL);
-  for (size_t i = 0; i < len; i++)
-    g_string_append_printf (s, "%02x", data[i]);
-  return g_string_free (s, FALSE);
-}
-
 /* ---- Config helpers ---- */
 
 static char *
@@ -377,66 +309,6 @@ sysfs_set_brightness (const char *path, int value)
   return n == len;
 }
 
-static char *
-find_keyboard_hidraw (void)
-{
-  GDir *dir = g_dir_open ("/sys/class/hidraw", 0, NULL);
-  if (!dir) return NULL;
-
-  const char *entry;
-  char *result = NULL;
-  while ((entry = g_dir_read_name (dir)))
-    {
-      char *uevent = g_build_filename ("/sys/class/hidraw", entry, "device", "uevent", NULL);
-      char *content = NULL;
-      if (g_file_get_contents (uevent, &content, NULL, NULL))
-        {
-          if (strstr (content, "HID_ID=0003:00000E6A:000002C0") &&
-              strstr (content, "HID_PHYS=usb-0000:0b:00.3-1/input1"))
-            {
-              result = g_build_filename ("/dev", entry, NULL);
-              g_free (content);
-              g_free (uevent);
-              break;
-            }
-          g_free (content);
-        }
-      g_free (uevent);
-    }
-  g_dir_close (dir);
-
-  if (!result)
-    {
-      /* Fallback: try any hidraw matching the VID:PID */
-      GDir *dir2 = g_dir_open ("/sys/class/hidraw", 0, NULL);
-      if (dir2)
-        {
-          const char *e2;
-          while ((e2 = g_dir_read_name (dir2)))
-            {
-              char *uevent = g_build_filename ("/sys/class/hidraw", e2, "device", "uevent", NULL);
-              char *content = NULL;
-              if (g_file_get_contents (uevent, &content, NULL, NULL))
-                {
-                  if (strstr (content, "HID_ID=0003:00000E6A:000002C0") &&
-                      !strstr (content, "0018F8"))
-                    {
-                      result = g_build_filename ("/dev", e2, NULL);
-                      g_free (content);
-                      g_free (uevent);
-                      break;
-                    }
-                  g_free (content);
-                }
-              g_free (uevent);
-            }
-          g_dir_close (dir2);
-        }
-    }
-
-  return result;
-}
-
 /* ---- Keyboard LED state reading ---- */
 
 static gboolean
@@ -548,7 +420,6 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
   (void) page;
   gboolean want_on = adw_switch_row_get_active (sw);
 
-  /* --- Method 1: sysfs /sys/class/leds/ (standard Linux backlight) --- */
   char *led_path = find_kbd_backlight_led ();
   if (led_path)
     {
@@ -565,87 +436,30 @@ on_backlight_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
       if (ok)
         {
           dashboard_show_toast (want_on
-            ? tr ("Keyboard illumination enabled")
-            : tr ("Keyboard illumination disabled"));
+            ? tr ("Keyboard backlight enabled")
+            : tr ("Keyboard backlight disabled"));
           return;
         }
     }
 
-  /* --- Method 2: HID feature reports (fallback, device-specific) --- */
-  char *hidraw_path = find_keyboard_hidraw ();
-  if (!hidraw_path)
-    {
-      dashboard_show_toast (tr ("Could not find keyboard backlight device"));
-      return;
-    }
+  dashboard_show_toast (tr ("No keyboard backlight device found"));
+}
 
-  static const unsigned char on_patterns[][3] = {
-    {0x03, 0x01, 0x00},
-    {0x03, 0x02, 0x00},
-    {0x03, 0x04, 0x00},
-    {0x03, 0x08, 0x00},
-    {0x04, 0x01, 0x00},
-  };
-  static const unsigned char off_patterns[][3] = {
-    {0x03, 0x00, 0x00},
-    {0x04, 0x00, 0x00},
-  };
+static void
+on_lock_led_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
+{
+  (void) pspec;
+  (void) page;
+  gboolean want_on = adw_switch_row_get_active (sw);
 
-  const unsigned char (*patterns)[3];
-  size_t n_patterns;
-  if (want_on) { patterns = on_patterns;  n_patterns = G_N_ELEMENTS (on_patterns); }
-  else         { patterns = off_patterns; n_patterns = G_N_ELEMENTS (off_patterns); }
+  /* Apply to all three lock key LEDs via setleds */
+  const char *keys[] = {"num", "caps", "scroll"};
+  for (size_t i = 0; i < G_N_ELEMENTS (keys); i++)
+    apply_kb_led (keys[i], want_on);
 
-  gboolean ok = FALSE;
-
-  int fd = open (hidraw_path, O_RDWR);
-  if (fd >= 0)
-    {
-      for (size_t i = 0; i < n_patterns; i++)
-        {
-          if (ioctl (fd, HIDIOCSFEATURE (3), patterns[i]) >= 0)
-            { ok = TRUE; break; }
-        }
-
-      if (!ok)
-        {
-          static const unsigned char raw_on[] = {0x03, 0x01};
-          static const unsigned char raw_off[] = {0x03, 0x00};
-          const unsigned char *raw = want_on ? raw_on : raw_off;
-          if (write (fd, raw, sizeof (raw_on)) == (ssize_t) sizeof (raw_on))
-            ok = TRUE;
-        }
-      close (fd);
-    }
-
-  if (!ok)
-    {
-      for (size_t i = 0; i < n_patterns && !ok; i++)
-        {
-          char *hex = bytes_to_hex (patterns[i], 3);
-          ok = run_epi_hidraw (hidraw_path, "set-feature", hex, NULL);
-          g_free (hex);
-        }
-
-      if (!ok)
-        {
-          static const unsigned char raw_on[] = {0x03, 0x01};
-          static const unsigned char raw_off[] = {0x03, 0x00};
-          const unsigned char *raw = want_on ? raw_on : raw_off;
-          char *hex = bytes_to_hex (raw, sizeof (raw_on));
-          ok = run_epi_hidraw (hidraw_path, "write", hex, NULL);
-          g_free (hex);
-        }
-    }
-
-  g_free (hidraw_path);
-
-  if (ok)
-    dashboard_show_toast (want_on
-      ? tr ("Keyboard illumination enabled (experimental)")
-      : tr ("Keyboard illumination disabled (experimental)"));
-  else
-    dashboard_show_toast (tr ("No compatible backlight control found"));
+  dashboard_show_toast (want_on
+    ? tr ("Lock key LEDs enabled")
+    : tr ("Lock key LEDs disabled"));
 }
 
 static void
@@ -674,32 +488,6 @@ on_keyboard_save (GtkButton *btn, KeyboardPage *page)
         dashboard_show_toast (tr ("Failed to set keyboard rate: kbdrate may not be installed"));
     }
   g_clear_error (&err);
-}
-
-static void
-populate_keyboard_info (KeyboardPage *page)
-{
-  char *name = NULL, *vendor = NULL, *speed = NULL;
-  char *driver = NULL, *chipset = NULL;
-
-  find_keyboard_usb_info (&name, &vendor, &speed, &driver, &chipset);
-
-  if (page->name_label)
-    gtk_label_set_text (GTK_LABEL (page->name_label), name ? name : "—");
-  if (page->vendor_label)
-    gtk_label_set_text (GTK_LABEL (page->vendor_label), vendor ? vendor : "—");
-  if (page->speed_label)
-    gtk_label_set_text (GTK_LABEL (page->speed_label), speed ? speed : "—");
-  if (page->driver_label)
-    gtk_label_set_text (GTK_LABEL (page->driver_label), driver ? driver : "—");
-  if (page->chipset_label)
-    gtk_label_set_text (GTK_LABEL (page->chipset_label), chipset ? chipset : "—");
-
-  g_free (name);
-  g_free (vendor);
-  g_free (speed);
-  g_free (driver);
-  g_free (chipset);
 }
 
 static void
@@ -743,26 +531,55 @@ keyboard_page_new (void)
 
   page->box = GTK_WIDGET (gtk_builder_get_object (builder, "keyboard-page"));
 
-  /* Info section */
-  page->name_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-name-label"));
-  page->vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-vendor-label"));
-  page->speed_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-speed-label"));
-  page->driver_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-driver-label"));
-  page->chipset_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-chipset-label"));
-
   /* Settings section */
+  page->repeat_rate_spin = GTK_WIDGET (gtk_builder_get_object (builder, "kb-repeat-rate-spin"));
+  page->repeat_delay_spin = GTK_WIDGET (gtk_builder_get_object (builder, "kb-repeat-delay-spin"));
+  page->layout_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-layout-label"));
+
+  /* Lock key boot options */
   page->numlock_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-numlock-row"));
   page->capslock_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-capslock-row"));
   page->scrolllock_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-scrolllock-row"));
-  page->repeat_rate_spin = GTK_WIDGET (gtk_builder_get_object (builder, "kb-repeat-rate-spin"));
-  page->repeat_delay_spin = GTK_WIDGET (gtk_builder_get_object (builder, "kb-repeat-delay-spin"));
 
-  /* Lighting Controls section */
+  /* Lighting Controls */
   page->backlight_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-backlight-switch-row"));
+  page->lock_led_switch = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "kb-lock-led-switch-row"));
 
-  /* Layout / save */
-  page->layout_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-layout-label"));
+  /* Save button */
   page->save_btn = GTK_WIDGET (gtk_builder_get_object (builder, "kb-save-btn"));
+
+  /* ---- Build branding section programmatically ---- */
+  {
+    /* Branding box: icon + text */
+    page->branding_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 16);
+    gtk_widget_set_margin_bottom (page->branding_box, 8);
+
+    GtkWidget *brand_icon = gtk_image_new_from_icon_name ("input-keyboard-symbolic");
+    gtk_image_set_pixel_size (GTK_IMAGE (brand_icon), 64);
+    gtk_widget_set_valign (brand_icon, GTK_ALIGN_START);
+
+    GtkWidget *brand_text = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+    gtk_widget_set_hexpand (brand_text, TRUE);
+
+    page->brand_name_label = gtk_label_new ("Keyboard");
+    gtk_widget_add_css_class (page->brand_name_label, "title-1");
+    gtk_widget_set_halign (page->brand_name_label, GTK_ALIGN_START);
+
+    page->brand_vendor_label = gtk_label_new ("");
+    gtk_widget_add_css_class (page->brand_vendor_label, "dim-label");
+    gtk_widget_set_halign (page->brand_vendor_label, GTK_ALIGN_START);
+
+    gtk_box_append (GTK_BOX (brand_text), page->brand_name_label);
+    gtk_box_append (GTK_BOX (brand_text), page->brand_vendor_label);
+
+    gtk_box_append (GTK_BOX (page->branding_box), brand_icon);
+    gtk_box_append (GTK_BOX (page->branding_box), brand_text);
+
+    /* Insert branding as first child of the inner content box */
+    GtkScrolledWindow *scroll = GTK_SCROLLED_WINDOW (page->box);
+    GtkWidget *inner_box = gtk_scrolled_window_get_child (scroll);
+    gtk_box_prepend (GTK_BOX (inner_box), page->branding_box);
+  }
 
   /* Connect signals */
   g_signal_connect (page->save_btn, "clicked", G_CALLBACK (on_keyboard_save), page);
@@ -770,13 +587,28 @@ keyboard_page_new (void)
   g_signal_connect (page->capslock_switch, "notify::active", G_CALLBACK (on_boot_toggled), page);
   g_signal_connect (page->scrolllock_switch, "notify::active", G_CALLBACK (on_boot_toggled), page);
   g_signal_connect (page->backlight_switch, "notify::active", G_CALLBACK (on_backlight_toggled), page);
+  g_signal_connect (page->lock_led_switch, "notify::active", G_CALLBACK (on_lock_led_toggled), page);
 
   g_object_ref_sink (page->box);
 
-  /* Populate info */
-  populate_keyboard_info (page);
+  /* Populate branding info from USB device */
+  {
+    char *name = NULL, *vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
+    find_keyboard_usb_info (&name, &vendor, &speed, &driver, &chipset);
 
-  /* Initialize switches from actual keyboard LED state */
+    if (name && name[0])
+      gtk_label_set_text (GTK_LABEL (page->brand_name_label), name);
+    if (vendor && vendor[0])
+      gtk_label_set_text (GTK_LABEL (page->brand_vendor_label), vendor);
+
+    g_free (name);
+    g_free (vendor);
+    g_free (speed);
+    g_free (driver);
+    g_free (chipset);
+  }
+
+  /* Initialize lock key switches from actual keyboard LED state */
   {
     gboolean num = FALSE, caps = FALSE, scroll = FALSE;
     if (read_kb_led_state (&num, &caps, &scroll))
@@ -787,7 +619,6 @@ keyboard_page_new (void)
       }
     else
       {
-        /* Fallback to saved config if LED read fails */
         adw_switch_row_set_active (page->numlock_switch,
           load_kb_boot_setting ("kb-numlock"));
         adw_switch_row_set_active (page->capslock_switch,
@@ -795,6 +626,26 @@ keyboard_page_new (void)
         adw_switch_row_set_active (page->scrolllock_switch,
           load_kb_boot_setting ("kb-scrolllock"));
       }
+  }
+
+  /* Initialize backlight toggle from sysfs state */
+  {
+    char *led_path = find_kbd_backlight_led ();
+    if (led_path)
+      {
+        char *content = read_sysfs (led_path);
+        int val = content ? atoi (content) : 0;
+        g_free (content);
+        g_free (led_path);
+        adw_switch_row_set_active (page->backlight_switch, val > 0);
+      }
+  }
+
+  /* Initialize lock LED toggle: on if any lock key LED is currently on */
+  {
+    gboolean num = FALSE, caps = FALSE, scroll = FALSE;
+    read_kb_led_state (&num, &caps, &scroll);
+    adw_switch_row_set_active (page->lock_led_switch, num || caps || scroll);
   }
 
   refresh_keyboard_info (page);

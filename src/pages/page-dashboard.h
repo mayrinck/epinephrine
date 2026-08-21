@@ -103,6 +103,7 @@ int import_lutris_games (DashboardPage *page);
 int import_bottles_games (DashboardPage *page);
 int import_hydra_games (DashboardPage *page);
 int import_hydra_classics_games (DashboardPage *page);
+int import_desktop_games (DashboardPage *page);
 void save_games_config (DashboardPage *page);
 void refresh_recent_games (DashboardPage *page);
 void open_edit_dialog (DashboardPage *page, int idx);

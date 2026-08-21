@@ -50,4 +50,7 @@ int           settings_load_graph_speed (void);
 void          settings_save_graph_speed (int speed_ms);
 void          settings_apply_graph_speed (void);
 
+gboolean      settings_load_untrusted_launchers (void);
+void          settings_save_untrusted_launchers (gboolean enabled);
+
 G_END_DECLS
