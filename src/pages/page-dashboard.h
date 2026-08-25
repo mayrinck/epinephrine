@@ -18,6 +18,7 @@ typedef struct
   char *group;    /* category name; NULL = ungrouped */
   gboolean feral_gamemode;
   gboolean mangohud;
+  char *proton_path;
   int play_time_secs;
   float avg_fps;
   gint64 last_played;

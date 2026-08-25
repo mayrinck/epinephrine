@@ -494,8 +494,9 @@ confirm_delete_selected (GtkButton *confirm_btn, DashboardPage *page)
       g_free (page->games[i].icon);
       g_free (page->games[i].workdir);
       g_free (page->games[i].source);
-      g_free (page->games[i].startup_cmd);
-      g_free (page->games[i].group);
+       g_free (page->games[i].startup_cmd);
+       g_free (page->games[i].group);
+       g_free (page->games[i].proton_path);
 
       for (int j = i; j < page->n_games - 1; j++)
         {

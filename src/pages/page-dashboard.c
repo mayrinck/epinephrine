@@ -266,8 +266,9 @@ free_games (DashboardPage *page)
       g_free (page->games[i].icon);
       g_free (page->games[i].workdir);
       g_free (page->games[i].source);
-      g_free (page->games[i].startup_cmd);
-      g_free (page->games[i].group);
+       g_free (page->games[i].startup_cmd);
+       g_free (page->games[i].group);
+       g_free (page->games[i].proton_path);
     }
   g_free (page->games);
   page->games = NULL;
@@ -349,9 +350,10 @@ load_games_config (DashboardPage *page)
               page->games[page->n_games].source = source ? source : g_strdup ("local");
               page->games[page->n_games].startup_cmd = g_key_file_get_string (keyfile, groups[i], "startup_cmd", NULL);
               page->games[page->n_games].group = g_key_file_get_string (keyfile, groups[i], "group", NULL);
-              page->games[page->n_games].feral_gamemode = g_key_file_get_boolean (keyfile, groups[i], "feral_gamemode", NULL);
-              page->games[page->n_games].mangohud = g_key_file_get_boolean (keyfile, groups[i], "mangohud", NULL);
-              page->games[page->n_games].play_time_secs = play_time;
+               page->games[page->n_games].feral_gamemode = g_key_file_get_boolean (keyfile, groups[i], "feral_gamemode", NULL);
+               page->games[page->n_games].mangohud = g_key_file_get_boolean (keyfile, groups[i], "mangohud", NULL);
+               page->games[page->n_games].proton_path = g_key_file_get_string (keyfile, groups[i], "proton_path", NULL);
+               page->games[page->n_games].play_time_secs = play_time;
               page->games[page->n_games].avg_fps = (float) avg_fps;
               page->games[page->n_games].last_played = last_played;
               page->n_games++;
@@ -398,8 +400,10 @@ save_games_config (DashboardPage *page)
         g_key_file_set_string (keyfile, group, "startup_cmd", page->games[i].startup_cmd);
       if (page->games[i].group)
         g_key_file_set_string (keyfile, group, "group", page->games[i].group);
-      g_key_file_set_boolean (keyfile, group, "feral_gamemode", page->games[i].feral_gamemode);
-      g_key_file_set_boolean (keyfile, group, "mangohud", page->games[i].mangohud);
+       g_key_file_set_boolean (keyfile, group, "feral_gamemode", page->games[i].feral_gamemode);
+       g_key_file_set_boolean (keyfile, group, "mangohud", page->games[i].mangohud);
+       if (page->games[i].proton_path)
+         g_key_file_set_string (keyfile, group, "proton_path", page->games[i].proton_path);
     }
 
   GError *err = NULL;
@@ -1601,6 +1605,11 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
       g_string_append_printf (launch, "%s && ", page->games[idx].startup_cmd);
       use_shell = TRUE;
     }
+  if (page->games[idx].proton_path && page->games[idx].proton_path[0])
+    {
+      g_string_append_printf (launch, "PROTONPATH='%s' ", page->games[idx].proton_path);
+      use_shell = TRUE;
+    }
   if (page->games[idx].feral_gamemode && gamemode_available ())
     {
       g_string_append (launch, "gamemoderun ");
@@ -1782,6 +1791,115 @@ on_browse_file_clicked (GtkButton *btn, gpointer user_data)
     on_browse_file_callback, entry);
 }
 
+typedef struct {
+  char *name;
+  char *path;
+} ProtonVersionInfo;
+
+static void
+free_proton_version (gpointer data)
+{
+  ProtonVersionInfo *v = data;
+  if (v)
+    {
+      g_free (v->name);
+      g_free (v->path);
+      g_free (v);
+    }
+}
+
+static gboolean
+is_valid_proton_dir (const char *dir_path)
+{
+  char *proton_bin = g_build_filename (dir_path, "proton", NULL);
+  char *toolmanifest = g_build_filename (dir_path, "toolmanifest.vdf", NULL);
+  gboolean valid = g_file_test (proton_bin, G_FILE_TEST_IS_EXECUTABLE) ||
+                   g_file_test (toolmanifest, G_FILE_TEST_EXISTS);
+  g_free (proton_bin);
+  g_free (toolmanifest);
+  return valid;
+}
+
+static GPtrArray *
+get_installed_proton_versions (void)
+{
+  GPtrArray *versions = g_ptr_array_new_with_free_func (free_proton_version);
+  const char *home = g_get_home_dir ();
+  if (!home) return versions;
+
+  gchar *steam_common = g_build_filename (home, ".steam", "steam", "steamapps", "common", NULL);
+  gchar *local_common = g_build_filename (home, ".local", "share", "Steam", "steamapps", "common", NULL);
+  gchar *steam_compat = g_build_filename (home, ".steam", "root", "compatibilitytools.d", NULL);
+  gchar *steam_compat2 = g_build_filename (home, ".steam", "steam", "compatibilitytools.d", NULL);
+  gchar *local_compat = g_build_filename (home, ".local", "share", "Steam", "compatibilitytools.d", NULL);
+
+  const char *search_dirs[] = {
+    steam_common,
+    local_common,
+    steam_compat,
+    steam_compat2,
+    local_compat,
+    "/usr/share/steam/compatibilitytools.d",
+    NULL
+  };
+
+  for (int i = 0; search_dirs[i] != NULL; i++)
+    {
+      const char *dir = search_dirs[i];
+      if (!dir) continue;
+      GDir *d = g_dir_open (dir, 0, NULL);
+      if (!d) continue;
+
+      const char *name;
+      while ((name = g_dir_read_name (d)) != NULL)
+        {
+          if (i < 2 && !g_str_has_prefix (name, "Proton") && !g_str_has_prefix (name, "proton"))
+            continue;
+
+          char *candidate = g_build_filename (dir, name, NULL);
+          if (g_file_test (candidate, G_FILE_TEST_IS_DIR) && is_valid_proton_dir (candidate))
+            {
+              char *real = g_file_read_link (candidate, NULL);
+              char *final_path = real ? real : g_strdup (candidate);
+              g_free (real);
+
+              gboolean dup = FALSE;
+              for (guint j = 0; j < versions->len; j++)
+                {
+                  ProtonVersionInfo *existing = g_ptr_array_index (versions, j);
+                  if (g_strcmp0 (existing->path, final_path) == 0)
+                    {
+                      dup = TRUE;
+                      break;
+                    }
+                }
+
+              if (!dup)
+                {
+                  ProtonVersionInfo *v = g_new0 (ProtonVersionInfo, 1);
+                  v->path = final_path;
+                  v->name = g_path_get_basename (final_path);
+                  g_ptr_array_add (versions, v);
+                }
+              else
+                {
+                  g_free (final_path);
+                }
+            }
+          g_free (candidate);
+        }
+      g_dir_close (d);
+    }
+
+  g_free (steam_common);
+  g_free (local_common);
+  g_free (steam_compat);
+  g_free (steam_compat2);
+  g_free (local_compat);
+
+  return versions;
+}
+
 static void
 on_edit_confirm (GtkButton *btn, gpointer user_data)
 {
@@ -1833,6 +1951,20 @@ on_edit_confirm (GtkButton *btn, gpointer user_data)
     gtk_switch_get_active (GTK_SWITCH (gamemode_switch)) : FALSE;
   page->games[idx].mangohud = mangohud_switch ?
     gtk_switch_get_active (GTK_SWITCH (mangohud_switch)) : FALSE;
+
+  GtkDropDown *proton_drop = dialog ? g_object_get_data (G_OBJECT (dialog), "proton-drop") : NULL;
+  GPtrArray *proton_versions = dialog ? g_object_get_data (G_OBJECT (dialog), "proton-versions") : NULL;
+  guint p_sel = proton_drop ? gtk_drop_down_get_selected (proton_drop) : 0;
+  g_free (page->games[idx].proton_path);
+  if (p_sel > 0 && proton_versions && (p_sel - 1) < proton_versions->len)
+    {
+      ProtonVersionInfo *v = g_ptr_array_index (proton_versions, p_sel - 1);
+      page->games[idx].proton_path = v ? g_strdup (v->path) : NULL;
+    }
+  else
+    {
+      page->games[idx].proton_path = NULL;
+    }
 
   save_games_config (page);
   refresh_games_grid (page);
@@ -2064,12 +2196,54 @@ open_edit_dialog (DashboardPage *page, int idx)
       gtk_widget_set_halign (mangohud_lbl, GTK_ALIGN_START);
       gtk_widget_set_hexpand (mangohud_lbl, TRUE);
       gtk_box_append (GTK_BOX (mangohud_row), mangohud_lbl);
-      mangohud_switch = gtk_switch_new ();
-      gtk_switch_set_active (GTK_SWITCH (mangohud_switch), page->games[idx].mangohud);
-      gtk_widget_set_halign (mangohud_switch, GTK_ALIGN_END);
-      gtk_box_append (GTK_BOX (mangohud_row), mangohud_switch);
-      gtk_box_append (GTK_BOX (right), mangohud_row);
-    }
+       mangohud_switch = gtk_switch_new ();
+       gtk_switch_set_active (GTK_SWITCH (mangohud_switch), page->games[idx].mangohud);
+       gtk_widget_set_halign (mangohud_switch, GTK_ALIGN_END);
+       gtk_box_append (GTK_BOX (mangohud_row), mangohud_switch);
+       gtk_box_append (GTK_BOX (right), mangohud_row);
+     }
+
+   /* Proton Version selector */
+   GtkWidget *proton_label = gtk_label_new (tr ("Proton Version"));
+   gtk_widget_set_margin_top (proton_label, 4);
+   gtk_widget_set_halign (proton_label, GTK_ALIGN_START);
+   gtk_widget_add_css_class (proton_label, "dim-label");
+   gtk_box_append (GTK_BOX (right), proton_label);
+
+   GPtrArray *proton_versions = get_installed_proton_versions ();
+   GPtrArray *proton_names = g_ptr_array_new_with_free_func (g_free);
+   g_ptr_array_add (proton_names, g_strdup (tr ("Default / System")));
+   for (guint p = 0; p < proton_versions->len; p++)
+     {
+       ProtonVersionInfo *v = g_ptr_array_index (proton_versions, p);
+       g_ptr_array_add (proton_names, g_strdup (v->name));
+     }
+   g_ptr_array_add (proton_names, NULL);
+
+   GtkStringList *proton_list = gtk_string_list_new ((const char *const *) proton_names->pdata);
+   GtkDropDown *proton_drop = GTK_DROP_DOWN (gtk_drop_down_new (G_LIST_MODEL (proton_list), NULL));
+   g_object_unref (proton_list);
+
+   guint proton_sel = 0;
+   if (page->games[idx].proton_path && page->games[idx].proton_path[0])
+     {
+       for (guint p = 0; p < proton_versions->len; p++)
+         {
+           ProtonVersionInfo *v = g_ptr_array_index (proton_versions, p);
+           if (g_strcmp0 (v->path, page->games[idx].proton_path) == 0)
+             {
+               proton_sel = p + 1;
+               break;
+             }
+         }
+     }
+   gtk_drop_down_set_selected (proton_drop, proton_sel);
+   gtk_widget_set_hexpand (GTK_WIDGET (proton_drop), TRUE);
+   gtk_box_append (GTK_BOX (right), GTK_WIDGET (proton_drop));
+
+   g_object_set_data_full (G_OBJECT (dialog), "proton-drop", proton_drop, NULL);
+   g_object_set_data_full (G_OBJECT (dialog), "proton-versions", proton_versions, (GDestroyNotify) g_ptr_array_unref);
+   g_ptr_array_unref (proton_names);
 
   /* ---- BOTTOM BUTTONS ---- */
   GtkWidget *btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
