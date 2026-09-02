@@ -526,7 +526,6 @@ hw_gpu_detail_build (HardwarePage *page)
   gtk_box_prepend (GTK_BOX (page->monitor_panel), page->monitor_notice);
   page->gpu_specs_container = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_specs_container"));
   page->gpu_mgt_group = ADW_EXPANDER_ROW (gtk_builder_get_object (builder, "gpu-mgt-toggle"));
-  page->gpu_lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "gpu_lighting_status"));
 
   n_gpu_mgt_rows = 0;
 
@@ -542,8 +541,6 @@ hw_gpu_detail_build (HardwarePage *page)
   /* Connect graph drawing function */
   gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (page->monitor_graph),
     hw_monitor_graph_draw, page, NULL);
-
-  /* Build monitor metric labels */
   GtkWidget *monitor_left = GTK_WIDGET (gtk_builder_get_object (builder, "monitor_left"));
 
   static const char *metric_names[] = {
@@ -578,21 +575,6 @@ hw_gpu_detail_build (HardwarePage *page)
       page->monitor_labels[i] = lbl;
       page->monitor_values[i] = val;
       page->monitor_avail[i] = FALSE;
-    }
-
-  /* Conditionally add OpenRGB button to lighting section */
-  if (g_find_program_in_path ("openrgb"))
-    {
-      AdwExpanderRow *lighting_toggle = ADW_EXPANDER_ROW (
-        gtk_builder_get_object (builder, "gpu-lighting-toggle"));
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      if (lighting_toggle)
-        adw_expander_row_add_row (lighting_toggle, openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked",
-        G_CALLBACK (hw_openrgb_launch), NULL);
     }
 
   g_object_ref_sink (page->gpu_detail_box);
@@ -1240,9 +1222,6 @@ hw_gpu_detail_show (HardwarePage *page)
     }
 
   hw_monitor_start (page);
-
-  /* Update lighting controls status */
-  hw_detail_update_lighting_section (GTK_LABEL (page->gpu_lighting_status));
 }
 
 static void

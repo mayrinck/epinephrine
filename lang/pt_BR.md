@@ -81,6 +81,7 @@
 | Breeze (KDE) | Breeze (KDE) |
 | Brightness of SDR in HDR mode (default: 400) | Brilho de SDR no modo HDR (padrão: 400) |
 | Button Mapping | Mapeamento de Botões |
+| Cache Pressure | Pressão do Cache |
 | Cancel | Cancelar |
 | Are you sure you want to delete %d game(s)? This cannot be undone. | Tem certeza de que deseja excluir %d jogo(s)? Isso não pode ser desfeito. |
 | Cannot access /dev/input for key capture | Não foi possível acessar /dev/input para captura de tecla |
@@ -141,6 +142,8 @@
 | Custom Text | Texto Personalizado |
 | D-Pad | D-Pad |
 | Date | Data |
+| Defines the pressure (priority) that the memory management system applies when trying to deallocate the VFS cache (dentries/inodes) relative to file page cache and application anonymous memory. | Define a pressão (prioridade) que o sistema de gerenciamento de memória aplica ao tentar desalocar o cache do VFS (dentries/inodes) em relação ao cache de páginas de arquivos (Page Cache) e à memória anonimizada de aplicativos. |
+| Defines the kernel's balance choice between ways of freeing RAM. The lower the value, the less Swap is favored. | Define o equilíbrio de escolha do kernel entre as formas de liberar memória RAM. Quanto menor o valor, menos o Swap é privilegiado. |
 | Default | Padrão |
 | Default DPI | DPI Padrão |
 | Defaults restored (not saved) | Padrões restaurados (não salvos) |
@@ -233,6 +236,7 @@
 | Frame Time Histogram | Histograma de Tempo de Quadro |
 | Frame Timing | Tempo de Quadro |
 | Framerate Limit | Limite de Taxa de Quadros |
+| Free RAM | Liberar RAM |
 | Frequency Limits | Limites de Frequência |
 | FSR | FidelityFX Super Resolution (FSR) |
 | Fullscreen | Tela Cheia |
@@ -373,7 +377,25 @@
 | May cause tearing | Pode causar tearing |
 | Memory | Memória |
 | Memory Clock | Memory Clock |
+| Memory Information | Informações da memória |
+| Memory Slots | Slots de memória |
+| Memory Stick | Pente |
+| Memory Stick Information | Informações do pente |
+| Bank Locator | Localização do banco |
+| Configured Memory Speed | Velocidade de memória configurada |
+| Data Width | Largura de dados |
+| Form Factor | Fator de forma |
+| Individual data of each installed memory stick | Dados individuais de cada pente de memória instalado |
+| Locator | Localizador |
+| Part Number | Número da peça |
+| Rank | Rank |
+| Serial Number | Número de série |
+| Size | Tamanho |
+| Total Width | Largura total |
+| Type | Tipo |
+| Type Detail | Detalhe do tipo |
 | Memory Usage | Uso de Memória |
+| Memory/Swap Management | Gerenciamento de Memória/Swap |
 | Mesa Version | Versão do Mesa |
 | Middle-Left | Meio-Esquerda |
 | Middle-Right | Meio-Direita |
@@ -425,8 +447,7 @@
 | NVIDIA Green | Verde NVIDIA |
 | NVIDIA Power Limit | Limite de Energia NVIDIA |
 | nvidia-smi could not provide real-time data for this GPU. | O nvidia-smi não pôde fornecer dados em tempo real para esta GPU. |
-| Official Page | Página Oficial |
-| Official Website | Site Oficial |
+| Product Website | Site do Produto |
 | Offset X | Deslocamento X |
 | Offset Y | Deslocamento Y |
 | ondemand | sob demanda |
@@ -460,6 +481,7 @@
 | Powersave | Economia de energia |
 | powersave | economia de energia |
 | Prefer Output | Preferir Saída |
+| Preserve | Conservar |
 | Press a key... | Pressione uma tecla... |
 | Press any button on the controller | Pressione qualquer botão no controle |
 | Prevents USB devices from entering sleep during gameplay, reducing potential input micro-lags. | Impede que dispositivos USB entrem em repouso durante o jogo, reduzindo possíveis micro-lags de entrada. |
@@ -480,6 +502,9 @@
 | RAM | RAM |
 | RAM Frequency | Frequência da RAM |
 | RAM Usage | Uso de RAM |
+| RGB Controller | Controlador de RGB |
+| This feature is under construction. | Esta funcionalidade está em construção. |
+| Open OpenRGB | Abrir OpenRGB |
 | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. | O ratbagd está rodando no seu sistema e pode conflitar com a configuração do G300. Considere parar o ratbagd para acesso exclusivo. |
 | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. | O monitoramento em tempo real requer nvidia-smi, que não foi encontrado neste sistema. Instale as ferramentas do driver NVIDIA para habilitar métricas ao vivo da GPU. |
 | Realtime | Tempo real |
@@ -575,12 +600,16 @@
 | Support Wayland clients via xdg-shell | Suportar clientes Wayland via xdg-shell |
 | Suspend compositor | Suspender compositor |
 | Suspend the desktop compositor to reduce input lag and eliminate forced vsync. Supported on KDE and GNOME. | Suspender o compositor da área de trabalho para reduzir a latência de entrada e eliminar vsync forçado. Suportado no KDE e GNOME. |
+| Swap and kernel memory-pressure tuning. | Ajuste de swap e pressão de memória do kernel. |
+| Swap Usage | Uso de Swap |
+| Swappiness | Swappiness |
 | System | Sistema |
 | System animations will not occur while gamemode is active | Animações do sistema não ocorrerão enquanto o gamemode estiver ativo |
 | System notification bubbles will not occur while gamemode is active | Notificações do sistema não aparecerão enquanto o gamemode estiver ativo |
 | System tweaks applied while GameMode is active. Changes are reverted when GameMode stops. | Ajustes do sistema aplicados enquanto o GameMode está ativo. As alterações são revertidas quando o GameMode é interrompido. |
 | Table Columns | Colunas da Tabela |
 | Target luminance (default: 1000) | Luminância alvo (padrão: 1000) |
+| Technical data of the RAM memory | Dados técnicos da memória RAM |
 | Technique Index | Índice da Técnica |
 | Technique index from the effect | Índice da técnica do efeito |
 | Technology | Tecnologia |
@@ -591,7 +620,6 @@
 | The app couldn't find any light source to manage. | O aplicativo não conseguiu encontrar nenhuma fonte de luz para gerenciar. |
 | The G300s stores 3 profiles in its onboard memory. Select a profile to configure its settings. | O G300s armazena 3 perfis em sua memória integrada. Selecione um perfil para configurar suas definições. |
 | Theme | Tema |
-| There are no registered games...\nYet. | Ainda não há jogos registrados...\nAinda. |
 | This information may be inaccurate or outdated | Esta informação pode ser imprecisa ou desatualizada |
 | This score is a reference and should not be taken without considering the context of which games will be played. More modest computers can also handle various types of games, when well configured :) | Esta pontuação é uma referência e não deve ser levada em conta sem a percepção do contexto de quais jogos serão jogados. Computadores mais modestos também podem funcionar para jogar diversos tipos de jogos, quando bem configurados :) |
 | Toggle Keyboard Illumination | Alternar Iluminação do Teclado |
@@ -643,3 +671,98 @@
 | Yes | Sim |
 | Your game library | Sua biblioteca de jogos |
 | Zero RPM Fan | Ventilador Zero RPM |
+| 25–2500 ms | 25–2500 ms |
+| Backend, mouse, keyboard, cursor and MangoApp settings. | Configurações de backend, mouse, teclado, cursor e MangoApp. |
+| Background opacity and transparency settings. | Configurações de opacidade do fundo e transparência. |
+| Balanced (100ms) | Balanceado (100ms) |
+| Base Frequency | Frequência Base |
+| Board identification | Identificação da placa-mãe |
+| BogoMIPS | BogoMIPS |
+| Boost Frequency | Frequência de Boost |
+| Buttons | Botões |
+| CPU Management | Gerenciamento da CPU |
+| CPU feature flags | Flags de recursos da CPU |
+| CPU vulnerability mitigations | Mitigações de vulnerabilidades da CPU |
+| Caches | Memórias cache |
+| CapsLock | CapsLock |
+| Category | Categoria |
+| Characters per second when holding a key | Caracteres por segundo ao segurar uma tecla |
+| Chipset / Manufacturer | Chipset / Fabricante |
+| Choose which stats to display on the overlay. | Escolha quais estatísticas exibir na sobreposição. |
+| Configure mouse acceleration, speed, and natural scrolling via libinput. | Configure a aceleração, a velocidade e a rolagem natural do mouse via libinput. |
+| Configure repeat rate and delay. | Configure a taxa de repetição e o atraso. |
+| Configure the behavior of the GPU while gamemode is active | Configure o comportamento da GPU enquanto o gamemode estiver ativo |
+| Configure the behavior of your CPU while gamemode is active. | Configure o comportamento da sua CPU enquanto o gamemode estiver ativo. |
+| Control CapsLock, NumLock and ScrollLock indicator lights via HID | Controle as luzes indicadoras de CapsLock, NumLock e ScrollLock via HID |
+| Control keyboard backlight via system LED interface | Controle a retroiluminação do teclado via interface de LED do sistema |
+| Controller configuration options | Opções de configuração do controle |
+| Cores / Threads | Núcleos / Threads |
+| Custom | Personalizado |
+| Custom interval (ms) | Intervalo personalizado (ms) |
+| Custom text labels displayed on the overlay. | Rótulos de texto personalizados exibidos na sobreposição. |
+| Define how the processes will be managed by the system. | Defina como os processos serão gerenciados pelo sistema. |
+| Define the scheduler behavior while gamemode is active. | Defina o comportamento do agendador (scheduler) enquanto o gamemode estiver ativo. |
+| Defines the priority of the processes while gamemode is active. | Define a prioridade dos processos enquanto o gamemode estiver ativo. |
+| Delay before key repeat starts | Atraso antes do início da repetição da tecla |
+| Device Information | Informações do Dispositivo |
+| Enable CapsLock at login | Ativar CapsLock no login |
+| Enable NumLock at login | Ativar NumLock no login |
+| Enable ScrollLock at login | Ativar ScrollLock no login |
+| Enable untrusted launchers | Permitir lançadores não confiáveis |
+| Enables access to Hydra and Hydra Classic, known for pirated or untrusted products | Permite o acesso ao Hydra e ao Hydra Classic, conhecidos por produtos pirateados ou não confiáveis |
+| FPS limit and performance tuning. | Limite de FPS e otimização de desempenho. |
+| Family / Model / Stepping | Família / Modelo / Stepping |
+| Firmware details | Detalhes do firmware |
+| Framerate limit for the compositor. | Limite de quadros (FPS) para o compositor. |
+| Game Import | Importação de Jogos |
+| Governor, frequency scaling | Governor, escalonamento de frequência |
+| Graph Update Speed | Velocidade de Atualização do Gráfico |
+| HDR10 output, inverse tone mapping and SDR gamut settings. | Saída HDR10, mapeamento de tom inverso e configurações de gama SDR. |
+| HUD position, offset, font size and table columns. | Posição do HUD, deslocamento, tamanho da fonte e colunas da tabela. |
+| Hardware identification and capabilities. | Identificação do hardware e recursos. |
+| Hardware identification and connection details. | Identificação do hardware e detalhes de conexão. |
+| Hardware information and capabilities | Informações e recursos do hardware |
+| Higher values use less CPU but feel less responsive | Valores maiores usam menos CPU, mas parecem menos responsivos |
+| Instructions | Instruções |
+| Keyboard (%04x:%04x) | Teclado (%04x:%04x) |
+| Keyboard Backlight | Retroiluminação do Teclado |
+| Keyboard backlight disabled | Retroiluminação do teclado desativada |
+| Keyboard backlight enabled | Retroiluminação do teclado ativada |
+| L1 Data | Dados L1 |
+| L1 Instruction | Instrução L1 |
+| L1, L2, L3 cache sizes | Tamanhos das caches L1, L2, L3 |
+| L2 | L2 |
+| L3 | L3 |
+| Lock Key LEDs | LEDs das Teclas de Bloqueio |
+| Lock Keys at Boot | Bloquear Teclas na Inicialização |
+| Lock key LEDs disabled | LEDs das teclas de bloqueio desativados |
+| Lock key LEDs enabled | LEDs das teclas de bloqueio ativados |
+| Manage | Gerenciar |
+| Controls the lighting of your keyboard (if it has any). | Controla a iluminação do seu teclado (se houver). |
+| Maximum Frequency (kHz) | Frequência Máxima (kHz) |
+| Microcode | Microcódigo |
+| Minimum Frequency (kHz) | Frequência Mínima (kHz) |
+| Monitor graph refresh rate | Taxa de atualização do gráfico do monitor |
+| No keyboard backlight device found | Nenhum dispositivo de retroiluminação de teclado encontrado |
+| No known vulnerabilities detected | Nenhuma vulnerabilidade conhecida detectada |
+| NumLock | NumLock |
+| Output resolution, game resolution, refresh rates and fullscreen options. | Resolução de saída, resolução do jogo, taxas de atualização e opções de tela cheia. |
+| Platform controller hub | Hub do controlador de plataforma (PCH) |
+| Power Saver (250ms) | Economia de Energia (250ms) |
+| Power, clocks, fan and more | Energia, clocks, ventoinha e mais |
+| Programmable buttons and macros | Botões programáveis e macros |
+| ReShade shader effect path and technique selection. | Caminho dos efeitos de shader do ReShade e seleção de técnica. |
+| Realtime (25ms) | Tempo real (25ms) |
+| Reduces shading rate to boost performance (AMD RDNA2+ or Intel Arc GPUs). | Reduz a taxa de sombreamento para melhorar o desempenho (GPUs AMD RDNA2+ ou Intel Arc). |
+| SMBus and management | SMBus e gerenciamento |
+| Save to Hardware | Salvar no Hardware |
+| Scripts that will execute every time Gamemode turns on/off | Scripts que serão executados toda vez que o Gamemode ligar/desligar |
+| ScrollLock | ScrollLock |
+| Security | Segurança |
+| Set default state for lock keys when logging in. | Defina o estado padrão das teclas de bloqueio ao fazer login. |
+| Socket | Soquete |
+| Socket, architecture, cores, frequencies | Soquete, arquitetura, núcleos, frequências |
+| Swap and kernel memory-pressure tuning | Ajuste de swap e pressão de memória do kernel |
+| There are no registered games...\nYet. | Não há jogos registrados...\nAinda. |
+| USB Speed | Velocidade USB |
+| Upscaling algorithm, filter type, sharpness and max scale factor. | Algoritmo de upscaling, tipo de filtro, nitidez e fator de escala máximo. |

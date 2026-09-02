@@ -21,5 +21,6 @@ install_data('io.github.mayrinck.epinephrine.svg',
 )
 
 install_data('../database/GPU_INDEX.md', '../database/JOY_INDEX.md',
+  '../database/RAM_INDEX.md',
   install_dir: join_paths(get_option('datadir'), 'epinephrine', 'database'),
 )

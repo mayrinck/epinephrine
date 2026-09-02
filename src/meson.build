@@ -37,7 +37,7 @@ sources = files(
 
 executable('epinephrine',
   sources, resources,
-  dependencies: [gtk4_dep, libadwaita_dep, m_dep, fontconfig_dep],
+  dependencies: [gtk4_dep, libadwaita_dep, gdk_pixbuf_dep, m_dep, fontconfig_dep],
   install: true,
 )
 

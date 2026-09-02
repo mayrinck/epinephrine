@@ -12,6 +12,14 @@ typedef struct
   GtkWidget *branding_box;
   GtkWidget *brand_name_label;
   GtkWidget *brand_vendor_label;
+  GtkWidget *brand_website_btn;
+  char *brand_url;
+
+  /* Device Information section */
+  GtkWidget *info_vendor_label;
+  GtkWidget *info_speed_label;
+  GtkWidget *info_driver_label;
+  GtkWidget *info_chipset_label;
 
   /* Settings section */
   GtkWidget *repeat_rate_spin;
@@ -31,5 +39,7 @@ typedef struct
 } KeyboardPage;
 
 KeyboardPage *keyboard_page_new (void);
+
+void keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product);
 
 G_END_DECLS

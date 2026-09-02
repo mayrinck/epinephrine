@@ -20,8 +20,7 @@ typedef struct
   GtkWidget      *brand_version;
   AdwComboRow    *accent_combo;
   AdwSwitchRow   *apply_theme_row;
-  AdwActionRow   *language_row;
-  AdwToggleGroup *language_group;
+  AdwComboRow    *language_combo;
   AdwComboRow    *graph_speed_combo;
   AdwActionRow   *custom_speed_row;
   GtkSpinButton  *custom_speed_spin;
@@ -29,9 +28,12 @@ typedef struct
 
 /* Graph speed presets (index into page-settings.ui combo) */
 #define GRAPH_SPEED_REALTIME_MS    25
-#define GRAPH_SPEED_BALANCED_MS   100
-#define GRAPH_SPEED_POWERSAVE_MS  250
+#define GRAPH_SPEED_BALANCED_MS   250
+#define GRAPH_SPEED_POWERSAVE_MS  500
 #define GRAPH_SPEED_CUSTOM_IDX      3
+
+/* Data labels always update at 1 second regardless of graph speed */
+#define MONITOR_DATA_INTERVAL_MS 1000
 
 extern int g_graph_speed_ms;
 

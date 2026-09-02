@@ -4,8 +4,11 @@
 #include "hw-devices.h"
 #include "hw-gpu.h"
 #include "hw-controller.h"
-#include "../epi-privilege.h"
+#include "hw-monitor.h"
+#include "hw-detail.h"
 #include "../epi-i18n.h"
+#include "../epi-privilege.h"
+#include "page-mouse.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -196,11 +199,19 @@ classify_evdev (int fd)
   if (ioctl (fd, EVIOCGBIT (EV_KEY, sizeof (key_bits)), key_bits) < 0)
     return NULL;
 
-  /* Joystick/gamepad */
-  if (test_bit (BTN_A, key_bits) || test_bit (BTN_B, key_bits) ||
-      test_bit (BTN_X, key_bits) || test_bit (BTN_Y, key_bits) ||
-      test_bit (BTN_START, key_bits) || test_bit (BTN_SELECT, key_bits) ||
-      test_bit (BTN_TL, key_bits) || test_bit (BTN_TR, key_bits))
+  /* Check for analog axes — real joysticks have ABS_X/ABS_Y.
+     Keyboards with multimedia keys (BTN_B, BTN_X) do NOT have
+     analog axes, so requiring ABS prevents misclassification. */
+  unsigned long abs_bits[NLONGS (ABS_MAX)] = {0};
+  ioctl (fd, EVIOCGBIT (EV_ABS, sizeof (abs_bits)), abs_bits);
+  gboolean has_abs = test_bit (ABS_X, abs_bits) || test_bit (ABS_Y, abs_bits);
+
+  /* Joystick/gamepad: needs BOTH gamepad buttons AND analog axes */
+  if (has_abs &&
+      (test_bit (BTN_A, key_bits) || test_bit (BTN_B, key_bits) ||
+       test_bit (BTN_X, key_bits) || test_bit (BTN_Y, key_bits) ||
+       test_bit (BTN_START, key_bits) || test_bit (BTN_SELECT, key_bits) ||
+       test_bit (BTN_TL, key_bits) || test_bit (BTN_TR, key_bits)))
     return "joystick";
 
   /* Mouse */
@@ -352,12 +363,172 @@ process_input_device (HardwarePage *page, GHashTable *seen,
               category = hw_controller_lookup_category (page, vendor, product);
             }
         }
+      else if (g_strcmp0 (type, "mouse") == 0)
+        {
+          if (read_evdev_vid_pid (devpath, &vendor, &product))
+            {
+              const char *override = mouse_index_lookup_name (vendor, product);
+              if (override)
+                {
+                  g_free (display_name);
+                  display_name = g_strdup (override);
+                }
+            }
+        }
+      else
+        {
+          /* For keyboards and other devices — still read VID/PID */
+          read_evdev_vid_pid (devpath, &vendor, &product);
+        }
       add_device (page, display_name, type ? type : "input", type_to_subtitle (type), devpath,
         vendor, product, url, category);
     }
 
   g_free (display_name);
   g_free (devpath);
+}
+
+/* Free one RamStick (array free-func). */
+void
+ram_stick_free (gpointer ptr)
+{
+  RamStick *s = ptr;
+  if (!s) return;
+  g_free (s->size);
+  g_free (s->form_factor);
+  g_free (s->type);
+  g_free (s->type_detail);
+  g_free (s->speed);
+  g_free (s->manufacturer);
+  g_free (s->part_number);
+  g_free (s->rank);
+  g_free (s->configured_speed);
+  g_free (s->serial_number);
+  g_free (s->locator);
+  g_free (s->bank_locator);
+  g_free (s->total_width);
+  g_free (s->data_width);
+  g_free (s);
+}
+
+static void
+ram_stick_set_str (char **dst, const char *value)
+{
+  g_free (*dst);
+  *dst = g_strdup (value);
+  g_strstrip (*dst);
+}
+
+static void
+ram_stick_set_size (RamStick *s, const char *value)
+{
+  ram_stick_set_str (&s->size, value);
+}
+
+/* Keep a stick only when it is actually installed (Size != "No Module
+   Installed"). Also derives the aggregate page->ram_technology/freq from the
+   first installed stick found. */
+static void
+ram_stick_finalize (HardwarePage *page, RamStick *cur, GPtrArray *sticks,
+                    int *found)
+{
+  if (!cur) return;
+  gboolean installed = cur->size && cur->size[0]
+    && g_strcmp0 (cur->size, "No Module Installed") != 0
+    && g_strcmp0 (cur->size, "No") != 0;
+
+  if (!installed)
+    {
+      ram_stick_free (cur);
+      return;
+    }
+
+  if (!page->ram_technology && cur->type && cur->type[0])
+    page->ram_technology = g_strdup (cur->type);
+  if (page->ram_freq_mhz == 0 && cur->speed)
+    {
+      char *end;
+      uint64_t val = g_ascii_strtoull (cur->speed, &end, 10);
+      if (val > 0) page->ram_freq_mhz = val;
+    }
+
+  g_ptr_array_add (sticks, cur);
+  (*found)++;
+}
+
+/* Parse `dmidecode -t memory` output (Type 17 "Memory Device" blocks) into
+   fresh RamStick entries appended to `sticks`. Also counts every slot present
+   in the output through `*slots_total`. Returns the number of installed
+   sticks found. */
+static int
+ram_parse_dmi (HardwarePage *page, GPtrArray *sticks, int *slots_total,
+               const char *output)
+{
+  int found = 0;
+  gboolean in_dev = FALSE;
+  RamStick *cur = NULL;
+
+  char *line = (char *) output;
+  while (line && *line)
+    {
+      char *nl = strchr (line, '\n');
+      if (nl) *nl = '\0';
+
+      char *trim = line;
+      while (*trim == '\t' || *trim == ' ') trim++;
+
+      if (trim[0] == '\0' && in_dev)
+        {
+          ram_stick_finalize (page, cur, sticks, &found);
+          cur = NULL;
+          in_dev = FALSE;
+        }
+      else if (g_str_has_prefix (trim, "Memory Device"))
+        {
+          if (cur) ram_stick_finalize (page, cur, sticks, &found);
+          in_dev = TRUE;
+          (*slots_total)++;
+          cur = g_new0 (RamStick, 1);
+        }
+      else if (in_dev && cur)
+        {
+          if (g_str_has_prefix (trim, "Size:"))
+            ram_stick_set_size (cur, trim + 5);
+          else if (g_str_has_prefix (trim, "Form Factor:"))
+            ram_stick_set_str (&cur->form_factor, trim + 12);
+          else if (g_str_has_prefix (trim, "Type Detail:"))
+            ram_stick_set_str (&cur->type_detail, trim + 12);
+          else if (g_str_has_prefix (trim, "Type:"))
+            ram_stick_set_str (&cur->type, trim + 5);
+          else if (g_str_has_prefix (trim, "Configured Memory Speed:"))
+            ram_stick_set_str (&cur->configured_speed, trim + 23);
+          else if (g_str_has_prefix (trim, "Speed:"))
+            ram_stick_set_str (&cur->speed, trim + 6);
+          else if (g_str_has_prefix (trim, "Manufacturer:"))
+            ram_stick_set_str (&cur->manufacturer, trim + 13);
+          else if (g_str_has_prefix (trim, "Part Number:"))
+            ram_stick_set_str (&cur->part_number, trim + 12);
+          else if (g_str_has_prefix (trim, "Rank:"))
+            ram_stick_set_str (&cur->rank, trim + 5);
+          else if (g_str_has_prefix (trim, "Serial Number:"))
+            ram_stick_set_str (&cur->serial_number, trim + 14);
+          else if (g_str_has_prefix (trim, "Bank Locator:"))
+            ram_stick_set_str (&cur->bank_locator, trim + 13);
+          else if (g_str_has_prefix (trim, "Locator:"))
+            ram_stick_set_str (&cur->locator, trim + 8);
+          else if (g_str_has_prefix (trim, "Total Width:"))
+            ram_stick_set_str (&cur->total_width, trim + 12);
+          else if (g_str_has_prefix (trim, "Data Width:"))
+            ram_stick_set_str (&cur->data_width, trim + 11);
+        }
+
+      if (nl) { *nl = '\n'; line = nl + 1; }
+      else break;
+    }
+
+  if (cur) ram_stick_finalize (page, cur, sticks, &found);
+
+  return found;
 }
 
 void
@@ -502,222 +673,83 @@ hw_devices_detect (HardwarePage *page)
       add_device (page, tr ("Unknown CPU"), "cpu", NULL, NULL, 0, 0, NULL, NULL);
   }
 
-  /* RAM — per-DIMM via dmidecode, fallback to /proc/meminfo */
+  /* RAM — per-stick detail via dmidecode (elevated fallback). Without the
+     elevated read we still fall back to /proc/meminfo totals only. */
   {
     gboolean dimm_found = FALSE;
-    GPtrArray *dimms = g_ptr_array_new_with_free_func (g_free);
+    GPtrArray *sticks = g_ptr_array_new_with_free_func (ram_stick_free);
+    int slots_total = 0;
     char *dmi_out = NULL;
-    if (g_spawn_sync (NULL,
-          (char *[]){ "/bin/sh", "-c",
-            "dmidecode -t memory 2>/dev/null", NULL },
-          NULL, G_SPAWN_DEFAULT, NULL, NULL, &dmi_out, NULL, NULL, NULL)
-        && dmi_out)
+
+    gboolean got = g_spawn_sync (NULL,
+      (char *[]){ "/bin/sh", "-c",
+        "dmidecode -t memory 2>/dev/null", NULL },
+      NULL, G_SPAWN_DEFAULT, NULL, NULL, &dmi_out, NULL, NULL, NULL);
+
+    /* dmidecode needs root to read the SMBIOS tables; when the direct read
+       yields no installed stick, retry through the privileged helper. */
+    if (got && dmi_out
+        && ram_parse_dmi (page, sticks, &slots_total, dmi_out) == 0)
       {
-        char *line = dmi_out;
-        char *mfr = NULL, *part = NULL, *sz_str = NULL;
-        gboolean in_dev = FALSE;
-
-        while (line && *line)
+        char *elev = NULL;
+        int ec = -1;
+        if (epi_privilege_exec_sync (
+              "dmidecode -t memory 2>/dev/null", &ec, &elev, NULL)
+            && ec == 0 && elev && elev[0])
           {
-            char *nl = strchr (line, '\n');
-            if (nl) *nl = '\0';
-
-            char *trim = line;
-            while (*trim == '\t' || *trim == ' ') trim++;
-
-            if (trim[0] == '\0' && in_dev)
-              {
-                if (sz_str && sz_str[0]
-                    && g_strcmp0 (sz_str, "No Module Installed") != 0
-                    && g_strcmp0 (sz_str, "No") != 0)
-                  {
-                    if (mfr && (g_strcmp0 (mfr, "Not Specified") == 0
-                        || g_strcmp0 (mfr, "Unknown") == 0
-                        || mfr[0] == '\0'))
-                      { g_free (mfr); mfr = NULL; }
-                    if (part && (g_strcmp0 (part, "Not Specified") == 0
-                        || g_strcmp0 (part, "Unknown") == 0
-                        || part[0] == '\0'))
-                      { g_free (part); part = NULL; }
-
-                    char *name;
-                    if (mfr && part)
-                      name = g_strdup_printf ("%s %s", mfr, part);
-                    else if (part) name = g_strdup (part);
-                    else if (mfr)  name = g_strdup (mfr);
-                    else           name = g_strdup ("Unknown");
-
-                    /* Collect DIMM info instead of adding directly;
-                       we'll group identical sticks below. */
-                    g_ptr_array_add (dimms, name);
-                    g_ptr_array_add (dimms, g_strdup (sz_str));
-                    dimm_found = TRUE;
-                  }
-                g_free (mfr); mfr = NULL;
-                g_free (part); part = NULL;
-                g_free (sz_str); sz_str = NULL;
-                in_dev = FALSE;
-              }
-            else if (g_str_has_prefix (trim, "Memory Device"))
-              {
-                if (in_dev)
-                  {
-                    g_free (mfr); mfr = NULL;
-                    g_free (part); part = NULL;
-                    g_free (sz_str); sz_str = NULL;
-                  }
-                in_dev = TRUE;
-              }
-            else if (in_dev && g_str_has_prefix (trim, "Size:"))
-              {
-                const char *v = trim + 5;
-                while (*v == ' ') v++;
-                g_free (sz_str);
-                sz_str = g_strdup (v);
-              }
-            else if (in_dev && g_str_has_prefix (trim, "Manufacturer:"))
-              {
-                const char *v = trim + 13;
-                while (*v == ' ') v++;
-                g_free (mfr);
-                mfr = g_strdup (v);
-              }
-            else if (in_dev && g_str_has_prefix (trim, "Part Number:"))
-              {
-                const char *v = trim + 12;
-                while (*v == ' ') v++;
-                g_free (part);
-                part = g_strdup (v);
-              }
-            else if (in_dev && g_str_has_prefix (trim, "Type:"))
-              {
-                const char *v = trim + 5;
-                while (*v == ' ') v++;
-                if (!page->ram_technology)
-                  page->ram_technology = g_strdup (v);
-              }
-            else if (in_dev && g_str_has_prefix (trim, "Speed:"))
-              {
-                const char *v = trim + 6;
-                while (*v == ' ') v++;
-                char *end;
-                uint64_t freq = g_ascii_strtoull (v, &end, 10);
-                if (freq > 0 && page->ram_freq_mhz == 0)
-                  page->ram_freq_mhz = freq;
-              }
-
-            if (nl) { *nl = '\n'; line = nl + 1; }
-            else break;
+            slots_total = 0;
+            ram_parse_dmi (page, sticks, &slots_total, elev);
           }
-
-        g_free (mfr);
-        g_free (part);
-        g_free (sz_str);
-        g_free (dmi_out);
-        dmi_out = NULL;
+        g_free (elev);
       }
+
+    g_free (dmi_out);
+    dimm_found = (sticks->len > 0);
 
     if (dimm_found)
       {
-        /* Group identical DIMM sticks and display as:
-           "Brand Model (Nx SIZE - TOTAL Total)" */
-        int n_dimms = dimms->len / 2;
-        gboolean *used = g_new0 (gboolean, n_dimms);
+        page->ram_sticks = sticks;          /* transfer ownership */
+        page->ram_slots_total = slots_total;
+        page->ram_slots_used = (int) sticks->len;
 
-        /* First pass: collect per-DIMM info for the detail page */
-        GPtrArray *dimm_infos = g_ptr_array_new_with_free_func (g_free);
-        for (int i = 0; i < n_dimms; i++)
+        /* Total installed memory from the per-stick sizes */
+        uint64_t total_mb = 0;
+        for (guint i = 0; i < sticks->len; i++)
           {
-            const char *name = g_ptr_array_index (dimms, i * 2);
-            const char *size0 = g_ptr_array_index (dimms, i * 2 + 1);
-            g_ptr_array_add (dimm_infos,
-              g_strdup_printf ("%s — %s", name, size0));
-          }
-
-        for (int i = 0; i < n_dimms; i++)
-          {
-            if (used[i]) continue;
-
-            const char *name = g_ptr_array_index (dimms, i * 2);
-            const char *size0 = g_ptr_array_index (dimms, i * 2 + 1);
-            int count = 1;
-
-            /* Parse per-stick size */
+            RamStick *s = g_ptr_array_index (sticks, i);
+            if (!s->size) continue;
             char *end;
-            double per_val = strtod (size0, &end);
+            double v = strtod (s->size, &end);
             while (*end == ' ') end++;
-            uint64_t total_mb = 0;
             if (g_str_has_prefix (end, "GB"))
-              total_mb = (uint64_t) (per_val * 1024);
+              total_mb += (uint64_t) (v * 1024);
             else if (g_str_has_prefix (end, "MB"))
-              total_mb = (uint64_t) per_val;
+              total_mb += (uint64_t) v;
             else
-              total_mb = (uint64_t) per_val;
-
-            for (int j = i + 1; j < n_dimms; j++)
-              {
-                if (used[j]) continue;
-                const char *nj = g_ptr_array_index (dimms, j * 2);
-                if (g_strcmp0 (name, nj) == 0)
-                  {
-                    count++;
-                    const char *sz = g_ptr_array_index (dimms, j * 2 + 1);
-                    double v = strtod (sz, &end);
-                    while (*end == ' ') end++;
-                    if (g_str_has_prefix (end, "GB"))
-                      total_mb += (uint64_t) (v * 1024);
-                    else if (g_str_has_prefix (end, "MB"))
-                      total_mb += (uint64_t) v;
-                    else
-                      total_mb += (uint64_t) v;
-                    used[j] = TRUE;
-                  }
-              }
-
-            char *ram_str;
-            if (count > 1)
-              {
-                /* Per-stick display size */
-                uint64_t per_mb = total_mb / count;
-                char per_str[32];
-                if (per_mb >= 1024 && per_mb % 1024 == 0)
-                  g_snprintf (per_str, sizeof (per_str), "%.0f GB", per_mb / 1024.0);
-                else if (per_mb >= 1024)
-                  g_snprintf (per_str, sizeof (per_str), "%.1f GB", per_mb / 1024.0);
-                else
-                  g_snprintf (per_str, sizeof (per_str), "%ld MB", (long) per_mb);
-
-                char total_str[32];
-                if (total_mb >= 1024 && total_mb % 1024 == 0)
-                  g_snprintf (total_str, sizeof (total_str), tr ("%.0f GB Total"),
-                    total_mb / 1024.0);
-                else if (total_mb >= 1024)
-                  g_snprintf (total_str, sizeof (total_str), tr ("%.1f GB Total"),
-                    total_mb / 1024.0);
-                else
-                  g_snprintf (total_str, sizeof (total_str), tr ("%ld MB Total"),
-                    (long) total_mb);
-
-                ram_str = g_strdup_printf ("%s (%dx %s - %s)", name, count, per_str, total_str);
-              }
-            else
-              ram_str = g_strdup_printf ("%s %s", name, size0);
-
-            add_device (page, ram_str, "ram", tr ("Memory"), NULL, 0, 0, NULL, NULL);
-            g_free (ram_str);
+              total_mb += (uint64_t) v;
           }
 
-        g_free (used);
+        char *amount = ram_size_mb_str (total_mb);
 
-        /* Store per-DIMM info for the detail page */
-        page->n_ram_dimms = dimm_infos->len;
-        page->ram_dimm_names = g_new0 (char *, page->n_ram_dimms);
-        for (guint i = 0; i < dimm_infos->len; i++)
-          page->ram_dimm_names[i] = g_strdup (g_ptr_array_index (dimm_infos, i));
-        g_ptr_array_unref (dimm_infos);
+        /* Name: "RAM <Technology> x<installed>" (RAM + Type + xN). */
+        GString *ram_name = g_string_new (tr ("RAM"));
+        if (page->ram_technology && page->ram_technology[0])
+          g_string_append_printf (ram_name, " %s", page->ram_technology);
+        g_string_append_printf (ram_name, " x%d", page->ram_slots_used);
+
+        char *info = g_strdup_printf ("%s (%s)", tr ("Memory"), amount);
+        add_device (page, ram_name->str, "ram", info, NULL, 0, 0, NULL, NULL);
+        g_string_free (ram_name, TRUE);
+        g_free (info);
+        g_free (amount);
       }
     else
       {
+        g_ptr_array_unref (sticks);
+        page->ram_sticks = NULL;
+        page->ram_slots_total = 0;
+        page->ram_slots_used = 0;
+
         char buf[256] = {0};
         FILE *f = fopen ("/proc/meminfo", "r");
         if (f)
@@ -732,11 +764,7 @@ hw_devices_detect (HardwarePage *page)
                         char *val = colon + 1;
                         g_strstrip (val);
                         long kb = atol (val);
-                        char *ram_str;
-                        if (kb > 1048576)
-                          ram_str = g_strdup_printf ("%.1f GB", kb / 1048576.0);
-                        else
-                          ram_str = g_strdup_printf ("%.0f MB", kb / 1024.0);
+                        char *ram_str = ram_size_mb_str (kb / 1024ULL);
                         add_device (page, ram_str, "ram",
                           tr ("Memory"), NULL, 0, 0, NULL, NULL);
                         g_free (ram_str);
@@ -774,55 +802,57 @@ hw_devices_detect (HardwarePage *page)
           page->ram_used_bytes = (mem_total_kb - mem_avail_kb) * 1024;
         }
     }
-
-    g_ptr_array_unref (dimms);
-    g_free (dmi_out);
   }
 
   /* Input devices — 3-phase scan */
   {
-    /* Phase 1+2: /dev/input/by-id/ and /dev/input/by-path/ */
+    /* Phase 1+2: /dev/input/by-id/ and /dev/input/by-path/
+       Multi-pass by priority: joystick first, then mouse, then keyboard.
+       This ensures that composite USB devices (e.g. GameSir T3 Lite) are
+       claimed by their primary category before secondary interfaces. */
     GHashTable *seen = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     GHashTable *kbd_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     GHashTable *joy_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
     GHashTable *all_phys = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 
+    struct { const char *sfx1; const char *sfx2; const char *type; } passes[] = {
+      { "-event-joystick", "-joystick", "joystick"  },
+      { "-event-mouse",    "-mouse",    "mouse"     },
+      { "-event-kbd",      "-kbd",      "keyboard"  },
+    };
+
     const char *scan_dirs[] = { "/dev/input/by-id", "/dev/input/by-path" };
-    for (size_t scan = 0; scan < G_N_ELEMENTS (scan_dirs); scan++)
-      {
-        GDir *dir = g_dir_open (scan_dirs[scan], 0, NULL);
-        if (!dir) continue;
+    for (size_t p = 0; p < G_N_ELEMENTS (passes); p++)
+      for (size_t scan = 0; scan < G_N_ELEMENTS (scan_dirs); scan++)
+        {
+          GDir *dir = g_dir_open (scan_dirs[scan], 0, NULL);
+          if (!dir) continue;
 
-        const char *entry;
-        while ((entry = g_dir_read_name (dir)))
-          {
-            if (g_str_has_suffix (entry, "event-if"))
-              continue;
+          const char *entry;
+          while ((entry = g_dir_read_name (dir)))
+            {
+              if (g_str_has_suffix (entry, "event-if"))
+                continue;
 
-            char *full = g_build_filename (scan_dirs[scan], entry, NULL);
-            char target[256] = {0};
-            ssize_t len = readlink (full, target, sizeof (target) - 1);
-            g_free (full);
-            if (len < 0) continue;
-            target[len] = '\0';
-            if (!strstr (target, "event")) continue;
+              if (!g_str_has_suffix (entry, passes[p].sfx1) &&
+                  !g_str_has_suffix (entry, passes[p].sfx2))
+                continue;
 
-            const char *type = NULL;
-            if (g_str_has_suffix (entry, "-event-joystick") || g_str_has_suffix (entry, "-joystick"))
-              type = "joystick";
-            else if (g_str_has_suffix (entry, "-event-kbd") || g_str_has_suffix (entry, "-kbd"))
-              type = "keyboard";
-            else if (g_str_has_suffix (entry, "-event-mouse") || g_str_has_suffix (entry, "-mouse"))
-              type = "mouse";
-            else
-              continue;
+              char *full = g_build_filename (scan_dirs[scan], entry, NULL);
+              char target[256] = {0};
+              ssize_t len = readlink (full, target, sizeof (target) - 1);
+              g_free (full);
+              if (len < 0) continue;
+              target[len] = '\0';
+              if (!strstr (target, "event")) continue;
 
-            char *from_name = (scan == 0) ? extract_byid_name (entry) : g_strdup ("");
-            process_input_device (page, seen, target, from_name, type, kbd_phys, joy_phys, all_phys);
-            g_free (from_name);
-          }
-        g_dir_close (dir);
-      }
+              char *from_name = (scan == 0) ? extract_byid_name (entry) : g_strdup ("");
+              process_input_device (page, seen, target, from_name, passes[p].type,
+                kbd_phys, joy_phys, all_phys);
+              g_free (from_name);
+            }
+          g_dir_close (dir);
+        }
 
     /* Phase 3: /dev/input/event* fallback */
     {
@@ -853,6 +883,27 @@ hw_devices_detect (HardwarePage *page)
 
               if (!name && !type)
                 { g_free (devpath); continue; }
+
+              /* Cross-type deduplication: if same physical device was already
+                 added in Phase 1+2, skip this duplicate interface. */
+              if (all_phys)
+                {
+                  char *phys = read_evdev_phys (devpath);
+                  if (phys)
+                    {
+                      char *inp = strstr (phys, "/input");
+                      if (inp) *inp = '\0';
+                      if (g_hash_table_contains (all_phys, phys))
+                        {
+                          g_free (phys);
+                          g_free (name);
+                          g_free (devpath);
+                          continue;
+                        }
+                      g_hash_table_add (all_phys, g_strdup (phys));
+                      g_free (phys);
+                    }
+                }
 
               /* Deduplicate joysticks/controllers from the same physical device */
               if ((g_strcmp0 (type, "joystick") == 0 || g_strcmp0 (type, "controller") == 0) && joy_phys)

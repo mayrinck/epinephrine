@@ -1,5 +1,6 @@
 #include "page-cpu.h"
 #include "page-dashboard.h"
+#include "page-settings.h"
 #include "epi-privilege.h"
 #include "../epi-i18n.h"
 
@@ -311,18 +312,44 @@ cpu_monitor_poll_cb (gpointer user_data)
 
   page->monitor_history_count++;
 
-  /* Update legend labels */
+  /* Update legend labels with value + 10s rolling average */
   for (int m = 0; m < CPU_MON_METRICS; m++)
     {
       if (ok[m])
         {
-          char buf[32];
+          /* Store raw value in circular buffer for average */
+          int idx = page->monitor_avg_idx[m];
+          page->monitor_avg_buf[m][idx % 400] = vals[m];
+          page->monitor_avg_idx[m] = idx + 1;
+          if (page->monitor_avg_count[m] < 400)
+            page->monitor_avg_count[m]++;
+
+          /* Compute rolling average */
+          double sum = 0;
+          int cnt = page->monitor_avg_count[m];
+          for (int j = 0; j < cnt; j++)
+            sum += page->monitor_avg_buf[m][j];
+          double avg = sum / cnt;
+
+          char val_str[32];
+          char avg_str[32];
           if (m == 3)
-            g_snprintf (buf, sizeof (buf), "%.3f %s", vals[m], cpu_metric_units[m]);
+            {
+              g_snprintf (val_str, sizeof (val_str), "%.3f %s", vals[m], cpu_metric_units[m]);
+              g_snprintf (avg_str, sizeof (avg_str), "%.3f %s", avg, cpu_metric_units[m]);
+            }
           else if (m == 2)
-            g_snprintf (buf, sizeof (buf), "%.0f %s", vals[m], cpu_metric_units[m]);
+            {
+              g_snprintf (val_str, sizeof (val_str), "%.0f %s", vals[m], cpu_metric_units[m]);
+              g_snprintf (avg_str, sizeof (avg_str), "%.0f %s", avg, cpu_metric_units[m]);
+            }
           else
-            g_snprintf (buf, sizeof (buf), "%.1f %s", vals[m], cpu_metric_units[m]);
+            {
+              g_snprintf (val_str, sizeof (val_str), "%.1f %s", vals[m], cpu_metric_units[m]);
+              g_snprintf (avg_str, sizeof (avg_str), "%.1f %s", avg, cpu_metric_units[m]);
+            }
+          char buf[96];
+          g_snprintf (buf, sizeof (buf), "%s (avg: %s)", val_str, avg_str);
           gtk_label_set_text (GTK_LABEL (page->monitor_values[m]), buf);
         }
       else
@@ -373,10 +400,10 @@ cpu_monitor_start (CpuPage *page)
       g_source_remove (page->graph_timer_id);
       page->graph_timer_id = 0;
     }
-  /* Data poll every 1s (ALWAYS 1s, never changes) */
-  page->monitor_timer_id = g_timeout_add (1000, cpu_monitor_poll_cb, page);
-  /* Graph redraw at configurable interval */
   extern int g_graph_speed_ms;
+  /* Data poll at configured graph speed */
+  page->monitor_timer_id = g_timeout_add (g_graph_speed_ms, cpu_monitor_poll_cb, page);
+  /* Graph redraw at same interval — keeps animation smooth */
   page->graph_timer_id = g_timeout_add (g_graph_speed_ms, cpu_graph_redraw_cb, page);
   cpu_monitor_poll_cb (page);
 }
@@ -402,10 +429,6 @@ cpu_monitor_restart (CpuPage *page)
 {
   if (!page) return;
   cpu_monitor_stop (page);
-  /* Clear history on explicit restart (e.g. graph speed change) */
-  page->monitor_history_count = 0;
-  memset (page->monitor_history, 0, sizeof (page->monitor_history));
-  memset (&page->prev_idle, 0, sizeof (page->prev_idle) + sizeof (page->prev_total));
   cpu_monitor_start (page);
 }
 
@@ -746,6 +769,38 @@ collect_cpu_info (CpuPage *page)
 /* ---- Forward declarations ---- */
 static void update_governor_subtitle (CpuPage *page, const char *gov_name);
 
+/* ---- Case-insensitive substring test ---- */
+
+static gboolean
+cpu_is_brand (const char *text, const char *needle)
+{
+  if (!text || !needle) return FALSE;
+  char *text_low = g_ascii_strdown (text, -1);
+  char *needle_low = g_ascii_strdown (needle, -1);
+  gboolean hit = strstr (text_low, needle_low) != NULL;
+  g_free (text_low);
+  g_free (needle_low);
+  return hit;
+}
+
+/* ---- Official website button ---- */
+
+static void
+on_cpu_website_clicked (GtkButton *btn, CpuPage *page)
+{
+  (void) btn;
+  if (page->brand_url)
+    {
+      GError *err = NULL;
+      g_app_info_launch_default_for_uri (page->brand_url, NULL, &err);
+      if (err)
+        {
+          g_warning ("Failed to open URL: %s", err->message);
+          g_error_free (err);
+        }
+    }
+}
+
 /* ---- Populate all row subtitles ---- */
 
 static void
@@ -756,6 +811,35 @@ populate_cpu_labels (CpuPage *page)
     gtk_label_set_text (GTK_LABEL (page->cpu_name_label), page->model_name);
   if (page->vendor_id)
     gtk_label_set_text (GTK_LABEL (page->cpu_vendor_label), page->vendor_id);
+
+  /* Brand logo — AMD / Intel assets, otherwise the symbolic CPU icon */
+  gboolean is_amd   = cpu_is_brand (page->vendor_id, "AuthenticAMD")
+                   || cpu_is_brand (page->model_name, "amd");
+  gboolean is_intel = cpu_is_brand (page->vendor_id, "GenuineIntel")
+                   || cpu_is_brand (page->model_name, "intel");
+
+  const char *logo_res = is_amd
+    ? "/io/github/mayrinck/epinephrine/icons/processors/amd.png"
+    : (is_intel ? "/io/github/mayrinck/epinephrine/icons/processors/intel.png" : NULL);
+  if (logo_res)
+    gtk_image_set_from_resource (GTK_IMAGE (page->cpu_brand_icon), logo_res);
+  else
+    {
+      gtk_image_set_from_icon_name (GTK_IMAGE (page->cpu_brand_icon), "cpu-symbolic");
+      gtk_image_set_pixel_size (GTK_IMAGE (page->cpu_brand_icon), 64);
+    }
+
+  /* Official website — Ryzen desktop page for AMD, Core page for Intel */
+  g_free (page->brand_url);
+  page->brand_url = NULL;
+  if (is_amd)
+    page->brand_url = g_strdup (
+      "https://www.amd.com/en/products/processors/desktops/ryzen.html");
+  else if (is_intel)
+    page->brand_url = g_strdup (
+      "https://www.intel.com.br/content/www/br/pt/products/details/processors/core.html");
+  if (page->cpu_website_btn)
+    gtk_widget_set_sensitive (page->cpu_website_btn, page->brand_url != NULL);
 
   /* Codename */
   if (page->model_name)
@@ -1000,11 +1084,15 @@ cpu_page_new (void)
 
   page->box = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-page"));
 
-  /* Branding */
+/* Branding */
   page->cpu_brand_icon   = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_brand_icon"));
   page->cpu_name_label   = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_name_label"));
   page->cpu_vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_vendor_label"));
   page->cpu_codename_label = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_codename_label"));
+  page->cpu_website_btn  = GTK_WIDGET (gtk_builder_get_object (builder, "cpu-website-btn"));
+  gtk_widget_set_sensitive (page->cpu_website_btn, FALSE);
+  g_signal_connect (page->cpu_website_btn, "clicked",
+    G_CALLBACK (on_cpu_website_clicked), page);
 
   /* Monitor */
   page->monitor_graph = GTK_WIDGET (gtk_builder_get_object (builder, "cpu_monitor_graph"));
@@ -1036,11 +1124,6 @@ cpu_page_new (void)
       gtk_widget_set_halign (page->monitor_values[i], GTK_ALIGN_END);
       gtk_label_set_width_chars (GTK_LABEL (page->monitor_values[i]), 12);
       gtk_box_append (GTK_BOX (row), page->monitor_values[i]);
-
-      GtkWidget *unit_lbl = gtk_label_new (cpu_metric_units[i]);
-      gtk_widget_set_halign (unit_lbl, GTK_ALIGN_START);
-      gtk_label_set_width_chars (GTK_LABEL (unit_lbl), 4);
-      gtk_box_append (GTK_BOX (row), unit_lbl);
 
       gtk_box_append (GTK_BOX (monitor_left), row);
     }

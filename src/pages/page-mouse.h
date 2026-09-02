@@ -9,6 +9,8 @@ typedef struct {
     char *name;
     char *url;
     int buttons;
+    gboolean white_label;
+    char *white_label_vendor;
 } MouseIndexEntry;
 
 typedef struct
@@ -20,12 +22,23 @@ typedef struct
   GtkWidget *natural_scroll_switch;
   GtkWidget *dpi_label;
   GtkWidget *save_btn;
-  GtkWidget *lighting_status;
 
   /* Branding header (from MICE_INDEX.md lookup) */
   GtkWidget *mouse_name_label;
+  GtkWidget *mouse_vendor_label;
   GtkWidget *mouse_website_btn;
   char *mouse_url;
+
+  /* Device Information labels */
+  GtkWidget *dev_vendor_value;
+  GtkWidget *dev_devid_value;
+  GtkWidget *dev_buttons_value;
+  GtkWidget *dev_white_label_row;
+  GtkWidget *dev_white_label_value;
+
+  /* Current device for info refresh */
+  uint16_t    cur_vendor;
+  uint16_t    cur_product;
 
   /* G300s detection */
   int         hidraw_fd;
@@ -81,5 +94,8 @@ typedef struct
 
 MousePage *mouse_page_new (void);
 void mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product);
+
+/* MICE_INDEX.md name lookup (for use during device detection) */
+const char *mouse_index_lookup_name (uint16_t vendor, uint16_t product);
 
 G_END_DECLS

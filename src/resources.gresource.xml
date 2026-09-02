@@ -32,12 +32,15 @@
     <file>icons/feral.svg</file>
     <file preprocess="xml-stripblanks">icons/gpu-amd.svg</file>
     <file preprocess="xml-stripblanks">icons/gpu-nvidia.svg</file>
+    <file>icons/nvidia.png</file>
     <file preprocess="xml-stripblanks">icons/gpu-intel-xe.svg</file>
     <file>icons/gpu-intel-arc.png</file>
     <file>icons/gpu-intel.png</file>
     <file preprocess="xml-stripblanks">icons/gpu-qualcomm.svg</file>
     <file>icons/gpu-innosilicon.png</file>
     <file>icons/gpu-generic.png</file>
+    <file>icons/processors/amd.png</file>
+    <file>icons/processors/intel.png</file>
     <file preprocess="xml-stripblanks">icons-sym/addon-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/chip-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/cpu-symbolic.svg</file>
@@ -50,6 +53,7 @@
     <file preprocess="xml-stripblanks">icons-sym/mic-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/mouse-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/pci-card-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons-sym/planet-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/pocket-knife-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/resource-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/speedometer-symbolic.svg</file>
@@ -61,6 +65,7 @@
     <file alias="database/GPU_INDEX.md">../database/GPU_INDEX.md</file>
     <file alias="database/JOY_INDEX.md">../database/JOY_INDEX.md</file>
     <file alias="database/MICE_INDEX.md">../database/MICE_INDEX.md</file>
+    <file alias="database/RAM_INDEX.md">../database/RAM_INDEX.md</file>
     <file alias="lang/pt_BR.md">../lang/pt_BR.md</file>
     <file alias="lang/en_US.md">../lang/en_US.md</file>
     <file alias="lang/es_ES.md">../lang/es_ES.md</file>

@@ -1180,7 +1180,7 @@ hw_gpu_brand_resource (const GpuInfo *gpu)
   if (strcmp (gpu->vendor, "AMD") == 0)
     return "/io/github/mayrinck/epinephrine/icons/gpu-amd.svg";
   if (strcmp (gpu->vendor, "NVIDIA") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/gpu-nvidia.svg";
+    return "/io/github/mayrinck/epinephrine/icons/nvidia.png";
   if (strcmp (gpu->vendor, "Intel") == 0)
     {
       if (gpu->device_name &&

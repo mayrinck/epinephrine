@@ -115,15 +115,22 @@ clear_device_list (HardwarePage *page)
   g_free (page->mobo_chipset_model); page->mobo_chipset_model = NULL;
   page->mobo_detected = FALSE;
 
-  g_strfreev (page->ram_dimm_names); page->ram_dimm_names = NULL;
-  page->n_ram_dimms = 0;
+  if (page->ram_sticks)
+    {
+      g_ptr_array_unref (page->ram_sticks);
+      page->ram_sticks = NULL;
+    }
+  page->ram_slots_total = 0;
+  page->ram_slots_used = 0;
+  g_free (page->ram_technology); page->ram_technology = NULL;
+  page->ram_freq_mhz = 0;
   page->ram_total_bytes = 0;
   page->ram_used_bytes = 0;
-  if (page->ram_monitor_timer_id > 0)
-    {
-      g_source_remove (page->ram_monitor_timer_id);
-      page->ram_monitor_timer_id = 0;
-    }
+  page->ram_monitor_history_count = 0;
+  memset (page->ram_monitor_history, 0, sizeof (page->ram_monitor_history));
+  for (int i = 0; i < RAM_MON_METRICS; i++)
+    page->ram_monitor_avail[i] = FALSE;
+  hw_ram_monitor_stop (page);
 
   if (page->monitor_data_timer_id > 0)
     {
@@ -212,11 +219,7 @@ hw_device_list_on_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_d
       g_source_remove (page->monitor_timer_id);
       page->monitor_timer_id = 0;
     }
-  if (page->ram_monitor_timer_id > 0)
-    {
-      g_source_remove (page->ram_monitor_timer_id);
-      page->ram_monitor_timer_id = 0;
-    }
+  hw_ram_monitor_stop (page);
 
   const char *type = page->device_types[idx];
   const char *path = page->device_paths[idx];
@@ -241,7 +244,11 @@ hw_device_list_on_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_d
   else if (g_strcmp0 (type, "cpu") == 0 && page->cpu_page)
     gtk_stack_set_visible_child_name (page->detail_stack, "cpu");
   else if (g_strcmp0 (type, "keyboard") == 0 && page->keyboard_page)
-    gtk_stack_set_visible_child_name (page->detail_stack, "keyboard");
+    {
+      keyboard_page_show_device (page->keyboard_page,
+        page->device_vendor[idx], page->device_product[idx]);
+      gtk_stack_set_visible_child_name (page->detail_stack, "keyboard");
+    }
   else if (g_strcmp0 (type, "mouse") == 0 && page->mouse_page)
     {
       mouse_page_show_device (page->mouse_page,

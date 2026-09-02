@@ -90,6 +90,7 @@ eph_restart_monitors (void)
     return;
 
   hw_monitor_restart (g_epi->hw_page);
+  hw_ram_monitor_restart (g_epi->hw_page);
 
   if (g_epi->hw_page->cpu_page)
     cpu_monitor_restart (g_epi->hw_page->cpu_page);

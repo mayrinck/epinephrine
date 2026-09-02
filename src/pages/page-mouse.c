@@ -41,6 +41,7 @@ free_mouse_index_entry (gpointer data)
     {
       g_free (e->name);
       g_free (e->url);
+      g_free (e->white_label_vendor);
       g_free (e);
     }
 }
@@ -88,11 +89,12 @@ load_mouse_index (MousePage *page)
           continue;
         }
 
-      /* Columns: Name | VID:PID | URL | Buttons */
+      /* Columns: Name | VID:PID | URL | Buttons | White-Label */
       char *name = cols[1] ? g_strstrip (cols[1]) : NULL;
       char *vidpid_str = cols[2] ? g_strstrip (cols[2]) : NULL;
       char *url_str = cols[3] ? g_strstrip (cols[3]) : NULL;
       char *btn_str = cols[4] ? g_strstrip (cols[4]) : NULL;
+      char *wl_str = cols[5] ? g_strstrip (cols[5]) : NULL;
 
       if (!name || !name[0] || !vidpid_str || !vidpid_str[0])
         {
@@ -114,6 +116,8 @@ load_mouse_index (MousePage *page)
       entry->name = g_strdup (name);
       entry->url = url_str && url_str[0] ? g_strdup (url_str) : NULL;
       entry->buttons = btn_str && btn_str[0] ? atoi (btn_str) : 0;
+      entry->white_label = wl_str && wl_str[0] ? TRUE : FALSE;
+      entry->white_label_vendor = (wl_str && wl_str[0]) ? g_strdup (wl_str) : NULL;
 
       g_hash_table_insert (page->mouse_index, g_strdup (key), entry);
 
@@ -130,6 +134,233 @@ lookup_mouse (MousePage *page, uint16_t vendor, uint16_t product)
   char key[16];
   g_snprintf (key, sizeof (key), "%04x:%04x", vendor, product);
   return g_hash_table_lookup (page->mouse_index, key);
+}
+
+/* Public MICE_INDEX.md name lookup (used by hw-devices.c during detection).
+ * Loads the index lazily into a module-level cache. */
+static GHashTable *s_mouse_index_cache = NULL;
+
+const char *
+mouse_index_lookup_name (uint16_t vendor, uint16_t product)
+{
+  if (!s_mouse_index_cache)
+    {
+      s_mouse_index_cache = g_hash_table_new_full (g_str_hash, g_str_equal,
+        g_free, g_free);
+
+      char *content = NULL;
+      GBytes *gbytes = g_resources_lookup_data (
+        "/io/github/mayrinck/epinephrine/database/MICE_INDEX.md", 0, NULL);
+      if (gbytes)
+        {
+          content = g_strndup (g_bytes_get_data (gbytes, NULL),
+            g_bytes_get_size (gbytes));
+          g_bytes_unref (gbytes);
+        }
+      if (!content) return NULL;
+
+      gboolean in_table = FALSE;
+      char **lines = g_strsplit (content, "\n", -1);
+      g_free (content);
+
+      for (int i = 0; lines[i]; i++)
+        {
+          const char *line = lines[i];
+          if (g_str_has_prefix (line, "|---|---"))
+            { in_table = TRUE; continue; }
+          if (!in_table || line[0] != '|') continue;
+
+          char **cols = g_strsplit (line, "|", 0);
+          char *name = cols[1] ? g_strstrip (cols[1]) : NULL;
+          char *vidpid_str = cols[2] ? g_strstrip (cols[2]) : NULL;
+          if (!name || !name[0] || !vidpid_str || !vidpid_str[0])
+            { g_strfreev (cols); continue; }
+
+          unsigned int v = 0, p = 0;
+          if (sscanf (vidpid_str, "%04x:%04x", &v, &p) != 2 || v == 0)
+            { g_strfreev (cols); continue; }
+
+          char key[16];
+          g_snprintf (key, sizeof (key), "%04x:%04x", v, p);
+          g_hash_table_insert (s_mouse_index_cache,
+            g_strdup (key), g_strdup (name));
+          g_strfreev (cols);
+        }
+      g_strfreev (lines);
+    }
+
+  char key[16];
+  g_snprintf (key, sizeof (key), "%04x:%04x", vendor, product);
+  return g_hash_table_lookup (s_mouse_index_cache, key);
+}
+
+/* ─────────────── USB device info query (mirrors keyboard approach) ─────────────── */
+
+static char *
+mouse_read_sysfs (const char *path)
+{
+  char buf[256] = {0};
+  int fd = open (path, O_RDONLY);
+  if (fd < 0) return NULL;
+  ssize_t n = read (fd, buf, sizeof (buf) - 1);
+  close (fd);
+  if (n <= 0) return NULL;
+  buf[n] = '\0';
+  g_strstrip (buf);
+  return buf[0] ? g_strdup (buf) : NULL;
+}
+
+static char *
+mouse_find_usb_parent (const char *start)
+{
+  /* Resolve symlinks first (e.g. /sys/class/input/eventN/device → real HID path) */
+  char *resolved = realpath (start, NULL);
+  char *path = resolved ? resolved : g_strdup (start);
+  while (path && path[0])
+    {
+      char *vendor = g_build_filename (path, "idVendor", NULL);
+      if (g_file_test (vendor, G_FILE_TEST_EXISTS))
+        { g_free (vendor); return path; }
+      g_free (vendor);
+      char *parent = g_path_get_dirname (path);
+      g_free (path);
+      path = parent;
+      if (g_strcmp0 (path, "/sys") == 0 || g_strcmp0 (path, "/") == 0)
+        { g_free (path); return NULL; }
+    }
+  return NULL;
+}
+
+static gboolean
+find_mouse_usb_info (uint16_t vendor, uint16_t product,
+                     char **out_vendor, char **out_speed,
+                     char **out_driver, char **out_chipset)
+{
+  GDir *dir = g_dir_open ("/dev/input/by-id", 0, NULL);
+  if (!dir) return FALSE;
+
+  gboolean found = FALSE;
+  const char *entry;
+  while (!found && (entry = g_dir_read_name (dir)))
+    {
+      if (!g_str_has_suffix (entry, "-event-mouse"))
+        continue;
+
+      char *full = g_build_filename ("/dev/input/by-id", entry, NULL);
+      char target[256] = {0};
+      ssize_t len = readlink (full, target, sizeof (target) - 1);
+      g_free (full);
+      if (len < 0) continue;
+      target[len] = '\0';
+
+      const char *base = target;
+      if (g_str_has_prefix (base, "../")) base += 3;
+      char *sys_path = g_build_filename ("/sys/class/input", base, "device", NULL);
+
+      char *usb_path = mouse_find_usb_parent (sys_path);
+      g_free (sys_path);
+      if (!usb_path) continue;
+
+      /* Check if this device matches the requested VID:PID */
+      char vid_path[256], pid_path[256];
+      g_snprintf (vid_path, sizeof (vid_path), "%s/idVendor", usb_path);
+      g_snprintf (pid_path, sizeof (pid_path), "%s/idProduct", usb_path);
+      char *vid_str = mouse_read_sysfs (vid_path);
+      char *pid_str = mouse_read_sysfs (pid_path);
+      if (!vid_str || !pid_str)
+        { g_free (vid_str); g_free (pid_str); g_free (usb_path); continue; }
+      uint16_t v = (uint16_t) strtoul (vid_str, NULL, 16);
+      uint16_t p = (uint16_t) strtoul (pid_str, NULL, 16);
+      g_free (vid_str); g_free (pid_str);
+
+      if (vendor != 0 && (v != vendor || p != product))
+        { g_free (usb_path); continue; }
+
+      found = TRUE;
+
+      /* Query udevadm for vendor/model names */
+      char *out = NULL;
+      g_spawn_sync (NULL,
+        (char *[]){"udevadm", "info", "-q", "property", usb_path, NULL},
+        NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
+      if (out)
+        {
+          char **lines = g_strsplit (out, "\n", -1);
+          for (int i = 0; lines[i]; i++)
+            {
+              if (g_str_has_prefix (lines[i], "ID_VENDOR_FROM_DATABASE="))
+                {
+                  if (out_vendor) *out_vendor = g_strdup (lines[i] + 24);
+                }
+            }
+          g_strfreev (lines);
+          g_free (out);
+        }
+
+      char *speed_path = g_build_filename (usb_path, "speed", NULL);
+      char *speed_str = mouse_read_sysfs (speed_path);
+      g_free (speed_path);
+      if (speed_str)
+        {
+          double speed_val = atof (speed_str);
+          if (speed_val == 1.5)
+            { g_free (speed_str); speed_str = g_strdup (tr ("1.5 Mb/s (Low Speed)")); }
+          else if (speed_val == 12.0)
+            { g_free (speed_str); speed_str = g_strdup (tr ("12 Mb/s (Full Speed)")); }
+          else if (speed_val >= 480.0 && speed_val < 5000.0)
+            { g_free (speed_str); speed_str = g_strdup_printf (tr ("%.0f Mb/s (High Speed)"), speed_val); }
+          else if (speed_val >= 5000.0)
+            { g_free (speed_str); speed_str = g_strdup_printf (tr ("%.0f Mb/s (Super Speed)"), speed_val); }
+          else
+            { g_free (speed_str); speed_str = g_strdup_printf (tr ("%.1f Mb/s"), speed_val); }
+          if (out_speed) *out_speed = speed_str;
+          else g_free (speed_str);
+        }
+      else if (out_speed) *out_speed = g_strdup ("—");
+
+      GDir *iface_dir = g_dir_open (usb_path, 0, NULL);
+      if (iface_dir)
+        {
+          const char *if_entry;
+          while ((if_entry = g_dir_read_name (iface_dir)) && !*out_driver)
+            {
+              if (strchr (if_entry, ':'))
+                {
+                  char *driver_link = g_build_filename (usb_path, if_entry, "driver", NULL);
+                  char driver_buf[256] = {0};
+                  ssize_t dlen = readlink (driver_link, driver_buf, sizeof (driver_buf) - 1);
+                  if (dlen > 0)
+                    {
+                      driver_buf[dlen] = '\0';
+                      char *drv = strrchr (driver_buf, '/');
+                      if (out_driver) *out_driver = g_strdup (drv ? drv + 1 : driver_buf);
+                    }
+                  g_free (driver_link);
+                }
+            }
+          g_dir_close (iface_dir);
+        }
+      if (!out_driver || !*out_driver)
+        { g_free (*out_driver); *out_driver = g_strdup ("—"); }
+
+      char *chipset_path = g_build_filename (usb_path, "manufacturer", NULL);
+      char *chipset = mouse_read_sysfs (chipset_path);
+      g_free (chipset_path);
+      if (out_chipset) *out_chipset = chipset ? chipset : g_strdup ("—");
+      else g_free (chipset);
+
+      g_free (usb_path);
+    }
+  g_dir_close (dir);
+
+  if (!found)
+    {
+      if (out_vendor) *out_vendor = g_strdup ("—");
+      if (out_speed) *out_speed = g_strdup ("—");
+      if (out_driver) *out_driver = g_strdup ("—");
+      if (out_chipset) *out_chipset = g_strdup ("—");
+    }
+  return found;
 }
 
 /* ─────────────────────── Logitech G300s Protocol ─────────────────────── */
@@ -722,33 +953,38 @@ dump_profile (const uint8_t *data, int idx)
 /* ─────────────── UI Construction ─────────────── */
 
 static GtkWidget *
-create_g300_section (MousePage *page, GtkWidget *parent_box)
+create_g300_section (MousePage *page, GtkWidget *parent_box,
+                     const char *title, const char *subtitle,
+                     GtkWidget **out_wrapper)
 {
-  GtkWidget *section = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
-  gtk_widget_set_margin_top (section, 0);
-  gtk_widget_set_visible (section, page->g300_detected);
-  gtk_box_append (GTK_BOX (parent_box), section);
-  return section;
+  AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+  AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), title);
+  if (subtitle) adw_expander_row_set_subtitle (toggle, subtitle);
+
+  GtkWidget *content = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_margin_top (content, 4);
+  gtk_widget_set_margin_bottom (content, 4);
+  gtk_widget_set_margin_start (content, 12);
+  gtk_widget_set_margin_end (content, 12);
+  adw_expander_row_add_row (toggle, content);
+  adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+  gtk_widget_set_visible (GTK_WIDGET (wrapper), page->g300_detected);
+  gtk_box_append (GTK_BOX (parent_box), GTK_WIDGET (wrapper));
+  if (out_wrapper) *out_wrapper = GTK_WIDGET (wrapper);
+  return content;
 }
 
 static void
 build_g300_ui (MousePage *page, GtkWidget *parent_box)
 {
   /* ── Active Profile ── */
-  GtkWidget *prof_section = create_g300_section (page, parent_box);
-  page->g300_section_revealer[0] = prof_section;
-
-  GtkWidget *prof_title = gtk_label_new (tr ("Profiles (Onboard Memory)"));
-  gtk_widget_add_css_class (prof_title, "heading");
-  gtk_widget_set_halign (prof_title, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (prof_section), prof_title);
-
-  GtkWidget *prof_subtitle = gtk_label_new (
+  GtkWidget *prof_wrapper = NULL;
+  GtkWidget *prof_section = create_g300_section (page, parent_box,
+    tr ("Profiles (Onboard Memory)"),
     tr ("The G300s stores 3 profiles in its onboard memory. "
-    "Select a profile to configure its settings."));
-  gtk_widget_add_css_class (prof_subtitle, "dim-label");
-  gtk_label_set_wrap (GTK_LABEL (prof_subtitle), TRUE);
-  gtk_box_append (GTK_BOX (prof_section), prof_subtitle);
+    "Select a profile to configure its settings."), &prof_wrapper);
+  page->g300_section_revealer[0] = prof_wrapper;
 
   GtkWidget *prof_btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_widget_set_halign (prof_btn_box, GTK_ALIGN_CENTER);
@@ -768,18 +1004,11 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   gtk_box_append (GTK_BOX (prof_section), prof_btn_box);
 
   /* ── DPI Settings ── */
-  GtkWidget *dpi_section = create_g300_section (page, parent_box);
-  page->g300_section_revealer[1] = dpi_section;
-
-  GtkWidget *dpi_title = gtk_label_new (tr ("DPI Settings"));
-  gtk_widget_add_css_class (dpi_title, "heading");
-  gtk_widget_set_halign (dpi_title, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (dpi_section), dpi_title);
-
-  GtkWidget *dpi_sub = gtk_label_new (tr ("Configure up to 4 DPI levels (250–2500, steps of 250)."));
-  gtk_widget_add_css_class (dpi_sub, "dim-label");
-  gtk_label_set_wrap (GTK_LABEL (dpi_sub), TRUE);
-  gtk_box_append (GTK_BOX (dpi_section), dpi_sub);
+  GtkWidget *dpi_wrapper = NULL;
+  GtkWidget *dpi_section = create_g300_section (page, parent_box,
+    tr ("DPI Settings"),
+    tr ("Configure up to 4 DPI levels (250\u20132500, steps of 250)."), &dpi_wrapper);
+  page->g300_section_revealer[1] = dpi_wrapper;
 
   for (int i = 0; i < 4; i++)
     {
@@ -817,13 +1046,10 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
     }
 
   /* ── Polling Rate ── */
-  GtkWidget *rate_section = create_g300_section (page, parent_box);
-  page->g300_section_revealer[2] = rate_section;
-
-  GtkWidget *rate_title = gtk_label_new (tr ("Polling Rate"));
-  gtk_widget_add_css_class (rate_title, "heading");
-  gtk_widget_set_halign (rate_title, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (rate_section), rate_title);
+  GtkWidget *rate_wrapper = NULL;
+  GtkWidget *rate_section = create_g300_section (page, parent_box,
+    tr ("Polling Rate"), NULL, &rate_wrapper);
+  page->g300_section_revealer[2] = rate_wrapper;
 
   GtkWidget *rate_btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_widget_set_halign (rate_btn_box, GTK_ALIGN_CENTER);
@@ -844,13 +1070,10 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   gtk_box_append (GTK_BOX (rate_section), rate_btn_box);
 
   /* ── LED Color ── */
-  GtkWidget *led_section = create_g300_section (page, parent_box);
-  page->g300_section_revealer[3] = led_section;
-
-  GtkWidget *led_title = gtk_label_new (tr ("LED Color"));
-  gtk_widget_add_css_class (led_title, "heading");
-  gtk_widget_set_halign (led_title, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (led_section), led_title);
+  GtkWidget *led_wrapper = NULL;
+  GtkWidget *led_section = create_g300_section (page, parent_box,
+    tr ("LED Color"), NULL, &led_wrapper);
+  page->g300_section_revealer[3] = led_wrapper;
 
   GtkWidget *led_grid = gtk_grid_new ();
   gtk_grid_set_row_spacing (GTK_GRID (led_grid), 4);
@@ -885,20 +1108,12 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   gtk_box_append (GTK_BOX (led_section), led_grid);
 
   /* ── Button Mapping ── */
-  GtkWidget *btn_section = create_g300_section (page, parent_box);
-  page->g300_section_revealer[4] = btn_section;
-
-  GtkWidget *btn_title = gtk_label_new (tr ("Button Mapping"));
-  gtk_widget_add_css_class (btn_title, "heading");
-  gtk_widget_set_halign (btn_title, GTK_ALIGN_START);
-  gtk_box_append (GTK_BOX (btn_section), btn_title);
-
-  GtkWidget *btn_sub = gtk_label_new (
-    tr ("Configure what each button (G1–G9) does. "
-    "Choose a function or assign a keyboard key."));
-  gtk_widget_add_css_class (btn_sub, "dim-label");
-  gtk_label_set_wrap (GTK_LABEL (btn_sub), TRUE);
-  gtk_box_append (GTK_BOX (btn_section), btn_sub);
+  GtkWidget *btn_wrapper = NULL;
+  GtkWidget *btn_section = create_g300_section (page, parent_box,
+    tr ("Button Mapping"),
+    tr ("Configure what each button (G1\u2013G9) does. "
+    "Choose a function or assign a keyboard key."), &btn_wrapper);
+  page->g300_section_revealer[4] = btn_wrapper;
 
   for (int b = 0; b < G300_NUM_BUTTONS; b++)
     {
@@ -1648,22 +1863,6 @@ refresh_mouse_info (MousePage *page)
   gtk_label_set_text (GTK_LABEL (page->dpi_label), "—");
 }
 
-static void
-on_mouse_openrgb_clicked (GtkButton *btn, MousePage *page)
-{
-  (void) btn;
-  (void) page;
-  GError *err = NULL;
-  g_spawn_async (NULL, (char *[]){ "openrgb", NULL },
-    NULL, G_SPAWN_DEFAULT | G_SPAWN_SEARCH_PATH,
-    NULL, NULL, NULL, &err);
-  if (err)
-    {
-      dashboard_show_toast (tr ("OpenRGB not installed. Install it from openrgb.org"));
-      g_error_free (err);
-    }
-}
-
 /* ─────────────── Website button ─────────────── */
 
 static void
@@ -1697,15 +1896,66 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
 
       g_free (page->mouse_url);
       page->mouse_url = e->url ? g_strdup (e->url) : NULL;
-      gtk_widget_set_visible (page->mouse_website_btn, page->mouse_url != NULL);
+      gtk_widget_set_sensitive (page->mouse_website_btn, page->mouse_url != NULL);
     }
   else
     {
       char fallback[64];
       g_snprintf (fallback, sizeof (fallback), tr ("Mouse (%04x:%04x)"), vendor, product);
       gtk_label_set_text (GTK_LABEL (page->mouse_name_label), fallback);
-      gtk_widget_set_visible (page->mouse_website_btn, FALSE);
+      page->mouse_url = NULL;
+      gtk_widget_set_sensitive (page->mouse_website_btn, FALSE);
     }
+
+  /* Populate device info section */
+  page->cur_vendor = vendor;
+  page->cur_product = product;
+
+  char devid[16];
+  g_snprintf (devid, sizeof (devid), "%04x:%04x", vendor, product);
+  gtk_label_set_text (GTK_LABEL (page->dev_devid_value), devid);
+
+  /* Buttons count from MICE_INDEX */
+  if (e && e->buttons > 0)
+    {
+      char btn_str[16];
+      g_snprintf (btn_str, sizeof (btn_str), "%d", e->buttons);
+      gtk_label_set_text (GTK_LABEL (page->dev_buttons_value), btn_str);
+    }
+  else
+    gtk_label_set_text (GTK_LABEL (page->dev_buttons_value), "\u2014");
+
+  /* Vendor from USB/udevadm */
+  char *usb_vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
+  find_mouse_usb_info (vendor, product, &usb_vendor, &speed, &driver, &chipset);
+  gtk_label_set_text (GTK_LABEL (page->dev_vendor_value),
+    usb_vendor && usb_vendor[0] ? usb_vendor : "\u2014");
+  gtk_label_set_text (GTK_LABEL (page->mouse_vendor_label),
+    usb_vendor && usb_vendor[0] ? usb_vendor : "");
+  g_free (usb_vendor); g_free (speed); g_free (driver); g_free (chipset);
+
+  /* White-Label Product info from MICE_INDEX */
+  if (e && e->white_label && e->white_label_vendor && e->white_label_vendor[0])
+    {
+      gtk_widget_set_visible (page->dev_white_label_row, TRUE);
+      gtk_label_set_text (GTK_LABEL (page->dev_white_label_value), e->white_label_vendor);
+    }
+  else
+    {
+      gtk_widget_set_visible (page->dev_white_label_row, FALSE);
+      gtk_label_set_text (GTK_LABEL (page->dev_white_label_value), "");
+    }
+
+  /* Refresh DPI and other info for the new mouse */
+  refresh_mouse_info (page);
+
+  /* Show/hide G300 sections based on whether this mouse is G300s */
+  gboolean is_g300 = (vendor == G300_VID && product == G300_PID);
+  for (int i = 0; i < 5; i++)
+    if (page->g300_section_revealer[i])
+      gtk_widget_set_visible (page->g300_section_revealer[i], is_g300);
+  if (page->save_mouse_btn)
+    gtk_widget_set_visible (page->save_mouse_btn, is_g300);
 }
 
 /* ─────────────── Cleanup ─────────────── */
@@ -1748,31 +1998,70 @@ mouse_page_new (void)
   page->speed_scale = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-speed-scale"));
   page->accel_dropdown = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-accel-dropdown"));
   page->natural_scroll_switch = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-natural-scroll-row"));
-  page->dpi_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-dpi-label"));
   page->save_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-save-btn"));
   page->save_mouse_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-save-g300-btn"));
 
   /* Branding header */
-  page->mouse_name_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-branding-name"));
+  page->mouse_name_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_name_label"));
+  page->mouse_vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_vendor_label"));
   page->mouse_website_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-website-btn"));
+  gtk_widget_set_sensitive (page->mouse_website_btn, FALSE);
   g_signal_connect (page->mouse_website_btn, "clicked",
     G_CALLBACK (on_mouse_website_clicked), page);
 
-  /* Lighting Controls */
-  page->lighting_status = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-lighting-status"));
-  gtk_label_set_text (GTK_LABEL (page->lighting_status),
-    tr ("The app couldn't find any light source to manage."));
+  /* Device Information — build rows programmatically (same pattern as mobo/GPU) */
+  {
+    AdwExpanderRow *dev_section = ADW_EXPANDER_ROW (
+      gtk_builder_get_object (builder, "mouse-device-section"));
 
-  GtkWidget *mouse_lighting_header = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-lighting-header"));
-  if (g_find_program_in_path ("openrgb"))
-    {
-      GtkWidget *openrgb_btn = gtk_button_new_with_label (
-        tr ("Edit on OpenRGB"));
-      gtk_widget_add_css_class (openrgb_btn, "accent");
-      gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-      gtk_box_append (GTK_BOX (mouse_lighting_header), openrgb_btn);
-      g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (on_mouse_openrgb_clicked), page);
-    }
+    /* Vendor */
+    page->dev_vendor_value = gtk_label_new ("\u2014");
+    gtk_widget_set_halign (page->dev_vendor_value, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->dev_vendor_value, TRUE);
+    AdwActionRow *vendor_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (vendor_row), tr ("Vendor"));
+    adw_action_row_add_suffix (vendor_row, page->dev_vendor_value);
+    adw_expander_row_add_row (dev_section, GTK_WIDGET (vendor_row));
+
+    /* Device ID */
+    page->dev_devid_value = gtk_label_new ("\u2014");
+    gtk_widget_set_halign (page->dev_devid_value, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->dev_devid_value, TRUE);
+    AdwActionRow *devid_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (devid_row), tr ("Device ID"));
+    adw_action_row_add_suffix (devid_row, page->dev_devid_value);
+    adw_expander_row_add_row (dev_section, GTK_WIDGET (devid_row));
+
+    /* Buttons */
+    page->dev_buttons_value = gtk_label_new ("\u2014");
+    gtk_widget_set_halign (page->dev_buttons_value, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->dev_buttons_value, TRUE);
+    AdwActionRow *buttons_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (buttons_row), tr ("Buttons"));
+    adw_action_row_add_suffix (buttons_row, page->dev_buttons_value);
+    adw_expander_row_add_row (dev_section, GTK_WIDGET (buttons_row));
+
+    /* DPI (initially hidden) */
+    page->dpi_label = gtk_label_new ("\u2014");
+    gtk_widget_set_halign (page->dpi_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->dpi_label, TRUE);
+    AdwActionRow *dpi_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (dpi_row), tr ("Resolution (DPI)"));
+    adw_action_row_add_suffix (dpi_row, page->dpi_label);
+    adw_expander_row_add_row (dev_section, GTK_WIDGET (dpi_row));
+
+    /* White-Label Product (hidden by default) */
+    page->dev_white_label_value = gtk_label_new ("");
+    gtk_widget_set_halign (page->dev_white_label_value, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->dev_white_label_value, TRUE);
+    page->dev_white_label_row = GTK_WIDGET (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (page->dev_white_label_row),
+      tr ("White-Label Product"));
+    adw_action_row_add_suffix (ADW_ACTION_ROW (page->dev_white_label_row),
+      page->dev_white_label_value);
+    adw_expander_row_add_row (dev_section, page->dev_white_label_row);
+    gtk_widget_set_visible (page->dev_white_label_row, FALSE);
+  }
 
   /* ── G300s Detection ── */
   page->hidraw_fd = find_g300_hidraw ();
@@ -1801,19 +2090,21 @@ mouse_page_new (void)
         }
     }
 
-  /* ── Build G300-specific UI sections ── */
-  GtkWidget *scroll_box = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-scroll-box"));
+  /* ── Build G300-specific UI sections into g300-container ── */
+  GtkWidget *g300_container = GTK_WIDGET (gtk_builder_get_object (builder, "g300-container"));
+  if (g300_container)
+    build_g300_ui (page, g300_container);
 
-  /* Find position after Device Info section to insert G300 sections */
-  GtkWidget *dev_section = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-device-section"));
-  if (dev_section)
-    {
-      gtk_box_remove (GTK_BOX (scroll_box), dev_section);
-      build_g300_ui (page, scroll_box);
-      gtk_box_prepend (GTK_BOX (scroll_box), dev_section);
-    }
-  else
-    build_g300_ui (page, scroll_box);
+  /* ── Populate device info from first detected mouse ── */
+  {
+    char *usb_vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
+    find_mouse_usb_info (0, 0, &usb_vendor, &speed, &driver, &chipset);
+    gtk_label_set_text (GTK_LABEL (page->dev_vendor_value),
+      usb_vendor && usb_vendor[0] ? usb_vendor : "\u2014");
+    gtk_label_set_text (GTK_LABEL (page->dev_devid_value), "\u2014");
+    gtk_label_set_text (GTK_LABEL (page->dev_buttons_value), "\u2014");
+    g_free (usb_vendor); g_free (speed); g_free (driver); g_free (chipset);
+  }
 
   /* If G300s detected, populate widgets */
   if (page->g300_detected)

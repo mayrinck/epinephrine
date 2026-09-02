@@ -13,11 +13,53 @@
 
 /* ---- Page Creation ---- */
 
+static gboolean
+initial_hardware_scan_done (gpointer user_data)
+{
+  HardwarePage *page = user_data;
+
+  /* Detect devices */
+  hw_devices_detect (page);
+
+  /* Load controller index from JOY_INDEX.md */
+  hw_controller_load_index (page);
+
+  /* Initialize USB ID database: system file + async internet refresh */
+  page->usb_ids = usb_ids_new ();
+  usb_ids_load (page->usb_ids);
+  usb_ids_refresh_async (page->usb_ids);
+
+  /* Populate GPU specs from GPU_INDEX.md */
+  hw_gpu_populate_specs (page);
+
+  /* Populate list */
+  hw_device_list_populate (page);
+
+  /* Pre-select first device */
+  GtkListBoxRow *first = gtk_list_box_get_row_at_index (
+    GTK_LIST_BOX (page->device_list), 0);
+  if (first)
+    gtk_list_box_select_row (GTK_LIST_BOX (page->device_list), first);
+
+  /* Load saved GPU config after signals are connected */
+  hw_gpu_detail_load_config (page);
+
+  /* Connect GPU management signals */
+  if (page->gpu)
+    hw_gpu_detail_connect_signals (page);
+
+  /* NVIDIA signal connections (outside gpu check, widgets always exist) */
+  hw_gpu_detail_connect_nvidia_signals (page);
+
+  return G_SOURCE_REMOVE;
+}
+
 HardwarePage *
 hardware_page_new (void)
 {
   HardwarePage *page = g_new0 (HardwarePage, 1);
   page->controller_fd = -1;
+  page->ram_stick_rows = g_ptr_array_new ();
 
   page->box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 
@@ -127,44 +169,16 @@ hardware_page_new (void)
   gtk_box_append (GTK_BOX (right_panel), GTK_WIDGET (page->detail_stack));
   gtk_box_append (GTK_BOX (page->box), right_panel);
 
-  /* Detect devices */
-  hw_devices_detect (page);
-
-  /* Load controller index from JOY_INDEX.md */
-  hw_controller_load_index (page);
-
-  /* Initialize USB ID database: system file + async internet refresh */
-  page->usb_ids = usb_ids_new ();
-  usb_ids_load (page->usb_ids);
-  usb_ids_refresh_async (page->usb_ids);
-
-  /* Populate GPU specs from GPU_INDEX.md */
-  hw_gpu_populate_specs (page);
-
-  /* Populate list */
-  hw_device_list_populate (page);
-
-  /* Connect signals */
+  /* Connect signals early so the UI is interactive during scan */
   g_signal_connect (page->reload_btn, "clicked",
     G_CALLBACK (hw_device_list_on_reload), page);
   g_signal_connect (page->device_list, "row-selected",
     G_CALLBACK (hw_device_list_on_selected), page);
 
-  /* Load saved GPU config after signals are connected */
-  hw_gpu_detail_load_config (page);
-
-  /* Pre-select first device */
-  GtkListBoxRow *first = gtk_list_box_get_row_at_index (
-    GTK_LIST_BOX (page->device_list), 0);
-  if (first)
-    gtk_list_box_select_row (GTK_LIST_BOX (page->device_list), first);
-
-  /* Connect GPU management signals */
-  if (page->gpu)
-    hw_gpu_detail_connect_signals (page);
-
-  /* NVIDIA signal connections (outside gpu check, widgets always exist) */
-  hw_gpu_detail_connect_nvidia_signals (page);
+  /* Defer the hardware scan so the UI is fully realized first.
+     A 1-second delay ensures display adapters and input devices
+     are ready; matching the reload flow pattern. */
+  g_timeout_add (1000, initial_hardware_scan_done, page);
 
   return page;
 }

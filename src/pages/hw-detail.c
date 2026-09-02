@@ -7,14 +7,26 @@
 #include "../epi-i18n.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "page-dashboard.h"
+
 #define tr(x) epi_i18n_get (x)
+
+#define SYSCTL_CONF_PATH "/etc/sysctl.conf"
+
+/* vm.vfs_cache_pressure presets offered to the user (Preserve/Default/Free RAM) */
+static const int cache_presets[] = { 50, 100, 200 };
 
 /* ---- Motherboard Management helpers ---- */
 
 static void on_smbus_toggled (GtkSwitch *sw, GParamSpec *pspec, gpointer user_data);
+static void on_stick_website_clicked (GtkButton *btn, gpointer user_data);
+static void ram_stick_url_destroy (gpointer data, GClosure *closure);
+static void on_mobo_website_clicked (GtkButton *btn, gpointer user_data);
+static void on_ram_website_clicked (GtkButton *btn, gpointer user_data);
 
 static char *
 read_file (const char *path)
@@ -270,27 +282,6 @@ on_smbus_toggled (GtkSwitch *sw, GParamSpec *pspec, gpointer user_data)
 }
 
 void
-hw_detail_update_lighting_section (GtkLabel *label)
-{
-  /* Detect ASUS Aura USB Motherboard controller (VID 0B05, PID 18F3) */
-  char *result = NULL;
-  g_spawn_sync (NULL,
-    (char *[]){ "/bin/sh", "-c", "lsusb -d 0b05:18f3 2>/dev/null | head -1", NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, &result, NULL, NULL, NULL);
-  if (result) { g_strstrip (result); if (result[0] == '\0') { g_free (result); result = NULL; } }
-  gboolean has_usb_aura = (result != NULL);
-  g_free (result);
-
-  if (has_usb_aura)
-    gtk_label_set_text (label,
-      tr ("ASUS Aura controller detected."));
-  else
-    gtk_label_set_text (label,
-      tr (
-        "The app couldn't find any light source to manage."));
-}
-
-void
 hw_detail_build_motherboard (HardwarePage *page)
 {
   page->mobo_detail_box = gtk_scrolled_window_new ();
@@ -328,8 +319,19 @@ hw_detail_build_motherboard (HardwarePage *page)
   gtk_box_append (GTK_BOX (branding_text), page->mobo_name_label);
   gtk_box_append (GTK_BOX (branding_text), page->mobo_bios_label);
 
+  /* Product website button — standard branding position. No board URL
+     database exists yet, so it stays disabled until one is registered. */
+  page->mobo_website_btn = gtk_button_new_with_label (tr ("Product Website"));
+  gtk_widget_set_valign (page->mobo_website_btn, GTK_ALIGN_CENTER);
+  gtk_widget_add_css_class (page->mobo_website_btn, "flat");
+  gtk_widget_add_css_class (page->mobo_website_btn, "accent");
+  gtk_widget_set_sensitive (page->mobo_website_btn, FALSE);
+  g_signal_connect (page->mobo_website_btn, "clicked",
+    G_CALLBACK (on_mobo_website_clicked), page);
+
   gtk_box_append (GTK_BOX (branding_box), brand_icon);
   gtk_box_append (GTK_BOX (branding_box), branding_text);
+  gtk_box_append (GTK_BOX (branding_box), page->mobo_website_btn);
   gtk_box_append (GTK_BOX (content), branding_box);
 
   /* ======= General Information ======= */
@@ -473,36 +475,247 @@ hw_detail_build_motherboard (HardwarePage *page)
     gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
   }
 
-  /* ====== Lighting Controls ====== */
-  {
-    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
-    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
-
-    if (g_find_program_in_path ("openrgb"))
-      {
-        GtkWidget *openrgb_btn = gtk_button_new_with_label (
-          tr ("Edit on OpenRGB"));
-        gtk_widget_add_css_class (openrgb_btn, "accent");
-        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-        adw_expander_row_add_row (toggle, openrgb_btn);
-      }
-
-    page->mobo_lighting_status = gtk_label_new ("");
-    gtk_widget_set_halign (page->mobo_lighting_status, GTK_ALIGN_START);
-    gtk_widget_set_hexpand (page->mobo_lighting_status, TRUE);
-    gtk_label_set_wrap (GTK_LABEL (page->mobo_lighting_status), TRUE);
-    gtk_label_set_max_width_chars (GTK_LABEL (page->mobo_lighting_status), 60);
-    adw_expander_row_add_row (toggle, page->mobo_lighting_status);
-
-    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
-    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
-  }
-
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (page->mobo_detail_box), content);
   gtk_stack_add_named (page->detail_stack, page->mobo_detail_box, "motherboard");
+}
+
+/* ====== Memory / Swap (vm sysctl) management ====== */
+
+static void on_ram_swappiness_changed (GObject *widget, GParamSpec *pspec,
+                                       gpointer user_data);
+static void on_ram_cache_changed (AdwComboRow *row, GParamSpec *pspec,
+                                  gpointer user_data);
+
+/* Returns the value declared for `key` in /etc/sysctl.conf, or -1 if absent. */
+static int
+sysctl_conf_get (const char *key)
+{
+  char *contents = NULL;
+  if (!g_file_get_contents (SYSCTL_CONF_PATH, &contents, NULL, NULL))
+    return -1;
+
+  int found = -1;
+  char **lines = g_strsplit (contents, "\n", -1);
+  for (int i = 0; lines[i] && found < 0; i++)
+    {
+      char *line = g_strstrip (lines[i]);
+      if (line[0] == '#' || line[0] == '\0')
+        continue;
+
+      char *key_str = NULL, *val_str = NULL;
+      char *eq = strchr (line, '=');
+      if (eq)
+        {
+          *eq = '\0';
+          key_str = g_strstrip (line);
+          val_str = g_strstrip (eq + 1);
+        }
+      else
+        {
+          /* Also accept "key\tvalue" (whitespace separated) */
+          char *sp = line;
+          while (*sp && *sp != ' ' && *sp != '\t')
+            sp++;
+          if (*sp)
+            {
+              *sp = '\0';
+              key_str = g_strstrip (line);
+              val_str = g_strstrip (sp + 1);
+            }
+        }
+
+      if (key_str && val_str && key_str[0] && val_str[0]
+          && g_strcmp0 (key_str, key) == 0)
+        found = atoi (val_str);
+    }
+
+  g_strfreev (lines);
+  g_free (contents);
+  return found;
+}
+
+/* Returns the live kernel value for `key` (e.g. "vm.swappiness") from procfs. */
+static int
+sysctl_live_get (const char *key)
+{
+  char *path = g_strdup (key);
+  for (char *p = path; *p; p++)
+    if (*p == '.') *p = '/';
+  char *full = g_strdup_printf ("/proc/sys/%s", path);
+  g_free (path);
+
+  char *content = NULL;
+  if (!g_file_get_contents (full, &content, NULL, NULL))
+    {
+      g_free (full);
+      return -1;
+    }
+  g_free (full);
+
+  g_strstrip (content);
+  int val = atoi (content);
+  g_free (content);
+  return val;
+}
+
+/* True if a stripped sysctl line belongs to `key` (key followed by '=' or
+ * whitespace or end of line). */
+static gboolean
+sysctl_line_is_key (const char *line, const char *key)
+{
+  size_t n = strlen (key);
+  if (strncmp (line, key, n) != 0)
+    return FALSE;
+  char c = line[n];
+  return (c == '\0' || c == '=' || c == ' ' || c == '\t');
+}
+
+static void
+ram_save_sysctl_values (HardwarePage *page)
+{
+  int swappiness = (int) adw_spin_row_get_value (
+    ADW_SPIN_ROW (page->ram_swap_spin));
+  int cache_idx = (int) adw_combo_row_get_selected (
+    ADW_COMBO_ROW (page->ram_cache_combo));
+  if (cache_idx < 0 || cache_idx > 2)
+    cache_idx = 1;
+  int cache_pressure = cache_presets[cache_idx];
+
+  /* Rebuild /etc/sysctl.conf, replacing our two keys in place. */
+  char *orig = NULL;
+  GString *out = g_string_new (NULL);
+  g_file_get_contents (SYSCTL_CONF_PATH, &orig, NULL, NULL);
+  gboolean wrote_swap = FALSE, wrote_cache = FALSE;
+
+  if (orig)
+    {
+      char **lines = g_strsplit (orig, "\n", -1);
+      for (int i = 0; lines[i]; i++)
+        {
+          char *stripped = g_strstrip (lines[i]);
+          if (sysctl_line_is_key (stripped, "vm.swappiness"))
+            {
+              g_string_append_printf (out, "vm.swappiness = %d\n", swappiness);
+              wrote_swap = TRUE;
+            }
+          else if (sysctl_line_is_key (stripped, "vm.vfs_cache_pressure"))
+            {
+              g_string_append_printf (out, "vm.vfs_cache_pressure = %d\n",
+                cache_pressure);
+              wrote_cache = TRUE;
+            }
+          else
+            g_string_append_printf (out, "%s\n", lines[i]);
+        }
+      g_strfreev (lines);
+      g_free (orig);
+    }
+
+  if (!wrote_swap)
+    g_string_append_printf (out, "vm.swappiness = %d\n", swappiness);
+  if (!wrote_cache)
+    g_string_append_printf (out, "vm.vfs_cache_pressure = %d\n", cache_pressure);
+
+  /* Write through the admin session */
+  char tmp[] = "/tmp/epi-sysctl-XXXXXX";
+  int fd = g_mkstemp (tmp);
+  gboolean ok = FALSE;
+  if (fd >= 0)
+    {
+      FILE *f = fdopen (fd, "w");
+      if (f)
+        {
+          fputs (out->str, f);
+          fclose (f);
+        }
+      else
+        close (fd);
+    }
+
+  int exit_code = -1;
+  GError *err = NULL;
+  if (fd >= 0)
+    {
+      char *install_cmd = g_strdup_printf (
+        "install -m 0644 '%s' %s", tmp, SYSCTL_CONF_PATH);
+      ok = epi_privilege_exec_sync (install_cmd, &exit_code, NULL, &err)
+           && exit_code == 0;
+      g_free (install_cmd);
+      unlink (tmp);
+      g_clear_error (&err);
+
+      if (ok)
+        {
+          char *apply_cmd = g_strdup_printf (
+            "sysctl -w vm.swappiness=%d vm.vfs_cache_pressure=%d",
+            swappiness, cache_pressure);
+          int ec2 = -1;
+          GError *err2 = NULL;
+          if (!epi_privilege_exec_sync (apply_cmd, &ec2, NULL, &err2) || ec2 != 0)
+            ok = FALSE;
+          g_clear_error (&err2);
+          g_free (apply_cmd);
+        }
+    }
+
+  g_string_free (out, TRUE);
+
+  if (ok)
+    {
+      page->ram_swap_saved = swappiness;
+      page->ram_cache_saved = cache_pressure;
+    }
+  else
+    {
+      char buf[256];
+      g_snprintf (buf, sizeof (buf), "%s: %s",
+        tr ("Error"), err && err->message ? err->message : "?");
+      dashboard_show_toast (buf);
+      g_clear_error (&err);
+
+      /* Revert widgets to the last persisted state */
+      g_signal_handlers_block_by_func (page->ram_swap_spin,
+        on_ram_swappiness_changed, page);
+      g_signal_handlers_block_by_func (page->ram_cache_combo,
+        on_ram_cache_changed, page);
+      adw_spin_row_set_value (ADW_SPIN_ROW (page->ram_swap_spin),
+        page->ram_swap_saved);
+      adw_combo_row_set_selected (ADW_COMBO_ROW (page->ram_cache_combo),
+        page->ram_cache_saved);
+      g_signal_handlers_unblock_by_func (page->ram_swap_spin,
+        on_ram_swappiness_changed, page);
+      g_signal_handlers_unblock_by_func (page->ram_cache_combo,
+        on_ram_cache_changed, page);
+    }
+}
+
+static void
+on_ram_swappiness_changed (GObject *widget, GParamSpec *pspec,
+                           gpointer user_data)
+{
+  (void) pspec;
+  HardwarePage *page = user_data;
+  if (epi_i18n_in_apply ())
+    return;
+  int val = (int) adw_spin_row_get_value (ADW_SPIN_ROW (widget));
+  if (val == page->ram_swap_saved)
+    return;
+  ram_save_sysctl_values (page);
+}
+
+static void
+on_ram_cache_changed (AdwComboRow *row, GParamSpec *pspec, gpointer user_data)
+{
+  (void) pspec;
+  HardwarePage *page = user_data;
+  if (epi_i18n_in_apply ())
+    return;
+  int idx = (int) adw_combo_row_get_selected (row);
+  if (idx < 0 || idx > 2)
+    idx = 1;
+  if (cache_presets[idx] == page->ram_cache_saved)
+    return;
+  ram_save_sysctl_values (page);
 }
 
 void
@@ -538,16 +751,164 @@ hw_detail_build_rams (HardwarePage *page)
   gtk_widget_set_hexpand (branding_text, TRUE);
   gtk_box_append (GTK_BOX (branding_text), page->ram_name_label);
 
+  /* Product website button — standard branding position; enabled when a
+     registered manufacturer URL is found for an installed module. */
+  page->ram_website_btn = gtk_button_new_with_label (tr ("Product Website"));
+  gtk_widget_set_valign (page->ram_website_btn, GTK_ALIGN_CENTER);
+  gtk_widget_add_css_class (page->ram_website_btn, "flat");
+  gtk_widget_add_css_class (page->ram_website_btn, "accent");
+  gtk_widget_set_sensitive (page->ram_website_btn, FALSE);
+  g_signal_connect (page->ram_website_btn, "clicked",
+    G_CALLBACK (on_ram_website_clicked), page);
+
   gtk_box_append (GTK_BOX (branding_box), brand_icon);
   gtk_box_append (GTK_BOX (branding_box), branding_text);
+  gtk_box_append (GTK_BOX (branding_box), page->ram_website_btn);
   gtk_box_append (GTK_BOX (content), branding_box);
 
-  /* ====== Memory Usage Group ====== */
+  /* ====== Monitor Group (right after branding) ====== */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    adw_preferences_group_set_title (wrapper, tr ("Monitor"));
+
+    GtkWidget *panel = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+    gtk_widget_set_margin_start (panel, 8);
+    gtk_widget_set_margin_bottom (panel, 8);
+
+    page->ram_graph = gtk_drawing_area_new ();
+    gtk_widget_set_hexpand (page->ram_graph, TRUE);
+    gtk_widget_set_size_request (page->ram_graph, -1, 160);
+    gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (page->ram_graph),
+      hw_ram_monitor_graph_draw, page, NULL);
+    gtk_box_append (GTK_BOX (panel), page->ram_graph);
+
+    /* Legend rows (dot + name + live value) */
+    static const char *ram_legend_names[RAM_MON_METRICS] = {
+      "RAM Usage", "Swap Usage"
+    };
+    for (int i = 0; i < RAM_MON_METRICS; i++)
+      {
+        GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
+        gtk_widget_set_margin_top (row, 1);
+        gtk_widget_set_margin_bottom (row, 1);
+
+        GtkWidget *dot = gtk_drawing_area_new ();
+        gtk_widget_set_size_request (dot, 8, 8);
+        gtk_widget_set_valign (dot, GTK_ALIGN_CENTER);
+        /* Metric colors: 1 = green (RAM usage), 5 = yellow (swap usage) */
+        gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (dot),
+          hw_monitor_metric_dot_draw, GINT_TO_POINTER (i == 0 ? 1 : 5), NULL);
+
+        GtkWidget *lbl = gtk_label_new (tr (ram_legend_names[i]));
+        gtk_widget_set_halign (lbl, GTK_ALIGN_START);
+        gtk_widget_set_hexpand (lbl, TRUE);
+        gtk_widget_add_css_class (lbl, "dim-label");
+
+        GtkWidget *val = gtk_label_new ("—");
+        gtk_widget_set_halign (val, GTK_ALIGN_END);
+
+        gtk_box_append (GTK_BOX (row), dot);
+        gtk_box_append (GTK_BOX (row), lbl);
+        gtk_box_append (GTK_BOX (row), val);
+        gtk_box_append (GTK_BOX (panel), row);
+
+        page->ram_monitor_labels[i] = lbl;
+        page->ram_monitor_values[i] = val;
+        page->ram_monitor_avail[i] = FALSE;
+      }
+
+    adw_preferences_group_add (wrapper, GTK_WIDGET (panel));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
+
+  /* ====== Memory / Swap Management ====== */
   {
     AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
     AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Memory Usage"));
-    adw_expander_row_set_subtitle (toggle, tr ("RAM utilization"));
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle),
+      tr ("Memory/Swap Management"));
+    adw_expander_row_set_subtitle (toggle,
+      tr ("Swap and kernel memory-pressure tuning"));
+
+    /* Swappiness value (0-200, auto-saved) */
+    GtkAdjustment *sw_adj = gtk_adjustment_new (60, 0, 200, 1, 10, 0);
+    page->ram_swap_spin = adw_spin_row_new (sw_adj, 0.25, 0);
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (page->ram_swap_spin),
+      "Swappiness");
+    adw_action_row_set_subtitle (ADW_ACTION_ROW (page->ram_swap_spin),
+      "Defines the kernel's balance choice between ways of freeing RAM. The lower the value, the less Swap is favored.");
+    adw_spin_row_set_numeric (ADW_SPIN_ROW (page->ram_swap_spin), TRUE);
+    gtk_widget_set_tooltip_text (GTK_WIDGET (page->ram_swap_spin),
+      "vm.swappiness");
+    adw_expander_row_add_row (toggle, GTK_WIDGET (page->ram_swap_spin));
+
+    /* Cache pressure preset (Conservar=50, Padrão=100, Liberar RAM=200) */
+    static const char *cache_options[] = {
+      "Preserve", "Default", "Free RAM", NULL
+    };
+    GtkStringList *cache_model = gtk_string_list_new (cache_options);
+
+    page->ram_cache_combo = GTK_WIDGET (adw_combo_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (page->ram_cache_combo),
+      "Cache Pressure");
+    adw_action_row_set_subtitle (ADW_ACTION_ROW (page->ram_cache_combo),
+      "Defines the pressure (priority) that the memory management system applies when trying to deallocate the VFS cache (dentries/inodes) relative to file page cache and application anonymous memory.");
+    gtk_widget_set_tooltip_text (GTK_WIDGET (page->ram_cache_combo),
+      "vm.vfs_cache_pressure");
+    adw_combo_row_set_model (ADW_COMBO_ROW (page->ram_cache_combo),
+      G_LIST_MODEL (cache_model));
+    g_object_unref (cache_model);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (page->ram_cache_combo));
+
+    /* Load effective values: /etc/sysctl.conf first, kernel default fallback */
+    int swap_effective = sysctl_conf_get ("vm.swappiness");
+    if (swap_effective < 0)
+      swap_effective = sysctl_live_get ("vm.swappiness");
+    page->ram_swap_saved = (swap_effective < 0) ? 60 : swap_effective;
+
+    int cache_effective = sysctl_conf_get ("vm.vfs_cache_pressure");
+    if (cache_effective < 0)
+      cache_effective = sysctl_live_get ("vm.vfs_cache_pressure");
+    page->ram_cache_saved = (cache_effective < 0) ? 100 : cache_effective;
+
+    int cache_idx = 1; /* Default */
+    if (cache_effective < 0)
+      cache_idx = 1;
+    else if (cache_effective <= 75)
+      cache_idx = 0;
+    else if (cache_effective > 150)
+      cache_idx = 2;
+
+    g_signal_handlers_block_by_func (page->ram_swap_spin,
+      on_ram_swappiness_changed, page);
+    adw_spin_row_set_value (ADW_SPIN_ROW (page->ram_swap_spin),
+      page->ram_swap_saved);
+    g_signal_handlers_unblock_by_func (page->ram_swap_spin,
+      on_ram_swappiness_changed, page);
+
+    g_signal_handlers_block_by_func (page->ram_cache_combo,
+      on_ram_cache_changed, page);
+    adw_combo_row_set_selected (ADW_COMBO_ROW (page->ram_cache_combo), cache_idx);
+    g_signal_handlers_unblock_by_func (page->ram_cache_combo,
+      on_ram_cache_changed, page);
+
+    g_signal_connect (page->ram_swap_spin, "notify::value",
+      G_CALLBACK (on_ram_swappiness_changed), page);
+    g_signal_connect (page->ram_cache_combo, "notify::selected",
+      G_CALLBACK (on_ram_cache_changed), page);
+
+    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+  }
+
+  /* ====== Memory Information Group ====== */
+  {
+    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle),
+      tr ("Memory Information"));
+    adw_expander_row_set_subtitle (toggle,
+      tr ("Technical data of the RAM memory"));
 
     page->ram_total_label = gtk_label_new ("—");
     gtk_widget_set_halign (page->ram_total_label, GTK_ALIGN_END);
@@ -557,13 +918,13 @@ hw_detail_build_rams (HardwarePage *page)
     adw_action_row_add_suffix (total_row, page->ram_total_label);
     adw_expander_row_add_row (toggle, GTK_WIDGET (total_row));
 
-    page->ram_used_label = gtk_label_new ("—");
-    gtk_widget_set_halign (page->ram_used_label, GTK_ALIGN_END);
-    gtk_widget_set_hexpand (page->ram_used_label, TRUE);
-    AdwActionRow *used_row = ADW_ACTION_ROW (adw_action_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (used_row), tr ("Usage"));
-    adw_action_row_add_suffix (used_row, page->ram_used_label);
-    adw_expander_row_add_row (toggle, GTK_WIDGET (used_row));
+    page->ram_slots_label = gtk_label_new ("—");
+    gtk_widget_set_halign (page->ram_slots_label, GTK_ALIGN_END);
+    gtk_widget_set_hexpand (page->ram_slots_label, TRUE);
+    AdwActionRow *slots_row = ADW_ACTION_ROW (adw_action_row_new ());
+    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (slots_row), tr ("Memory Slots"));
+    adw_action_row_add_suffix (slots_row, page->ram_slots_label);
+    adw_expander_row_add_row (toggle, GTK_WIDGET (slots_row));
 
     page->ram_tech_label = gtk_label_new ("—");
     gtk_widget_set_halign (page->ram_tech_label, GTK_ALIGN_END);
@@ -580,37 +941,19 @@ hw_detail_build_rams (HardwarePage *page)
     adw_preferences_row_set_title (ADW_PREFERENCES_ROW (freq_row), tr ("RAM Frequency"));
     adw_action_row_add_suffix (freq_row, page->ram_freq_label);
     adw_expander_row_add_row (toggle, GTK_WIDGET (freq_row));
-
-    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
+adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
     gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
   }
 
-  /* ====== Lighting Controls Group ====== */
+  /* ====== Memory Stick Information Group (below Memory Information) ====== */
   {
-    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
-    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
-
-    if (g_find_program_in_path ("openrgb"))
-      {
-        GtkWidget *openrgb_btn = gtk_button_new_with_label (
-          tr ("Edit on OpenRGB"));
-        gtk_widget_add_css_class (openrgb_btn, "accent");
-        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-        adw_expander_row_add_row (toggle, openrgb_btn);
-      }
-
-    page->ram_lighting_status = gtk_label_new ("");
-    gtk_widget_set_halign (page->ram_lighting_status, GTK_ALIGN_START);
-    gtk_widget_set_hexpand (page->ram_lighting_status, TRUE);
-    gtk_label_set_wrap (GTK_LABEL (page->ram_lighting_status), TRUE);
-    gtk_label_set_max_width_chars (GTK_LABEL (page->ram_lighting_status), 60);
-    adw_expander_row_add_row (toggle, page->ram_lighting_status);
-
-    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
-    gtk_box_append (GTK_BOX (content), GTK_WIDGET (wrapper));
+    AdwPreferencesGroup *group =
+      ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
+    adw_preferences_group_set_title (group, tr ("Memory Stick Information"));
+    adw_preferences_group_set_description (group,
+      tr ("Individual data of each installed memory stick"));
+    page->ram_sticks_group = GTK_WIDGET (group);
+    gtk_box_append (GTK_BOX (content), GTK_WIDGET (group));
   }
 
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (page->ram_detail_box), content);
@@ -651,11 +994,305 @@ hw_detail_show_motherboard (HardwarePage *page)
   gtk_label_set_text (GTK_LABEL (page->mobo_chipset_vendor_label), page->mobo_chipset_vendor ? page->mobo_chipset_vendor : "—");
   gtk_label_set_text (GTK_LABEL (page->mobo_chipset_model_label), page->mobo_chipset_model ? page->mobo_chipset_model : "—");
 
-  /* Lighting Controls */
-  hw_detail_update_lighting_section (GTK_LABEL (page->mobo_lighting_status));
-
   /* Refresh SMBus status */
   refresh_smbus_status (page);
+}
+
+/* Append one "label → value" row to a stick expander, skipping empty or
+   meaningless SMBIOS placeholders. When `url` is non-NULL the row gets a
+   trailing planet button that opens the module's official product page. */
+static void
+stick_add_field_row (AdwExpanderRow *exp, const char *title, const char *value,
+                     const char *url)
+{
+  if (!value || !value[0]) return;
+  if (g_strcmp0 (value, "Not Specified") == 0
+      || g_strcmp0 (value, "Unknown") == 0
+      || g_strcmp0 (value, "No Module Installed") == 0)
+    return;
+
+  AdwActionRow *row = ADW_ACTION_ROW (adw_action_row_new ());
+  adw_preferences_row_set_title (ADW_PREFERENCES_ROW (row), title);
+  adw_action_row_set_subtitle (ADW_ACTION_ROW (row), value);
+
+  if (url && url[0])
+    {
+      GtkWidget *btn = gtk_button_new_from_icon_name ("planet-symbolic");
+      gtk_widget_set_valign (btn, GTK_ALIGN_CENTER);
+      gtk_widget_add_css_class (btn, "flat");
+      gtk_widget_set_tooltip_text (btn, tr ("Product Website"));
+      g_signal_connect_data (btn, "clicked",
+        G_CALLBACK (on_stick_website_clicked),
+        g_strdup (url), ram_stick_url_destroy, 0);
+      adw_action_row_add_suffix (row, btn);
+    }
+
+  adw_expander_row_add_row (exp, GTK_WIDGET (row));
+}
+
+char *
+ram_size_mb_str (uint64_t mb)
+{
+  if (mb >= 1024)
+    {
+      double gb = mb / 1024.0;
+      if (mb % 1024 == 0)
+        return g_strdup_printf ("%.0f GB", gb);
+      return g_strdup_printf ("%.1f GB", gb);
+    }
+  return g_strdup_printf ("%.0f MB", (double) mb);
+}
+
+gboolean
+ram_parse_size_mb (const char *size, uint64_t *out_mb)
+{
+  if (!size || !size[0] || !out_mb)
+    return FALSE;
+  char *end = NULL;
+  double v = strtod (size, &end);
+  if (end == size)
+    return FALSE;
+  while (end && *end == ' ')
+    end++;
+  if (g_str_has_prefix (end, "GB"))
+    *out_mb = (uint64_t) (v * 1024.0);
+  else if (g_str_has_prefix (end, "MB") || *end == '\0')
+    *out_mb = (uint64_t) v;
+  else
+    return FALSE;
+  return TRUE;
+}
+
+/* ---- RAM module index (database/RAM_INDEX.md) ---- */
+
+static GHashTable *ram_idx_exact;  /* "manufacturer\x1fpart" → url */
+static GHashTable *ram_idx_mfg;    /* "manufacturer" → url (module not matched) */
+static gboolean ram_idx_loaded = FALSE;
+
+/* Normalize a manufacturer/part number key: lowercase, strip leading/trailing
+   whitespace and collapse inner whitespace runs to a single space. */
+static gchar *
+ram_idx_norm (const char *s)
+{
+  GString *out = g_string_new (NULL);
+  gboolean sp = FALSE;
+  if (s)
+    for (const char *p = s; *p; p++)
+      {
+        if (g_ascii_isspace (*p)) { sp = TRUE; continue; }
+        if (sp && out->len)
+          g_string_append_c (out, ' ');
+        sp = FALSE;
+        g_string_append_c (out, g_ascii_tolower (*p));
+      }
+  return g_string_free (out, FALSE);
+}
+
+static void
+ram_idx_ensure_loaded (void)
+{
+  if (ram_idx_loaded)
+    return;
+  ram_idx_exact = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+  ram_idx_mfg = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+
+  char *content = NULL;
+  GBytes *gbytes = g_resources_lookup_data (
+    "/io/github/mayrinck/epinephrine/database/RAM_INDEX.md", 0, NULL);
+  if (gbytes)
+    {
+      content = g_strndup (g_bytes_get_data (gbytes, NULL),
+        g_bytes_get_size (gbytes));
+      g_bytes_unref (gbytes);
+    }
+  if (!content)
+    g_file_get_contents (DATADIR "/epinephrine/database/RAM_INDEX.md",
+      &content, NULL, NULL);
+  if (!content)
+    {
+      char *cwd = g_get_current_dir ();
+      char *rel = g_build_filename (cwd, "database", "RAM_INDEX.md", NULL);
+      g_file_get_contents (rel, &content, NULL, NULL);
+      g_free (cwd);
+      g_free (rel);
+    }
+
+  if (!content)
+    {
+      ram_idx_loaded = TRUE;
+      return;
+    }
+
+  gboolean in_table = FALSE;
+  char **lines = g_strsplit (content, "\n", -1);
+  g_free (content);
+
+  for (int i = 0; lines[i]; i++)
+    {
+      const char *line = lines[i];
+
+      if (g_str_has_prefix (line, "|---"))
+        {
+          in_table = TRUE;
+          continue;
+        }
+      if (!in_table || line[0] != '|')
+        continue;
+
+      /* Memory Name | Manufacturer | Part Number | Official Product Page */
+      char **cols = g_strsplit (line, "|", 0);
+      if (!cols[4])
+        {
+          g_strfreev (cols);
+          continue;
+        }
+
+      char *mfg  = g_strstrip (cols[2]);
+      char *part = g_strstrip (cols[3]);
+      char *url  = g_strstrip (cols[4]);
+      if (!mfg[0] || !url[0])
+        {
+          g_strfreev (cols);
+          continue;
+        }
+
+      gchar *k_mfg = ram_idx_norm (mfg);
+      if (part[0])
+        {
+          gchar *k_part = ram_idx_norm (part);
+          gchar *key = g_strdup_printf ("%s\x1f%s", k_mfg, k_part);
+          if (!g_hash_table_contains (ram_idx_exact, key))
+            g_hash_table_insert (ram_idx_exact, key, g_strdup (url));
+          else
+            g_free (key);
+          g_free (k_part);
+        }
+      else if (!g_hash_table_contains (ram_idx_mfg, k_mfg))
+        g_hash_table_insert (ram_idx_mfg, k_mfg, g_strdup (url));
+      else
+        g_free (k_mfg);
+
+      g_strfreev (cols);
+    }
+  g_strfreev (lines);
+
+  ram_idx_loaded = TRUE;
+}
+
+char *
+epi_ram_find_url (const char *manufacturer, const char *part_number)
+{
+  ram_idx_ensure_loaded ();
+  if (!ram_idx_exact || !manufacturer || !manufacturer[0])
+    return NULL;
+
+  gchar *k_mfg = ram_idx_norm (manufacturer);
+
+  if (part_number && part_number[0])
+    {
+      gchar *k_part = ram_idx_norm (part_number);
+      gchar *key = g_strdup_printf ("%s\x1f%s", k_mfg, k_part);
+      const char *url = g_hash_table_lookup (ram_idx_exact, key);
+      g_free (key);
+      g_free (k_part);
+      if (url)
+        {
+          g_free (k_mfg);
+          return g_strdup (url);
+        }
+    }
+
+  /* Fall back to a manufacturer-level page when the module is not matched. */
+  const char *murl = g_hash_table_lookup (ram_idx_mfg, k_mfg);
+  g_free (k_mfg);
+  return murl ? g_strdup (murl) : NULL;
+}
+
+static void
+on_stick_website_clicked (GtkButton *btn, gpointer user_data)
+{
+  (void) btn;
+  const char *url = user_data;
+  if (!url || !url[0])
+    return;
+  GError *err = NULL;
+  g_app_info_launch_default_for_uri (url, NULL, &err);
+  if (err)
+    {
+      g_error_free (err);
+      dashboard_show_toast (tr ("Could not open URL"));
+    }
+}
+
+static void
+ram_stick_url_destroy (gpointer data, GClosure *closure)
+{
+  (void) closure;
+  g_free (data);
+}
+
+static void
+on_mobo_website_clicked (GtkButton *btn, gpointer user_data)
+{
+  (void) btn;
+  HardwarePage *page = user_data;
+  if (!page->mobo_url || !page->mobo_url[0]) return;
+  GError *err = NULL;
+  g_app_info_launch_default_for_uri (page->mobo_url, NULL, &err);
+  if (err)
+    {
+      g_error_free (err);
+      dashboard_show_toast (tr ("Could not open URL"));
+    }
+}
+
+static void
+on_ram_website_clicked (GtkButton *btn, gpointer user_data)
+{
+  (void) btn;
+  HardwarePage *page = user_data;
+  if (!page->ram_url || !page->ram_url[0]) return;
+  GError *err = NULL;
+  g_app_info_launch_default_for_uri (page->ram_url, NULL, &err);
+  if (err)
+    {
+      g_error_free (err);
+      dashboard_show_toast (tr ("Could not open URL"));
+    }
+}
+
+/* Remove every stick expander previously added to ram_sticks_group so a
+   re-scan (or a language change) never duplicates the section. */
+static void
+clear_ram_stick_rows (HardwarePage *page)
+{
+  if (!page->ram_stick_rows)
+    return;
+#if defined (ADW_CHECK_VERSION) && ADW_CHECK_VERSION (1, 5, 0)
+  AdwPreferencesGroup *group = ADW_PREFERENCES_GROUP (page->ram_sticks_group);
+  for (guint i = 0; i < page->ram_stick_rows->len; i++)
+    adw_preferences_group_remove (group,
+      g_ptr_array_index (page->ram_stick_rows, i));
+#else
+  /* libadwaita < 1.5 has no remove API: reach the internal GtkListBox and
+     clear it directly (widget layout is stable across versions). */
+  GtkWidget *child = gtk_widget_get_first_child (page->ram_sticks_group);
+  while (child)
+    {
+      GtkWidget *sub = gtk_widget_get_first_child (child);
+      while (sub)
+        {
+          if (GTK_IS_LIST_BOX (sub))
+            {
+              gtk_list_box_remove_all (GTK_LIST_BOX (sub));
+              break;
+            }
+          sub = gtk_widget_get_next_sibling (sub);
+        }
+      child = gtk_widget_get_next_sibling (child);
+    }
+#endif
+  g_ptr_array_set_size (page->ram_stick_rows, 0);
 }
 
 void
@@ -667,29 +1304,21 @@ hw_detail_show_ram (HardwarePage *page, const char *device_name)
   gtk_label_set_text (GTK_LABEL (page->ram_name_label),
     device_name ? device_name : "");
 
-  /* Total Memory */
-  char total_str[64];
-  double total_gb = page->ram_total_bytes / (1024.0 * 1024.0 * 1024.0);
-  if (total_gb >= 1.0)
-    g_snprintf (total_str, sizeof (total_str), "%.2f GB", total_gb);
-  else
-    g_snprintf (total_str, sizeof (total_str), "%.0f MB",
-      page->ram_total_bytes / (1024.0 * 1024.0));
-  gtk_label_set_text (GTK_LABEL (page->ram_total_label), total_str);
+  /* Product website — enabled when the first installed module has a
+     registered manufacturer URL in RAM_INDEX. */
+  g_free (page->ram_url);
+  page->ram_url = NULL;
+  if (page->ram_sticks && page->ram_sticks->len > 0)
+    {
+      const RamStick *s = g_ptr_array_index (page->ram_sticks, 0);
+      page->ram_url = epi_ram_find_url (s->manufacturer, s->part_number);
+    }
+  gtk_widget_set_sensitive (page->ram_website_btn, page->ram_url != NULL);
 
-  /* Usage */
-  char used_str[64];
-  double used_gb = page->ram_used_bytes / (1024.0 * 1024.0 * 1024.0);
-  double total_disp = page->ram_total_bytes / (1024.0 * 1024.0 * 1024.0);
-  double used_pct = page->ram_total_bytes > 0
-    ? (page->ram_used_bytes * 100.0 / page->ram_total_bytes) : 0.0;
-  if (used_gb >= 1.0)
-    g_snprintf (used_str, sizeof (used_str), "%.2f GB / %.2f GB (%.0f%%)",
-      used_gb, total_disp, used_pct);
-  else
-    g_snprintf (used_str, sizeof (used_str), "%.0f MB / %.2f GB (%.0f%%)",
-      page->ram_used_bytes / (1024.0 * 1024.0), total_disp, used_pct);
-  gtk_label_set_text (GTK_LABEL (page->ram_used_label), used_str);
+  /* Total Memory */
+  char *total_str = ram_size_mb_str (page->ram_total_bytes >> 20);
+  gtk_label_set_text (GTK_LABEL (page->ram_total_label), total_str);
+  g_free (total_str);
 
   /* Technology */
   gtk_label_set_text (GTK_LABEL (page->ram_tech_label),
@@ -705,10 +1334,73 @@ hw_detail_show_ram (HardwarePage *page, const char *device_name)
   else
     gtk_label_set_text (GTK_LABEL (page->ram_freq_label), "—");
 
-  /* Start RAM usage monitor */
-  if (page->ram_monitor_timer_id == 0)
+  /* Memory Slots: "used / total" */
+  if (page->ram_slots_used > 0 && page->ram_slots_total > 0)
     {
-      page->ram_monitor_timer_id = g_timeout_add (1000, hw_ram_monitor_tick, page);
-      hw_ram_monitor_tick (page);
+      char slots[32];
+      g_snprintf (slots, sizeof (slots), "%d / %d",
+        page->ram_slots_used, page->ram_slots_total);
+      gtk_label_set_text (GTK_LABEL (page->ram_slots_label), slots);
     }
+  else
+    gtk_label_set_text (GTK_LABEL (page->ram_slots_label), "—");
+
+  /* One expander row per installed stick, below the general info */
+  {
+    /* Remove any rows added by a previous call so the section never
+       duplicates (e.g. after a device re-scan or a language change). */
+    clear_ram_stick_rows (page);
+
+    if (page->ram_sticks)
+      {
+        for (guint i = 0; i < page->ram_sticks->len; i++)
+          {
+            RamStick *s = g_ptr_array_index (page->ram_sticks, i);
+
+            char title[48];
+            g_snprintf (title, sizeof (title), "%s #%u",
+              tr ("Memory Stick"), i + 1);
+
+            /* Normalize a dmidecode size like "16384 MB" to "16 GB" */
+            uint64_t size_mb = 0;
+            char *size_str = ram_parse_size_mb (s->size, &size_mb)
+              ? ram_size_mb_str (size_mb) : g_strdup (s->size ? s->size : "");
+
+            AdwExpanderRow *exp = ADW_EXPANDER_ROW (adw_expander_row_new ());
+            adw_preferences_row_set_title (ADW_PREFERENCES_ROW (exp), title);
+            adw_expander_row_set_subtitle (ADW_EXPANDER_ROW (exp), size_str);
+            adw_expander_row_set_expanded (exp, FALSE);
+
+            /* Official product page for this module (when registered);
+               it is attached to the Manufacturer row as a planet button. */
+            g_autofree char *url = epi_ram_find_url (s->manufacturer,
+              s->part_number);
+
+            stick_add_field_row (exp, tr ("Size"), size_str, NULL);
+            stick_add_field_row (exp, tr ("Form Factor"), s->form_factor, NULL);
+            stick_add_field_row (exp, tr ("Type"), s->type, NULL);
+            stick_add_field_row (exp, tr ("Type Detail"), s->type_detail, NULL);
+            stick_add_field_row (exp, tr ("Manufacturer"), s->manufacturer, url);
+            stick_add_field_row (exp, tr ("Part Number"), s->part_number, NULL);
+            stick_add_field_row (exp, tr ("Serial Number"), s->serial_number, NULL);
+            stick_add_field_row (exp, tr ("Rank"), s->rank, NULL);
+            stick_add_field_row (exp, tr ("Speed"), s->speed, NULL);
+            stick_add_field_row (exp, tr ("Configured Memory Speed"), s->configured_speed, NULL);
+            stick_add_field_row (exp, tr ("Locator"), s->locator, NULL);
+            stick_add_field_row (exp, tr ("Bank Locator"), s->bank_locator, NULL);
+            stick_add_field_row (exp, tr ("Total Width"), s->total_width, NULL);
+            stick_add_field_row (exp, tr ("Data Width"), s->data_width, NULL);
+
+            g_free (size_str);
+
+            adw_preferences_group_add (
+              ADW_PREFERENCES_GROUP (page->ram_sticks_group), GTK_WIDGET (exp));
+            if (page->ram_stick_rows)
+              g_ptr_array_add (page->ram_stick_rows, exp);
+          }
+      }
+  }
+
+  /* Start RAM monitor (graph speed aware) */
+  hw_ram_monitor_start (page);
 }

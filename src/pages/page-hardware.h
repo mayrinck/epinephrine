@@ -7,8 +7,32 @@
 
 G_BEGIN_DECLS
 
+#define RAM_MON_METRICS 2
+#define RAM_MON_HISTORY 120
+
 typedef struct _ControllerState ControllerState;
 typedef struct _UsbIds UsbIds;
+
+/* One installed memory stick, as reported by `dmidecode -t memory`
+   (Type 17 "Memory Device" block). Every string is an aliased copy of the
+   SMBIOS text; NULL/"" means the field was not reported. */
+typedef struct
+{
+  char *size;              /* Size */
+  char *form_factor;       /* Form Factor */
+  char *type;              /* Type */
+  char *type_detail;       /* Type Detail */
+  char *speed;             /* Speed */
+  char *manufacturer;      /* Manufacturer */
+  char *part_number;       /* Part Number */
+  char *rank;              /* Rank */
+  char *configured_speed;  /* Configured Memory Speed */
+  char *serial_number;     /* Serial Number */
+  char *locator;           /* Locator */
+  char *bank_locator;      /* Bank Locator */
+  char *total_width;       /* Total Width */
+  char *data_width;        /* Data Width */
+} RamStick;
 
 typedef struct
 {
@@ -132,6 +156,11 @@ typedef struct
   gboolean monitor_avail[8];
   float monitor_history[8][120];
   int monitor_history_count;
+
+  /* GPU average history (raw values for 10s rolling average) */
+  float monitor_avg_buf[8][400];
+  int monitor_avg_idx[8];
+  int monitor_avg_count[8];
   guint monitor_graph_width;
 
   /* NVIDIA management */
@@ -198,6 +227,8 @@ typedef struct
   /* Motherboard detail */
   GtkWidget *mobo_name_label;
   GtkWidget *mobo_bios_label;
+  GtkWidget *mobo_website_btn;
+  char *mobo_url;
   GtkWidget *mobo_vendor_label;
   GtkWidget *mobo_model_label;
   GtkWidget *mobo_revision_label;
@@ -210,38 +241,62 @@ typedef struct
   GtkWidget *mobo_chipset_model_label;
   GtkWidget *mobo_smbus_toggle;
   GtkWidget *mobo_smbus_desc;
-  GtkWidget *mobo_lighting_status;
 
   /* RAM metadata */
   uint64_t ram_total_bytes;
   uint64_t ram_used_bytes;
-  char **ram_dimm_names;
-  int n_ram_dimms;
+  GPtrArray *ram_sticks;   /* RamStick* (installed sticks) or NULL */
+  int ram_slots_total;     /* slots present in dmidecode */
+  int ram_slots_used;      /* installed sticks */
   char *ram_technology;
   uint64_t ram_freq_mhz;
 
   /* RAM detail (AdwPreferencesPage) */
   GtkWidget *ram_name_label;
   GtkWidget *ram_total_label;
-  GtkWidget *ram_used_label;
   GtkWidget *ram_freq_label;
   GtkWidget *ram_tech_label;
-  GtkWidget *ram_lighting_status;
-  guint ram_monitor_timer_id;
+  GtkWidget *ram_slots_label;
+  GtkWidget *ram_website_btn;
+  char *ram_url;
+  GtkWidget *ram_sticks_group;
+  GPtrArray *ram_stick_rows;   /* AdwExpanderRow* added to ram_sticks_group */
+
+  /* RAM monitor graph */
+  guint ram_data_timer_id;
+  guint ram_graph_timer_id;
+  GtkWidget *ram_graph;
+  GtkWidget *ram_monitor_labels[RAM_MON_METRICS];
+  GtkWidget *ram_monitor_values[RAM_MON_METRICS];
+  gboolean ram_monitor_avail[RAM_MON_METRICS];
+  float ram_monitor_history[RAM_MON_METRICS][RAM_MON_HISTORY];
+  int ram_monitor_history_count;
+
+  /* RAM average history (raw values for 10s rolling average) */
+  float ram_monitor_avg_buf[RAM_MON_METRICS][400];
+  int ram_monitor_avg_idx[RAM_MON_METRICS];
+  int ram_monitor_avg_count[RAM_MON_METRICS];
+
+  /* Memory/Swap management */
+  GtkWidget *ram_swap_spin;
+  GtkWidget *ram_cache_combo;
+  int ram_swap_saved;
+  int ram_cache_saved;
 
   /* CPU, Keyboard, Mouse sub-pages */
   CpuPage *cpu_page;
   KeyboardPage *keyboard_page;
   MousePage *mouse_page;
 
-  /* Lighting detection */
-  GtkWidget *gpu_lighting_status;
-
   /* Controller index loaded from JOY_INDEX.md */
   GHashTable *controller_index;
+
   struct _UsbIds *usb_ids;
 } HardwarePage;
 
 HardwarePage *hardware_page_new (void);
+
+/* Frees every field of a RamStick (g_free compatible). */
+void ram_stick_free (gpointer stick);
 
 G_END_DECLS

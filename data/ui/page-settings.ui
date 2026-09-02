@@ -101,7 +101,7 @@
               <object class="AdwPreferencesGroup">
                 <property name="title" translatable="yes">Language</property>
                 <child>
-                  <object class="AdwActionRow" id="language-row">
+                  <object class="AdwComboRow" id="language-row">
                     <property name="title" translatable="yes">Application Language</property>
                     <property name="subtitle" translatable="yes">Choose the display language</property>
                     <property name="icon-name">preferences-desktop-locale-symbolic</property>

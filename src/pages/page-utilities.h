@@ -17,6 +17,7 @@ typedef struct
   GtkWidget         *gamescope_empty;
   GtkWidget         *gamemode_empty;
   GtkWidget         *mangohud_empty;
+  GtkWidget         *rgb_controller_page;
 } UtilidadesPage;
 
 UtilidadesPage *utilidades_page_new (void);

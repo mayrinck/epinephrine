@@ -43,6 +43,7 @@ typedef struct {
 
 /* Runtime entries from JOY_INDEX.md */
 typedef struct {
+    uint16_t vendor;   /* primary VID from the row's VID:PID */
     char *name;
     char *url;
     char *category;
@@ -67,6 +68,64 @@ static const ControllerEntry controller_db[] = {
 };
 static const int controller_db_count = G_N_ELEMENTS (controller_db);
 
+/* Multi-mode controllers (e.g. GameSir Tecenaria Lite) report a different
+   PID -- but the same VID -- per input mode (XInput/HID).  When a device's
+   VID is known to switch modes but the exact PID is not registered, resolve
+   to the index entry whenever exactly one entry shares that VID.  If the VID
+   is ambiguous, fail (safer than labeling the wrong product).
+   Only vendors that are dedicated controller makers switching PIDs under
+   their own VID are allowed; masquerade modes (DS4/Switch impersonate
+   Sony/Nintendo) are intentionally NOT matched, since that would mislabel
+   genuine first-party controllers. */
+static const uint16_t controller_multi_vendor_ids[] = {
+  0x3537, /* GameSir */
+};
+
+static gboolean
+controller_multi_vendor_supported (uint16_t vendor)
+{
+  for (size_t i = 0; i < G_N_ELEMENTS (controller_multi_vendor_ids); i++)
+    if (controller_multi_vendor_ids[i] == vendor)
+      return TRUE;
+  return FALSE;
+}
+
+static ControllerIndexEntry *
+controller_index_unique_by_vendor (GHashTable *index, uint16_t vendor)
+{
+  ControllerIndexEntry *found = NULL;
+  GHashTableIter it;
+  gpointer key, value;
+
+  if (!index || !controller_multi_vendor_supported (vendor)) return NULL;
+
+  g_hash_table_iter_init (&it, index);
+  while (g_hash_table_iter_next (&it, &key, &value))
+    {
+      ControllerIndexEntry *e = value;
+      if (!e || e->vendor != vendor) continue;
+      if (found) return NULL;
+      found = e;
+    }
+  return found;
+}
+
+static const ControllerEntry *
+controller_db_unique_by_vendor (uint16_t vendor)
+{
+  const ControllerEntry *found = NULL;
+
+  if (!controller_multi_vendor_supported (vendor)) return NULL;
+
+  for (int i = 0; i < controller_db_count; i++)
+    {
+      if (controller_db[i].vendor != vendor) continue;
+      if (found) return NULL;
+      found = &controller_db[i];
+    }
+  return found;
+}
+
 const char *
 hw_controller_lookup_name (HardwarePage *page, uint16_t vendor, uint16_t product)
 {
@@ -84,10 +143,20 @@ hw_controller_lookup_name (HardwarePage *page, uint16_t vendor, uint16_t product
       ControllerIndexEntry *e = g_hash_table_lookup (page->controller_index, key);
       if (e && e->name) return e->name;
     }
+  /* Fall back to a JOY_INDEX entry sharing this vendor (multi-mode pads) */
+  if (page && page->controller_index)
+    {
+      ControllerIndexEntry *e = controller_index_unique_by_vendor (page->controller_index, vendor);
+      if (e && e->name) return e->name;
+    }
   /* Fall back to hardcoded database */
   for (int i = 0; i < controller_db_count; i++)
     if (controller_db[i].vendor == vendor && controller_db[i].product == product)
       return controller_db[i].name;
+  {
+    const ControllerEntry *e = controller_db_unique_by_vendor (vendor);
+    if (e) return e->name;
+  }
   return NULL;
 }
 
@@ -101,9 +170,19 @@ hw_controller_lookup_url (HardwarePage *page, uint16_t vendor, uint16_t product)
       ControllerIndexEntry *e = g_hash_table_lookup (page->controller_index, key);
       if (e && e->url) return e->url;
     }
+  /* Fall back to a JOY_INDEX entry sharing this vendor (multi-mode pads) */
+  if (page && page->controller_index)
+    {
+      ControllerIndexEntry *e = controller_index_unique_by_vendor (page->controller_index, vendor);
+      if (e && e->url) return e->url;
+    }
   for (int i = 0; i < controller_db_count; i++)
     if (controller_db[i].vendor == vendor && controller_db[i].product == product)
       return controller_db[i].url;
+  {
+    const ControllerEntry *e = controller_db_unique_by_vendor (vendor);
+    if (e) return e->url;
+  }
   return NULL;
 }
 
@@ -117,9 +196,19 @@ hw_controller_lookup_category (HardwarePage *page, uint16_t vendor, uint16_t pro
       ControllerIndexEntry *e = g_hash_table_lookup (page->controller_index, key);
       if (e && e->category) return e->category;
     }
+  /* Fall back to a JOY_INDEX entry sharing this vendor (multi-mode pads) */
+  if (page && page->controller_index)
+    {
+      ControllerIndexEntry *e = controller_index_unique_by_vendor (page->controller_index, vendor);
+      if (e && e->category) return e->category;
+    }
   for (int i = 0; i < controller_db_count; i++)
     if (controller_db[i].vendor == vendor && controller_db[i].product == product)
       return controller_db[i].category;
+  {
+    const ControllerEntry *e = controller_db_unique_by_vendor (vendor);
+    if (e) return e->category;
+  }
   return NULL;
 }
 
@@ -201,6 +290,7 @@ hw_controller_load_index (HardwarePage *page)
       g_snprintf (key, sizeof (key), "%04x:%04x", v, p);
 
       ControllerIndexEntry *entry = g_new0 (ControllerIndexEntry, 1);
+      entry->vendor = (uint16_t) v;
       entry->name = g_strdup (name);
       entry->url = url_str && url_str[0] ? g_strdup (url_str) : NULL;
       entry->category = cat_str && cat_str[0] ? g_strdup (cat_str) : NULL;
@@ -1145,11 +1235,11 @@ hw_controller_build_detail (HardwarePage *page)
   gtk_box_append (GTK_BOX (branding_text), page->controller_info_label);
 
   page->controller_website_btn = gtk_button_new_with_label (
-    tr ("Official Website"));
-  gtk_widget_set_valign (page->controller_website_btn, GTK_ALIGN_START);
-  gtk_widget_set_margin_top (page->controller_website_btn, 4);
-  gtk_widget_add_css_class (page->controller_website_btn, "text-button");
-  gtk_widget_set_visible (page->controller_website_btn, FALSE);
+    tr ("Product Website"));
+  gtk_widget_set_valign (page->controller_website_btn, GTK_ALIGN_CENTER);
+  gtk_widget_add_css_class (page->controller_website_btn, "flat");
+  gtk_widget_add_css_class (page->controller_website_btn, "accent");
+  gtk_widget_set_sensitive (page->controller_website_btn, FALSE);
   g_signal_connect (page->controller_website_btn, "clicked",
     G_CALLBACK (on_controller_website_clicked), page);
 
@@ -1208,35 +1298,6 @@ hw_controller_build_detail (HardwarePage *page)
     gtk_widget_set_halign (specs_placeholder, GTK_ALIGN_START);
     gtk_widget_set_hexpand (specs_placeholder, TRUE);
     adw_expander_row_add_row (toggle, specs_placeholder);
-
-    adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
-    gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
-  }
-
-  /* --- Lighting Controls (collapsible) --- */
-  {
-    AdwPreferencesGroup *wrapper = ADW_PREFERENCES_GROUP (adw_preferences_group_new ());
-    AdwExpanderRow *toggle = ADW_EXPANDER_ROW (adw_expander_row_new ());
-    adw_preferences_row_set_title (ADW_PREFERENCES_ROW (toggle), tr ("Lighting Controls"));
-    adw_expander_row_set_subtitle (toggle, tr ("RGB and LED management"));
-
-    if (g_find_program_in_path ("openrgb"))
-      {
-        GtkWidget *openrgb_btn = gtk_button_new_with_label (
-          tr ("Edit on OpenRGB"));
-        gtk_widget_add_css_class (openrgb_btn, "accent");
-        gtk_widget_set_valign (openrgb_btn, GTK_ALIGN_CENTER);
-        adw_expander_row_add_row (toggle, openrgb_btn);
-        g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
-      }
-
-    GtkWidget *lighting_status = gtk_label_new (
-      tr ("The app couldn't find any light source to manage."));
-    gtk_widget_set_halign (lighting_status, GTK_ALIGN_START);
-    gtk_widget_set_hexpand (lighting_status, TRUE);
-    gtk_label_set_wrap (GTK_LABEL (lighting_status), TRUE);
-    gtk_label_set_max_width_chars (GTK_LABEL (lighting_status), 60);
-    adw_expander_row_add_row (toggle, lighting_status);
 
     adw_preferences_group_add (wrapper, GTK_WIDGET (toggle));
     gtk_box_append (GTK_BOX (settings_content), GTK_WIDGET (wrapper));
@@ -1445,11 +1506,11 @@ hw_controller_show (HardwarePage *page)
     page->device_info[idx] && page->device_info[idx][0]
       ? page->device_info[idx] : "");
 
-  /* Show/hide official website button */
+  /* Enable/disable official website button */
   g_free (page->controller_url);
   page->controller_url = page->device_urls[idx]
     ? g_strdup (page->device_urls[idx]) : NULL;
-  gtk_widget_set_visible (page->controller_website_btn,
+  gtk_widget_set_sensitive (page->controller_website_btn,
     page->controller_url != NULL);
 
   /* Detect manufacturer for button labels */

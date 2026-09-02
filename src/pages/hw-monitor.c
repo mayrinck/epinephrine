@@ -1,7 +1,9 @@
 #define _GNU_SOURCE
 #include "page-hardware.h"
 #include "hw-monitor.h"
+#include "hw-detail.h"
 #include "hw-gpu.h"
+#include "page-settings.h"
 #include "../epi-i18n.h"
 
 #include <stdio.h>
@@ -373,7 +375,7 @@ monitor_poll_cb (gpointer user_data)
         }
     }
 
-  /* Update labels every 1s */
+  /* Update labels with value + 10s rolling average */
   static const char *fmt8[] = {
     "%.0f °C",       /* Temp */
     "%.0f %%",       /* Usage */
@@ -409,9 +411,28 @@ monitor_poll_cb (gpointer user_data)
         if (ok[i])
           {
             any_data = TRUE;
-            char buf[32];
+
+            /* Store raw value in circular buffer for average */
+            int idx = page->monitor_avg_idx[i];
+            page->monitor_avg_buf[i][idx % 400] = vals[i];
+            page->monitor_avg_idx[i] = idx + 1;
+            if (page->monitor_avg_count[i] < 400)
+              page->monitor_avg_count[i]++;
+
+            /* Compute rolling average */
+            double sum = 0;
+            int cnt = page->monitor_avg_count[i];
+            for (int j = 0; j < cnt; j++)
+              sum += page->monitor_avg_buf[i][j];
+            double avg = sum / cnt;
+
+            char buf[64];
             const char *f = page->gpu->has_nvidia_smi ? nvidia_fmt8[i] : fmt8[i];
-            g_snprintf (buf, sizeof (buf), f, vals[i]);
+            char val_str[32];
+            g_snprintf (val_str, sizeof (val_str), f, vals[i]);
+            char avg_str[32];
+            g_snprintf (avg_str, sizeof (avg_str), f, avg);
+            g_snprintf (buf, sizeof (buf), "%s (avg: %s)", val_str, avg_str);
             gtk_label_set_text (GTK_LABEL (page->monitor_values[i]), buf);
           }
         else
@@ -471,9 +492,9 @@ hw_monitor_start (HardwarePage *page)
       page->monitor_timer_id = 0;
     }
   extern int g_graph_speed_ms;
-  /* Data poll every 1s (ALWAYS 1s, never changes) */
-  page->monitor_data_timer_id = g_timeout_add (1000, monitor_poll_cb, page);
-  /* Graph redraw at configurable speed */
+  /* Data poll at configured graph speed */
+  page->monitor_data_timer_id = g_timeout_add (g_graph_speed_ms, monitor_poll_cb, page);
+  /* Graph redraw at same interval — keeps animation smooth */
   page->monitor_timer_id = g_timeout_add (g_graph_speed_ms, gpu_graph_redraw_cb, page);
   monitor_poll_cb (page);
 }
@@ -492,21 +513,131 @@ hw_monitor_restart (HardwarePage *page)
       g_source_remove (page->monitor_timer_id);
       page->monitor_timer_id = 0;
     }
-  /* Clear history on explicit restart (e.g. graph speed change) */
-  page->monitor_history_count = 0;
-  memset (page->monitor_history, 0, sizeof (page->monitor_history));
   hw_monitor_start (page);
 }
 
-gboolean
-hw_ram_monitor_tick (gpointer user_data)
+/* ---- RAM monitor graph ---- */
+
+void
+hw_ram_monitor_graph_draw (GtkDrawingArea *area, cairo_t *cr,
+    int width, int height, gpointer user_data)
 {
   HardwarePage *page = user_data;
+  (void) area;
+
+  /* Transparent background — no fill */
+
+  /* Grid lines + percentage labels */
+  cairo_set_source_rgba (cr, 0.5, 0.5, 0.5, 0.2);
+  cairo_set_line_width (cr, 0.5);
+  cairo_select_font_face (cr, "monospace", CAIRO_FONT_SLANT_NORMAL,
+                          CAIRO_FONT_WEIGHT_NORMAL);
+  cairo_set_font_size (cr, 8);
+
+  for (int i = 0; i <= 4; i++)
+    {
+      double y = height - 4.0 - (height - 12.0) * i / 4.0;
+      cairo_move_to (cr, 30, y);
+      cairo_line_to (cr, width - 4, y);
+      cairo_stroke (cr);
+
+      char lbl[8];
+      g_snprintf (lbl, sizeof (lbl), "%d%%", i * 25);
+      cairo_move_to (cr, 2, y + 3);
+      cairo_show_text (cr, lbl);
+    }
+
+  int n = page->ram_monitor_history_count;
+  if (n <= 0) return;
+  int pts = MIN (n, RAM_MON_HISTORY);
+  if (pts < 2) return;
+
+  static const GdkRGBA colors[RAM_MON_METRICS] = {
+    { 0.200, 0.820, 0.478, 0.9 },  /* RAM usage (green)      */
+    { 0.965, 0.827, 0.176, 0.9 },  /* Swap usage (yellow)    */
+  };
+
+  double plot_w = width - 34.0;
+  double plot_h = height - 12.0;
+  double x0 = 30.0;
+  double y0 = 6.0;
+
+  for (int m = 0; m < RAM_MON_METRICS; m++)
+    {
+      if (!page->ram_monitor_avail[m]) continue;
+
+      const GdkRGBA *c = &colors[m];
+      cairo_set_source_rgba (cr, c->red, c->green, c->blue, c->alpha);
+      cairo_set_line_width (cr, 1.5);
+      cairo_set_line_join (cr, CAIRO_LINE_JOIN_ROUND);
+
+      int start = n - pts;
+      for (int i = 0; i < pts - 1; i++)
+        {
+          int idx0 = (start + i) % RAM_MON_HISTORY;
+          int idx1 = (start + i + 1) % RAM_MON_HISTORY;
+
+          float v0 = CLAMP (page->ram_monitor_history[m][idx0], 0.0f, 1.0f);
+          float v1 = CLAMP (page->ram_monitor_history[m][idx1], 0.0f, 1.0f);
+
+          /* Fixed-width slots: divide by (HISTORY-1) so each point has constant spacing */
+          double px0 = x0 + plot_w * i / (RAM_MON_HISTORY - 1);
+          double px1 = x0 + plot_w * (i + 1) / (RAM_MON_HISTORY - 1);
+          double py0 = y0 + plot_h * (1.0 - v0);
+          double py1 = y0 + plot_h * (1.0 - v1);
+
+          /* Hermite interpolation */
+          double dx = (px1 - px0) / 8.0;
+          double dy0, dy1;
+
+          if (i > 0)
+            {
+              int idx_prev = (start + i - 1) % RAM_MON_HISTORY;
+              float vp = CLAMP (page->ram_monitor_history[m][idx_prev], 0.0f, 1.0f);
+              dy0 = (v1 - vp) / 2.0 * plot_h;
+            }
+          else
+            dy0 = (v1 - v0) * plot_h;
+
+          if (i < pts - 2)
+            {
+              int idx_next = (start + i + 2) % RAM_MON_HISTORY;
+              float vn = CLAMP (page->ram_monitor_history[m][idx_next], 0.0f, 1.0f);
+              dy1 = (vn - v0) / 2.0 * plot_h;
+            }
+          else
+            dy1 = (v1 - v0) * plot_h;
+
+          cairo_move_to (cr, px0, py0);
+          for (int s = 1; s <= 8; s++)
+            {
+              double t = s / 8.0;
+              double t2 = t * t;
+              double t3 = t2 * t;
+              double h00 = 2*t3 - 3*t2 + 1;
+              double h10 = t3 - 2*t2 + t;
+              double h01 = -2*t3 + 3*t2;
+              double h11 = t3 - t2;
+              double y = h00*py0 + h10*dx*dy0 + h01*py1 + h11*dx*dy1;
+              cairo_line_to (cr, px0 + dx * s, y);
+            }
+          cairo_stroke (cr);
+        }
+    }
+}
+
+static gboolean
+ram_data_poll_cb (gpointer user_data)
+{
+  HardwarePage *page = user_data;
+  if (!page) return G_SOURCE_REMOVE;
+
   FILE *f = fopen ("/proc/meminfo", "r");
   if (!f) return G_SOURCE_CONTINUE;
 
   char buf[256];
   uint64_t mem_total_kb = 0, mem_avail_kb = 0;
+  uint64_t swap_total_kb = 0, swap_free_kb = 0;
   while (fgets (buf, sizeof (buf), f))
     {
       if (g_str_has_prefix (buf, "MemTotal:"))
@@ -521,32 +652,31 @@ hw_ram_monitor_tick (gpointer user_data)
           while (*v == ' ') v++;
           mem_avail_kb = strtoull (v, NULL, 10);
         }
+      else if (g_str_has_prefix (buf, "SwapTotal:"))
+        {
+          char *v = strchr (buf, ':') + 1;
+          while (*v == ' ') v++;
+          swap_total_kb = strtoull (v, NULL, 10);
+        }
+      else if (g_str_has_prefix (buf, "SwapFree:"))
+        {
+          char *v = strchr (buf, ':') + 1;
+          while (*v == ' ') v++;
+          swap_free_kb = strtoull (v, NULL, 10);
+        }
     }
   fclose (f);
+
+  uint64_t swap_used_kb = swap_total_kb > swap_free_kb
+    ? swap_total_kb - swap_free_kb : 0;
 
   page->ram_total_bytes = mem_total_kb * 1024;
   page->ram_used_bytes = (mem_total_kb - mem_avail_kb) * 1024;
 
-  char total_str[64], used_str[64];
-  double total_gb = page->ram_total_bytes / (1024.0 * 1024.0 * 1024.0);
-  if (total_gb >= 1.0)
-    g_snprintf (total_str, sizeof (total_str), "%.2f GB", total_gb);
-  else
-    g_snprintf (total_str, sizeof (total_str), "%.0f MB",
-      page->ram_total_bytes / (1024.0 * 1024.0));
+  /* Refresh static info labels */
+  char *total_str = ram_size_mb_str (page->ram_total_bytes >> 20);
   gtk_label_set_text (GTK_LABEL (page->ram_total_label), total_str);
-
-  double used_gb = page->ram_used_bytes / (1024.0 * 1024.0 * 1024.0);
-  double total_disp = page->ram_total_bytes / (1024.0 * 1024.0 * 1024.0);
-  double used_pct = page->ram_total_bytes > 0
-    ? (page->ram_used_bytes * 100.0 / page->ram_total_bytes) : 0.0;
-  if (used_gb >= 1.0)
-    g_snprintf (used_str, sizeof (used_str), "%.2f GB / %.2f GB (%.0f%%)",
-      used_gb, total_disp, used_pct);
-  else
-    g_snprintf (used_str, sizeof (used_str), "%.0f MB / %.2f GB (%.0f%%)",
-      page->ram_used_bytes / (1024.0 * 1024.0), total_disp, used_pct);
-  gtk_label_set_text (GTK_LABEL (page->ram_used_label), used_str);
+  g_free (total_str);
 
   if (page->ram_freq_mhz > 0)
     {
@@ -554,8 +684,113 @@ hw_ram_monitor_tick (gpointer user_data)
       g_snprintf (freq_str, sizeof (freq_str), "%ld MHz", (long) page->ram_freq_mhz);
       gtk_label_set_text (GTK_LABEL (page->ram_freq_label), freq_str);
     }
-  if (page->ram_technology)
-    gtk_label_set_text (GTK_LABEL (page->ram_tech_label), page->ram_technology);
+
+  /* Metrics: 0 = RAM usage (% of total), 1 = swap usage (% of SwapTotal) */
+  float vals[RAM_MON_METRICS] = { 0.0f, 0.0f };
+  gboolean ok[RAM_MON_METRICS] = { FALSE, FALSE };
+
+  /* Raw GB values for legend display */
+  double ram_used_gb = 0, ram_total_gb = 0;
+  double swap_used_gb = 0, swap_total_gb = 0;
+
+  if (page->ram_total_bytes > 0)
+    {
+      vals[0] = (float) (page->ram_used_bytes * 100.0 / page->ram_total_bytes);
+      ram_used_gb = page->ram_used_bytes / (1024.0 * 1024.0 * 1024.0);
+      ram_total_gb = page->ram_total_bytes / (1024.0 * 1024.0 * 1024.0);
+      ok[0] = TRUE;
+    }
+  if (swap_total_kb > 0)
+    {
+      vals[1] = (float) (swap_used_kb * 100.0 / swap_total_kb);
+      swap_used_gb = swap_used_kb / (1024.0 * 1024.0);
+      swap_total_gb = swap_total_kb / (1024.0 * 1024.0);
+      ok[1] = TRUE;
+    }
+
+  int n = page->ram_monitor_history_count;
+  for (int m = 0; m < RAM_MON_METRICS; m++)
+    {
+      page->ram_monitor_avail[m] = ok[m];
+      if (ok[m])
+        {
+          page->ram_monitor_history[m][n % RAM_MON_HISTORY] =
+            CLAMP (vals[m] / 100.0f, 0.0f, 1.0f);
+
+          char bufv[96];
+          if (m == 0)
+            g_snprintf (bufv, sizeof (bufv), "%.1f / %.1f GB (%.0f%%)",
+              ram_used_gb, ram_total_gb, vals[m]);
+          else
+            g_snprintf (bufv, sizeof (bufv), "%.1f / %.1f GB (%.0f%%)",
+              swap_used_gb, swap_total_gb, vals[m]);
+          gtk_label_set_text (GTK_LABEL (page->ram_monitor_values[m]), bufv);
+        }
+      else
+        gtk_label_set_text (GTK_LABEL (page->ram_monitor_values[m]), "N/A");
+    }
+  page->ram_monitor_history_count = n + 1;
 
   return G_SOURCE_CONTINUE;
+}
+
+static gboolean
+ram_graph_redraw_cb (gpointer user_data)
+{
+  HardwarePage *page = user_data;
+  if (!page) return G_SOURCE_REMOVE;
+  gtk_widget_queue_draw (page->ram_graph);
+  return G_SOURCE_CONTINUE;
+}
+
+void
+hw_ram_monitor_start (HardwarePage *page)
+{
+  if (!page) return;
+  /* If both timers already running, nothing to do */
+  if (page->ram_data_timer_id && page->ram_graph_timer_id) return;
+  /* Clean up stale timers before creating new ones */
+  if (page->ram_data_timer_id)
+    {
+      g_source_remove (page->ram_data_timer_id);
+      page->ram_data_timer_id = 0;
+    }
+  if (page->ram_graph_timer_id)
+    {
+      g_source_remove (page->ram_graph_timer_id);
+      page->ram_graph_timer_id = 0;
+    }
+  extern int g_graph_speed_ms;
+  /* Data poll at configured graph speed */
+  page->ram_data_timer_id = g_timeout_add (g_graph_speed_ms, ram_data_poll_cb, page);
+  /* Graph redraw at same interval — keeps animation smooth */
+  page->ram_graph_timer_id = g_timeout_add (g_graph_speed_ms, ram_graph_redraw_cb, page);
+  ram_data_poll_cb (page);
+}
+
+void
+hw_ram_monitor_stop (HardwarePage *page)
+{
+  if (!page) return;
+  if (page->ram_data_timer_id)
+    {
+      g_source_remove (page->ram_data_timer_id);
+      page->ram_data_timer_id = 0;
+    }
+  if (page->ram_graph_timer_id)
+    {
+      g_source_remove (page->ram_graph_timer_id);
+      page->ram_graph_timer_id = 0;
+    }
+}
+
+void
+hw_ram_monitor_restart (HardwarePage *page)
+{
+  if (!page) return;
+  /* Only restart when the RAM monitor is currently active */
+  if (!page->ram_data_timer_id && !page->ram_graph_timer_id)
+    return;
+  hw_ram_monitor_stop (page);
+  hw_ram_monitor_start (page);
 }

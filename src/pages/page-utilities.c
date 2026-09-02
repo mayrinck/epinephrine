@@ -1,4 +1,5 @@
 #include "page-utilities.h"
+#include "hw-gpu-detail.h"
 #include "epi-privilege.h"
 #include "epi-i18n.h"
 
@@ -78,7 +79,7 @@ create_empty_state (const char *icon_name, const char *title, const char *pkg_na
   char *install_cmd = install_cmd_for_pkg (pkg_name);
   if (install_cmd)
     {
-      GtkWidget *btn = gtk_button_new_with_label ("Install");
+      GtkWidget *btn = gtk_button_new_with_label (tr ("Install"));
       gtk_widget_add_css_class (btn, "suggested-action");
       gtk_widget_set_halign (btn, GTK_ALIGN_CENTER);
       g_object_set_data_full (G_OBJECT (btn), "install-cmd", install_cmd, g_free);
@@ -94,6 +95,40 @@ create_empty_state (const char *icon_name, const char *title, const char *pkg_na
       gtk_widget_set_opacity (no_pm, 0.5);
       gtk_box_append (GTK_BOX (box), no_pm);
     }
+
+  return box;
+}
+
+/* RGB Controller placeholder: warning text plus an OpenRGB launcher button.
+   The actual lighting editor will live here once implemented. */
+static GtkWidget *
+create_rgb_controller_page (void)
+{
+  GtkWidget *box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 16);
+  gtk_widget_set_halign (box, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign (box, GTK_ALIGN_CENTER);
+  gtk_widget_set_hexpand (box, TRUE);
+  gtk_widget_set_vexpand (box, TRUE);
+
+  GtkWidget *icon = gtk_image_new_from_icon_name ("color-select-symbolic");
+  gtk_image_set_pixel_size (GTK_IMAGE (icon), 64);
+  gtk_box_append (GTK_BOX (box), icon);
+
+  GtkWidget *title = gtk_label_new (tr ("RGB Controller"));
+  gtk_widget_add_css_class (title, "title-2");
+  gtk_box_append (GTK_BOX (box), title);
+
+  GtkWidget *warn = gtk_label_new (tr ("This feature is under construction."));
+  gtk_widget_set_halign (warn, GTK_ALIGN_CENTER);
+  gtk_widget_set_opacity (warn, 0.7);
+  gtk_label_set_wrap (GTK_LABEL (warn), TRUE);
+  gtk_box_append (GTK_BOX (box), warn);
+
+  GtkWidget *openrgb_btn = gtk_button_new_with_label (tr ("Open OpenRGB"));
+  gtk_widget_add_css_class (openrgb_btn, "accent");
+  gtk_widget_set_halign (openrgb_btn, GTK_ALIGN_CENTER);
+  g_signal_connect (openrgb_btn, "clicked", G_CALLBACK (hw_openrgb_launch), NULL);
+  gtk_box_append (GTK_BOX (box), openrgb_btn);
 
   return box;
 }
@@ -157,6 +192,11 @@ utilidades_page_new (void)
         page->mangohud_empty, "mangohud",
         "MangoHud", "speedometer-symbolic");
     }
+
+  page->rgb_controller_page = create_rgb_controller_page ();
+  adw_view_stack_add_titled_with_icon (page->sub_stack,
+    page->rgb_controller_page, "rgb-controller",
+    tr ("RGB Controller"), "color-select-symbolic");
 
   g_object_ref_sink (page->box);
   g_object_unref (builder);

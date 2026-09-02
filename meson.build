@@ -10,6 +10,7 @@ project('epinephrine', 'c',
 
 gtk4_dep = dependency('gtk4', version: '>= 4.10')
 libadwaita_dep = dependency('libadwaita-1', version: '>= 1.4')
+gdk_pixbuf_dep = dependency('gdk-pixbuf-2.0', version: '>= 2.42')
 fontconfig_dep = dependency('fontconfig')
 m_dep = meson.get_compiler('c').find_library('m', required: true)
 

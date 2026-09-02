@@ -477,14 +477,7 @@ settings_apply_accent (AccentChoice choice)
   snprintf (css, sizeof (css),
     "@define-color accent_color %s;\n"
     "@define-color accent_bg_color %s;\n"
-    "@define-color accent_fg_color %s;\n"
-    ".language-toggle-group > toggle:checked {\n"
-    "  background-color: var(--accent-bg-color);\n"
-    "  color: var(--accent-fg-color);\n"
-    "}\n"
-    ".language-flag {\n"
-    "  font-size: 18px;\n"
-    "}\n",
+    "@define-color accent_fg_color %s;\n",
     ACCENT_COLORS[choice], ACCENT_COLORS[choice], fg);
 
   g_accent_provider = gtk_css_provider_new ();
@@ -638,14 +631,14 @@ on_graph_speed_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
 }
 
 static void
-on_language_changed (AdwToggleGroup *group, GParamSpec *pspec, SettingsPage *page)
+on_language_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
 {
   (void) pspec;
   (void) page;
   if (epi_i18n_in_apply ())
     return;
 
-  guint sel = adw_toggle_group_get_active (group);
+  guint sel = adw_combo_row_get_selected (row);
   int count = 0;
   EpiLanguage *langs = epi_i18n_list_languages (&count);
 
@@ -700,36 +693,30 @@ language_index_for_code (const char *code)
 }
 
 static void
-language_group_rebuild (SettingsPage *page)
+language_combo_rebuild (SettingsPage *page)
 {
-  guint selected = adw_toggle_group_get_active (page->language_group);
+  GtkStringList *model = gtk_string_list_new (NULL);
 
-  AdwToggle *sys_toggle = adw_toggle_new ();
-  adw_toggle_set_name (sys_toggle, "system");
-  GtkWidget *sys_label = gtk_label_new (flag_emoji_for_code (NULL));
-  gtk_widget_add_css_class (sys_label, "language-flag");
-  adw_toggle_set_child (sys_toggle, sys_label);
-  adw_toggle_set_tooltip (sys_toggle, epi_i18n_get ("System"));
-  adw_toggle_group_add (page->language_group, sys_toggle);
+  /* Item 0: System */
+  char *sys_label = g_strdup_printf ("%s %s",
+    flag_emoji_for_code (NULL), epi_i18n_get ("System"));
+  gtk_string_list_append (model, sys_label);
+  g_free (sys_label);
 
+  /* Items 1..N: each available language */
   int count = 0;
   EpiLanguage *langs = epi_i18n_list_languages (&count);
   for (int i = 0; i < count; i++)
     {
-      AdwToggle *toggle = adw_toggle_new ();
-      adw_toggle_set_name (toggle, langs[i].code);
-      GtkWidget *flag = gtk_label_new (flag_emoji_for_code (langs[i].code));
-      gtk_widget_add_css_class (flag, "language-flag");
-      adw_toggle_set_child (toggle, flag);
-      adw_toggle_set_tooltip (toggle, langs[i].native_name);
-      adw_toggle_group_add (page->language_group, toggle);
+      char *label = g_strdup_printf ("%s %s",
+        flag_emoji_for_code (langs[i].code), langs[i].native_name);
+      gtk_string_list_append (model, label);
+      g_free (label);
     }
   epi_i18n_free_languages (langs, count);
 
-  guint n = adw_toggle_group_get_n_toggles (page->language_group);
-  if (selected >= n)
-    selected = 0;
-  adw_toggle_group_set_active (page->language_group, selected);
+  adw_combo_row_set_model (page->language_combo, G_LIST_MODEL (model));
+  g_object_unref (model);
 }
 
 SettingsPage *
@@ -745,18 +732,12 @@ settings_page_new (void)
   page->brand_version  = GTK_WIDGET (gtk_builder_get_object (builder, "brand-version"));
   page->accent_combo   = ADW_COMBO_ROW (gtk_builder_get_object (builder, "accent-color-row"));
   page->apply_theme_row = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "apply-theme-row"));
-  page->language_row   = ADW_ACTION_ROW (gtk_builder_get_object (builder, "language-row"));
+  page->language_combo = ADW_COMBO_ROW (gtk_builder_get_object (builder, "language-row"));
   page->graph_speed_combo = ADW_COMBO_ROW (gtk_builder_get_object (builder, "graph-speed-row"));
   page->custom_speed_row = ADW_ACTION_ROW (gtk_builder_get_object (builder, "custom-speed-row"));
   page->custom_speed_spin = GTK_SPIN_BUTTON (gtk_builder_get_object (builder, "custom-speed-spin"));
 
   AdwSwitchRow *untrusted_row = ADW_SWITCH_ROW (gtk_builder_get_object (builder, "untrusted-launchers-row"));
-
-  page->language_group = ADW_TOGGLE_GROUP (adw_toggle_group_new ());
-  adw_toggle_group_set_homogeneous (page->language_group, TRUE);
-  gtk_widget_add_css_class (GTK_WIDGET (page->language_group),
-    "language-toggle-group");
-  adw_action_row_add_suffix (page->language_row, GTK_WIDGET (page->language_group));
 
   AccentChoice saved = settings_load_accent ();
   gboolean theme_saved = settings_load_full_theme ();
@@ -767,7 +748,7 @@ settings_page_new (void)
     G_CALLBACK (on_accent_changed), page);
   g_signal_connect (page->apply_theme_row, "notify::active",
     G_CALLBACK (on_theme_toggled), page);
-  g_signal_connect (page->language_group, "notify::active",
+  g_signal_connect (page->language_combo, "notify::selected",
     G_CALLBACK (on_language_changed), page);
   g_signal_connect (page->graph_speed_combo, "notify::selected",
     G_CALLBACK (on_graph_speed_changed), page);
@@ -780,8 +761,8 @@ settings_page_new (void)
   adw_switch_row_set_active (page->apply_theme_row, theme_saved);
   adw_switch_row_set_active (untrusted_row, settings_load_untrusted_launchers ());
 
-  language_group_rebuild (page);
-  adw_toggle_group_set_active (page->language_group,
+  language_combo_rebuild (page);
+  adw_combo_row_set_selected (page->language_combo,
     language_index_for_code (lang_saved));
   g_free (lang_saved);
 

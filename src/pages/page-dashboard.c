@@ -2,6 +2,7 @@
 #include "page-games.h"
 #include "window.h"
 #include "epi-privilege.h"
+#include "hw-detail.h"
 #include "../epi-i18n.h"
 #include "../hydra-ldb.h"
 
@@ -1648,24 +1649,60 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
   g_child_watch_add (child_pid, on_steam_exit, page);
 }
 
+/* GdkPixbufAnimation / gtk_image_new_from_pixbuf are deprecated in GTK4 but
+   still needed for proper animated GIF support and pre-scaled static images. */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
 GtkWidget *
 create_game_icon_widget (const char *icon, int pixel_size)
 {
-  GtkWidget *img;
   if (icon && (icon[0] == '/' || icon[0] == '~'))
     {
       char *path = (icon[0] == '~')
         ? g_build_filename (g_get_home_dir (), icon + 1, NULL)
         : g_strdup (icon);
-      img = gtk_image_new_from_file (path);
+
+      /* Check if this is an animated GIF */
+      GError *err = NULL;
+      GdkPixbufAnimation *anim = gdk_pixbuf_animation_new_from_file (path, &err);
+      if (anim && !gdk_pixbuf_animation_is_static_image (anim))
+        {
+          /* Animated GIF: GtkImage handles animation automatically */
+          GtkWidget *img = gtk_image_new_from_file (path);
+          gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
+          g_object_unref (anim);
+          g_free (path);
+          return img;
+        }
+      if (anim) g_object_unref (anim);
+      if (err) g_error_free (err);
+
+      /* Static image (PNG, JPEG, GIF single-frame, WebP, ICO, BMP, TIFF) */
+      err = NULL;
+      GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_size (path, pixel_size, pixel_size, &err);
+      if (pixbuf)
+        {
+          GtkWidget *img = gtk_image_new_from_pixbuf (pixbuf);
+          g_object_unref (pixbuf);
+          g_free (path);
+          return img;
+        }
+      if (err) g_error_free (err);
+
+      /* Last resort: let GTK try to load it */
+      GtkWidget *img = gtk_image_new_from_file (path);
+      gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
       g_free (path);
+      return img;
     }
-  else
-    img = gtk_image_new_from_icon_name (
-      icon && icon[0] ? icon : "input-gaming-symbolic");
+
+  GtkWidget *img = gtk_image_new_from_icon_name (
+    icon && icon[0] ? icon : "input-gaming-symbolic");
   gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
   return img;
 }
+
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 static void
 on_delete_game_clicked (GtkButton *btn, gpointer user_data)
@@ -3301,8 +3338,14 @@ gather_all (void)
   if (tmp) { g_strlcpy (r->cpu, tmp, sizeof (r->cpu)); g_free (tmp); }
   else     g_strlcpy (r->cpu, tr ("N/A"), sizeof (r->cpu));
 
-  tmp = RUN_SH_STATIC ("awk '/MemTotal/{printf \"%.0f MB (%.1f GB)\", $2, $2/1024/1024}' /proc/meminfo");
-  if (tmp) { g_strlcpy (r->ram, tmp, sizeof (r->ram)); g_free (tmp); }
+  tmp = RUN_SH_STATIC ("awk '/MemTotal/{print $2}' /proc/meminfo");
+  if (tmp)
+    {
+      char *sz = ram_size_mb_str (g_ascii_strtoull (tmp, NULL, 10) / 1024ULL);
+      g_strlcpy (r->ram, sz, sizeof (r->ram));
+      g_free (sz);
+      g_free (tmp);
+    }
   else     g_strlcpy (r->ram, tr ("N/A"), sizeof (r->ram));
 
   tmp = RUN_SH_STATIC ("lspci 2>/dev/null | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //'");
@@ -3313,18 +3356,21 @@ gather_all (void)
   /* VRAM total. Prefer the live sysfs / nvidia-smi readings; when none of
      them yields a relevant value, fall back to the VRAM declared for this
      GPU in GPU_INDEX.md (matching by detected GPU name). */
-  tmp = RUN_SH_STATIC ("cat /sys/class/drm/*/device/mem_info_vram_total 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1/1024/1024}'");
+  tmp = RUN_SH_STATIC ("cat /sys/class/drm/*/device/mem_info_vram_total 2>/dev/null | head -1 | awk '{printf \"%.0f\", $1/1024/1024}'");
   if (!tmp)
-    tmp = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | awk '{printf \"%.0f MB\", $1}'");
+    tmp = RUN_SH_STATIC ("nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1");
   if (tmp)
     {
+      char *sz = ram_size_mb_str (g_ascii_strtoull (tmp, NULL, 10));
       if (atof (tmp) > 1.0f)
         {
-          g_strlcpy (r->vram, tmp, sizeof (r->vram));
+          g_strlcpy (r->vram, sz, sizeof (r->vram));
+          g_free (sz);
           g_free (tmp);
         }
       else
         {
+          g_free (sz);
           g_free (tmp);
           tmp = NULL;
         }
@@ -3333,7 +3379,11 @@ gather_all (void)
     {
       float idx_vram = gpu_vram_from_index (r->gpu);
       if (idx_vram > 0.5f)
-        g_snprintf (r->vram, sizeof (r->vram), "%.0f MB", idx_vram * 1024.0f);
+        {
+          char *sz = ram_size_mb_str ((uint64_t) (idx_vram * 1024.0f));
+          g_strlcpy (r->vram, sz, sizeof (r->vram));
+          g_free (sz);
+        }
       else
         g_strlcpy (r->vram, tr ("N/A"), sizeof (r->vram));
     }

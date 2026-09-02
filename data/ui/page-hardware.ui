@@ -77,11 +77,11 @@
 
                 <child>
                   <object class="GtkButton" id="gpu_specs_btn">
-                    <property name="label" translatable="yes">Official Page</property>
-                    <property name="valign">start</property>
-                    <property name="margin-top">4</property>
+                    <property name="label" translatable="yes">Product Website</property>
+                    <property name="valign">center</property>
                     <style>
-                      <class name="text-button"/>
+                      <class name="flat"/>
+                      <class name="accent"/>
                     </style>
                   </object>
                 </child>
@@ -200,26 +200,6 @@
                       </object>
                     </child>
 
-                  </object>
-                </child>
-              </object>
-            </child>
-
-            <!-- ===== Lighting Controls (collapsible) ===== -->
-            <child>
-              <object class="AdwPreferencesGroup">
-                <child>
-                  <object class="AdwExpanderRow" id="gpu-lighting-toggle">
-                    <property name="title" translatable="yes">Lighting Controls</property>
-                    <property name="subtitle" translatable="yes">RGB and LED management</property>
-                    <child>
-                      <object class="GtkLabel" id="gpu_lighting_status">
-                        <property name="halign">start</property>
-                        <property name="hexpand">True</property>
-                        <property name="wrap">True</property>
-                        <property name="max-width-chars">60</property>
-                      </object>
-                    </child>
                   </object>
                 </child>
               </object>

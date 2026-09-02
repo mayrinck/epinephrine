@@ -84,7 +84,9 @@ read_sysfs (const char *path)
 static char *
 find_usb_parent (const char *start)
 {
-  char *path = g_strdup (start);
+  /* Resolve symlinks first (e.g. /sys/class/input/eventN/device → real HID path) */
+  char *resolved = realpath (start, NULL);
+  char *path = resolved ? resolved : g_strdup (start);
   while (path && path[0])
     {
       char *vendor = g_build_filename (path, "idVendor", NULL);
@@ -109,7 +111,8 @@ find_usb_parent (const char *start)
 /* ---- Keyboard info querying ---- */
 
 static gboolean
-find_keyboard_usb_info (char **out_name, char **out_vendor,
+find_keyboard_usb_info (uint16_t vendor, uint16_t product,
+                        char **out_name, char **out_vendor,
                         char **out_speed, char **out_driver,
                         char **out_chipset)
 {
@@ -118,6 +121,7 @@ find_keyboard_usb_info (char **out_name, char **out_vendor,
 
   const char *entry;
   gboolean found = FALSE;
+  char *byid_name = NULL;
   while (!found && (entry = g_dir_read_name (dir)))
     {
       if (!g_str_has_suffix (entry, "-event-kbd"))
@@ -132,13 +136,61 @@ find_keyboard_usb_info (char **out_name, char **out_vendor,
 
       const char *base = target;
       if (g_str_has_prefix (base, "../")) base += 3;
-      char *sys_path = g_build_filename ("/sys/class/input", base, NULL);
-      char *phys_path = g_build_filename (sys_path, "device", "device", NULL);
+      char *sys_path = g_build_filename ("/sys/class/input", base, "device", NULL);
 
-      char *usb_path = find_usb_parent (phys_path);
-      g_free (phys_path);
+      char *usb_path = find_usb_parent (sys_path);
       g_free (sys_path);
       if (!usb_path) continue;
+
+      /* When specific VID:PID requested, verify this entry matches */
+      if (vendor != 0 || product != 0)
+        {
+          char vid_buf[16] = {0}, pid_buf[16] = {0};
+          char *vid_file = g_build_filename (usb_path, "idVendor", NULL);
+          char *pid_file = g_build_filename (usb_path, "idProduct", NULL);
+          int fv = open (vid_file, O_RDONLY);
+          int fp = open (pid_file, O_RDONLY);
+          g_free (vid_file);
+          g_free (pid_file);
+          if (fv >= 0)
+            {
+              ssize_t n = read (fv, vid_buf, sizeof (vid_buf) - 1);
+              close (fv);
+              if (n > 0) vid_buf[n] = '\0';
+              g_strstrip (vid_buf);
+            }
+          if (fp >= 0)
+            {
+              ssize_t n = read (fp, pid_buf, sizeof (pid_buf) - 1);
+              close (fp);
+              if (n > 0) pid_buf[n] = '\0';
+              g_strstrip (pid_buf);
+            }
+          uint16_t ev_vendor = (uint16_t) strtoul (vid_buf, NULL, 16);
+          uint16_t ev_product = (uint16_t) strtoul (pid_buf, NULL, 16);
+          if (ev_vendor != vendor || ev_product != product)
+            { g_free (usb_path); continue; }
+        }
+
+      /* Extract device name from the by-id entry itself (most reliable) */
+      {
+        char *d = g_strdup (entry);
+        char *usb_part = strstr (d, "usb-");
+        char *name_start = usb_part ? usb_part + 4 : d;
+        char *suffix = strstr (name_start, "-event-kbd");
+        if (suffix) *suffix = '\0';
+        /* Skip leading hex VID:PID if present */
+        if (name_start[0] && g_ascii_isxdigit (name_start[0]))
+          {
+            char *first_us = strchr (name_start, '_');
+            if (first_us) name_start = first_us + 1;
+          }
+        /* Convert underscores to spaces */
+        for (int i = 0; name_start[i]; i++)
+          if (name_start[i] == '_') name_start[i] = ' ';
+        byid_name = g_strstrip (g_strdup (name_start));
+        g_free (d);
+      }
 
       found = TRUE;
 
@@ -164,6 +216,13 @@ find_keyboard_usb_info (char **out_name, char **out_vendor,
             }
           g_strfreev (lines);
           g_free (out);
+        }
+
+      /* Use by-id name as fallback if udevadm didn't provide one */
+      if (out_name && !*out_name && byid_name && byid_name[0])
+        {
+          *out_name = byid_name;
+          byid_name = NULL;
         }
 
       char *manufacturer = g_build_filename (usb_path, "manufacturer", NULL);
@@ -241,6 +300,7 @@ find_keyboard_usb_info (char **out_name, char **out_vendor,
 
       g_free (usb_path);
     }
+  g_free (byid_name);
   g_dir_close (dir);
 
   if (!found)
@@ -463,6 +523,22 @@ on_lock_led_toggled (AdwSwitchRow *sw, GParamSpec *pspec, KeyboardPage *page)
 }
 
 static void
+on_keyboard_website_clicked (GtkButton *btn, KeyboardPage *page)
+{
+  (void) btn;
+  if (page->brand_url)
+    {
+      GError *err = NULL;
+      g_app_info_launch_default_for_uri (page->brand_url, NULL, &err);
+      if (err)
+        {
+          g_warning ("Failed to open URL: %s", err->message);
+          g_error_free (err);
+        }
+    }
+}
+
+static void
 on_keyboard_save (GtkButton *btn, KeyboardPage *page)
 {
   (void) btn;
@@ -548,38 +624,20 @@ keyboard_page_new (void)
   /* Save button */
   page->save_btn = GTK_WIDGET (gtk_builder_get_object (builder, "kb-save-btn"));
 
-  /* ---- Build branding section programmatically ---- */
-  {
-    /* Branding box: icon + text */
-    page->branding_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 16);
-    gtk_widget_set_margin_bottom (page->branding_box, 8);
+  /* ---- Branding from UI ---- */
+  page->branding_box = GTK_WIDGET (gtk_builder_get_object (builder, "kb_branding_box"));
+  page->brand_name_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb_name_label"));
+  page->brand_vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb_vendor_label"));
+  page->brand_website_btn = GTK_WIDGET (gtk_builder_get_object (builder, "kb-website-btn"));
+  gtk_widget_set_sensitive (page->brand_website_btn, FALSE);
+  g_signal_connect (page->brand_website_btn, "clicked",
+    G_CALLBACK (on_keyboard_website_clicked), page);
 
-    GtkWidget *brand_icon = gtk_image_new_from_icon_name ("input-keyboard-symbolic");
-    gtk_image_set_pixel_size (GTK_IMAGE (brand_icon), 64);
-    gtk_widget_set_valign (brand_icon, GTK_ALIGN_START);
-
-    GtkWidget *brand_text = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
-    gtk_widget_set_hexpand (brand_text, TRUE);
-
-    page->brand_name_label = gtk_label_new ("Keyboard");
-    gtk_widget_add_css_class (page->brand_name_label, "title-1");
-    gtk_widget_set_halign (page->brand_name_label, GTK_ALIGN_START);
-
-    page->brand_vendor_label = gtk_label_new ("");
-    gtk_widget_add_css_class (page->brand_vendor_label, "dim-label");
-    gtk_widget_set_halign (page->brand_vendor_label, GTK_ALIGN_START);
-
-    gtk_box_append (GTK_BOX (brand_text), page->brand_name_label);
-    gtk_box_append (GTK_BOX (brand_text), page->brand_vendor_label);
-
-    gtk_box_append (GTK_BOX (page->branding_box), brand_icon);
-    gtk_box_append (GTK_BOX (page->branding_box), brand_text);
-
-    /* Insert branding as first child of the inner content box */
-    GtkScrolledWindow *scroll = GTK_SCROLLED_WINDOW (page->box);
-    GtkWidget *inner_box = gtk_scrolled_window_get_child (scroll);
-    gtk_box_prepend (GTK_BOX (inner_box), page->branding_box);
-  }
+  /* ---- Device Information labels ---- */
+  page->info_vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-vendor-value"));
+  page->info_speed_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-speed-value"));
+  page->info_driver_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-driver-value"));
+  page->info_chipset_label = GTK_WIDGET (gtk_builder_get_object (builder, "kb-chipset-value"));
 
   /* Connect signals */
   g_signal_connect (page->save_btn, "clicked", G_CALLBACK (on_keyboard_save), page);
@@ -591,15 +649,28 @@ keyboard_page_new (void)
 
   g_object_ref_sink (page->box);
 
-  /* Populate branding info from USB device */
+  /* Populate branding + device info from USB device */
   {
     char *name = NULL, *vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
-    find_keyboard_usb_info (&name, &vendor, &speed, &driver, &chipset);
+    find_keyboard_usb_info (0, 0, &name, &vendor, &speed, &driver, &chipset);
 
     if (name && name[0])
       gtk_label_set_text (GTK_LABEL (page->brand_name_label), name);
+
     if (vendor && vendor[0])
-      gtk_label_set_text (GTK_LABEL (page->brand_vendor_label), vendor);
+      {
+        gtk_label_set_text (GTK_LABEL (page->brand_vendor_label), vendor);
+        gtk_label_set_text (GTK_LABEL (page->info_vendor_label), vendor);
+      }
+    else
+      gtk_label_set_text (GTK_LABEL (page->info_vendor_label), "—");
+
+    gtk_label_set_text (GTK_LABEL (page->info_speed_label),
+      speed && speed[0] ? speed : "—");
+    gtk_label_set_text (GTK_LABEL (page->info_driver_label),
+      driver && driver[0] ? driver : "—");
+    gtk_label_set_text (GTK_LABEL (page->info_chipset_label),
+      chipset && chipset[0] ? chipset : "—");
 
     g_free (name);
     g_free (vendor);
@@ -651,4 +722,58 @@ keyboard_page_new (void)
   refresh_keyboard_info (page);
 
   return page;
+}
+
+void
+keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product)
+{
+  if (!page) return;
+
+  char *name = NULL, *vnd = NULL, *spd = NULL, *drv = NULL, *csp = NULL;
+  find_keyboard_usb_info (vendor, product, &name, &vnd, &spd, &drv, &csp);
+
+  if (name && name[0])
+    gtk_label_set_text (GTK_LABEL (page->brand_name_label), name);
+  else
+    {
+      char fallback[64];
+      g_snprintf (fallback, sizeof (fallback), tr ("Keyboard (%04x:%04x)"), vendor, product);
+      gtk_label_set_text (GTK_LABEL (page->brand_name_label), fallback);
+    }
+
+  if (vnd && vnd[0])
+    {
+      gtk_label_set_text (GTK_LABEL (page->brand_vendor_label), vnd);
+      gtk_label_set_text (GTK_LABEL (page->info_vendor_label), vnd);
+    }
+  else
+    {
+      gtk_label_set_text (GTK_LABEL (page->brand_vendor_label), "");
+      gtk_label_set_text (GTK_LABEL (page->info_vendor_label), "\u2014");
+    }
+
+  gtk_label_set_text (GTK_LABEL (page->info_speed_label),
+    spd && spd[0] ? spd : "\u2014");
+  gtk_label_set_text (GTK_LABEL (page->info_driver_label),
+    drv && drv[0] ? drv : "\u2014");
+  gtk_label_set_text (GTK_LABEL (page->info_chipset_label),
+    csp && csp[0] ? csp : "\u2014");
+
+  g_free (name);
+  g_free (vnd);
+  g_free (spd);
+  g_free (drv);
+  g_free (csp);
+
+  /* Refresh layout info */
+  refresh_keyboard_info (page);
+
+  /* Refresh lock LED state for this keyboard */
+  gboolean num = FALSE, caps = FALSE, scroll = FALSE;
+  if (read_kb_led_state (&num, &caps, &scroll))
+    {
+      adw_switch_row_set_active (page->numlock_switch, num);
+      adw_switch_row_set_active (page->capslock_switch, caps);
+      adw_switch_row_set_active (page->scrolllock_switch, scroll);
+    }
 }

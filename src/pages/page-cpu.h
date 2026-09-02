@@ -19,6 +19,8 @@ typedef struct
   GtkWidget *cpu_name_label;
   GtkWidget *cpu_vendor_label;
   GtkWidget *cpu_codename_label;
+  GtkWidget *cpu_website_btn;
+  char *brand_url;
 
   /* Monitor */
   GtkWidget *monitor_graph;
@@ -28,6 +30,11 @@ typedef struct
   guint graph_timer_id;
   float monitor_history[CPU_MON_METRICS][CPU_MON_HISTORY];
   int monitor_history_count;
+
+  /* CPU average history (raw values for 10s rolling average) */
+  float monitor_avg_buf[CPU_MON_METRICS][400];
+  int monitor_avg_idx[CPU_MON_METRICS];
+  int monitor_avg_count[CPU_MON_METRICS];
 
   /* CPU identification (static) */
   char *model_name;

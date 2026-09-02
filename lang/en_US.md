@@ -82,6 +82,7 @@
 | Breeze (KDE) | Breeze (KDE) |
 | Brightness of SDR in HDR mode (default: 400) | Brightness of SDR in HDR mode (default: 400) |
 | Button Mapping | Button Mapping |
+| Cache Pressure | Cache Pressure |
 | Cancel | Cancel |
 | Cannot access /dev/input for key capture | Cannot access /dev/input for key capture |
 | Capture Key | Capture Key |
@@ -140,6 +141,8 @@
 | Custom Text | Custom Text |
 | D-Pad | D-Pad |
 | Date | Date |
+| Defines the pressure (priority) that the memory management system applies when trying to deallocate the VFS cache (dentries/inodes) relative to file page cache and application anonymous memory. | Defines the pressure (priority) that the memory management system applies when trying to deallocate the VFS cache (dentries/inodes) relative to file page cache and application anonymous memory. |
+| Defines the kernel's balance choice between ways of freeing RAM. The lower the value, the less Swap is favored. | Defines the kernel's balance choice between ways of freeing RAM. The lower the value, the less Swap is favored. |
 | Default | Default |
 | Default DPI | Default DPI |
 | Defaults restored (not saved) | Defaults restored (not saved) |
@@ -232,6 +235,7 @@
 | Frame Time Histogram | Frame Time Histogram |
 | Frame Timing | Frame Timing |
 | Framerate Limit | Framerate Limit |
+| Free RAM | Free RAM |
 | Frequency Limits | Frequency Limits |
 | FSR | FSR |
 | Fullscreen | Fullscreen |
@@ -373,7 +377,25 @@
 | May cause tearing | May cause tearing |
 | Memory | Memory |
 | Memory Clock | Memory Clock |
+| Memory Information | Memory Information |
+| Memory Slots | Memory Slots |
+| Memory Stick | Memory Stick |
+| Memory Stick Information | Memory Stick Information |
+| Bank Locator | Bank Locator |
+| Configured Memory Speed | Configured Memory Speed |
+| Data Width | Data Width |
+| Form Factor | Form Factor |
+| Individual data of each installed memory stick | Individual data of each installed memory stick |
+| Locator | Locator |
+| Part Number | Part Number |
+| Rank | Rank |
+| Serial Number | Serial Number |
+| Size | Size |
+| Total Width | Total Width |
+| Type | Type |
+| Type Detail | Type Detail |
 | Memory Usage | Memory Usage |
+| Memory/Swap Management | Memory/Swap Management |
 | Mesa Version | Mesa Version |
 | Middle-Left | Middle-Left |
 | Middle-Right | Middle-Right |
@@ -424,8 +446,7 @@
 | NVIDIA Green | NVIDIA Green |
 | NVIDIA Power Limit | NVIDIA Power Limit |
 | nvidia-smi could not provide real-time data for this GPU. | nvidia-smi could not provide real-time data for this GPU. |
-| Official Page | Official Page |
-| Official Website | Official Website |
+| Product Website | Product Website |
 | Offset X | Offset X |
 | Offset Y | Offset Y |
 | ondemand | ondemand |
@@ -459,6 +480,7 @@
 | Powersave | Powersave |
 | powersave | powersave |
 | Prefer Output | Prefer Output |
+| Preserve | Preserve |
 | Press a key... | Press a key... |
 | Press any button on the controller | Press any button on the controller |
 | Prevents USB devices from entering sleep during gameplay, reducing potential input micro-lags. | Prevents USB devices from entering sleep during gameplay, reducing potential input micro-lags. |
@@ -479,6 +501,9 @@
 | RAM | RAM |
 | RAM Frequency | RAM Frequency |
 | RAM Usage | RAM Usage |
+| RGB Controller | RGB Controller |
+| This feature is under construction. | This feature is under construction. |
+| Open OpenRGB | Open OpenRGB |
 | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. |
 | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. |
 | Realtime | Realtime |
@@ -572,12 +597,16 @@
 | Support Wayland clients via xdg-shell | Support Wayland clients via xdg-shell |
 | Suspend compositor | Suspend compositor |
 | Suspend the desktop compositor to reduce input lag and eliminate forced vsync. Supported on KDE and GNOME. | Suspend the desktop compositor to reduce input lag and eliminate forced vsync. Supported on KDE and GNOME. |
+| Swap and kernel memory-pressure tuning. | Swap and kernel memory-pressure tuning. |
+| Swap Usage | Swap Usage |
+| Swappiness | Swappiness |
 | System | System |
 | System animations will not occur while gamemode is active | System animations will not occur while gamemode is active |
 | System notification bubbles will not occur while gamemode is active | System notification bubbles will not occur while gamemode is active |
 | System tweaks applied while GameMode is active. Changes are reverted when GameMode stops. | System tweaks applied while GameMode is active. Changes are reverted when GameMode stops. |
 | Table Columns | Table Columns |
 | Target luminance (default: 1000) | Target luminance (default: 1000) |
+| Technical data of the RAM memory | Technical data of the RAM memory |
 | Technique Index | Technique Index |
 | Technique index from the effect | Technique index from the effect |
 | Technology | Technology |
@@ -640,3 +669,101 @@
 | Yes | Yes |
 | Your game library | Your game library |
 | Zero RPM Fan | Zero RPM Fan |
+| 25–2500 ms | 25–2500 ms |
+| Backend, mouse, keyboard, cursor and MangoApp settings. | Backend, mouse, keyboard, cursor and MangoApp settings. |
+| Background opacity and transparency settings. | Background opacity and transparency settings. |
+| Balanced (100ms) | Balanced (100ms) |
+| Base Frequency | Base Frequency |
+| Board identification | Board identification |
+| BogoMIPS | BogoMIPS |
+| Boost Frequency | Boost Frequency |
+| Buttons | Buttons |
+| CPU Management | CPU Management |
+| CPU feature flags | CPU feature flags |
+| CPU vulnerability mitigations | CPU vulnerability mitigations |
+| Caches | Caches |
+| CapsLock | CapsLock |
+| Category | Category |
+| Characters per second when holding a key | Characters per second when holding a key |
+| Chipset / Manufacturer | Chipset / Manufacturer |
+| Choose which stats to display on the overlay. | Choose which stats to display on the overlay. |
+| Configure mouse acceleration, speed, and natural scrolling via libinput. | Configure mouse acceleration, speed, and natural scrolling via libinput. |
+| Configure repeat rate and delay. | Configure repeat rate and delay. |
+| Configure the behavior of the GPU while gamemode is active | Configure the behavior of the GPU while gamemode is active |
+| Configure the behavior of your CPU while gamemode is active. | Configure the behavior of your CPU while gamemode is active. |
+| Control CapsLock, NumLock and ScrollLock indicator lights via HID | Control CapsLock, NumLock and ScrollLock indicator lights via HID |
+| Control keyboard backlight via system LED interface | Control keyboard backlight via system LED interface |
+| Controller configuration options | Controller configuration options |
+| Cores / Threads | Cores / Threads |
+| Custom | Custom |
+| Custom interval (ms) | Custom interval (ms) |
+| Custom text labels displayed on the overlay. | Custom text labels displayed on the overlay. |
+| Define how the processes will be managed by the system. | Define how the processes will be managed by the system. |
+| Define the scheduler behavior while gamemode is active. | Define the scheduler behavior while gamemode is active. |
+| Defines the priority of the processes while gamemode is active. | Defines the priority of the processes while gamemode is active. |
+| Delay before key repeat starts | Delay before key repeat starts |
+| Device Information | Device Information |
+| Enable CapsLock at login | Enable CapsLock at login |
+| Enable NumLock at login | Enable NumLock at login |
+| Enable ScrollLock at login | Enable ScrollLock at login |
+| Enable untrusted launchers | Enable untrusted launchers |
+| Enables access to Hydra and Hydra Classic, known for pirated or untrusted products | Enables access to Hydra and Hydra Classic, known for pirated or untrusted products |
+| FPS limit and performance tuning. | FPS limit and performance tuning. |
+| Family / Model / Stepping | Family / Model / Stepping |
+| Firmware details | Firmware details |
+| Framerate limit for the compositor. | Framerate limit for the compositor. |
+| Game Import | Game Import |
+| Governor, frequency scaling | Governor, frequency scaling |
+| Graph Update Speed | Graph Update Speed |
+| HDR10 output, inverse tone mapping and SDR gamut settings. | HDR10 output, inverse tone mapping and SDR gamut settings. |
+| HUD position, offset, font size and table columns. | HUD position, offset, font size and table columns. |
+| Hardware identification and capabilities. | Hardware identification and capabilities. |
+| Hardware identification and connection details. | Hardware identification and connection details. |
+| Hardware information and capabilities | Hardware information and capabilities |
+| Higher values use less CPU but feel less responsive | Higher values use less CPU but feel less responsive |
+| Instructions | Instructions |
+| Keyboard (%04x:%04x) | Keyboard (%04x:%04x) |
+| Keyboard Backlight | Keyboard Backlight |
+| Keyboard backlight disabled | Keyboard backlight disabled |
+| Keyboard backlight enabled | Keyboard backlight enabled |
+| L1 Data | L1 Data |
+| L1 Instruction | L1 Instruction |
+| L1, L2, L3 cache sizes | L1, L2, L3 cache sizes |
+| L2 | L2 |
+| L3 | L3 |
+| Lock Key LEDs | Lock Key LEDs |
+| Lock Keys at Boot | Lock Keys at Boot |
+| Lock key LEDs disabled | Lock key LEDs disabled |
+| Lock key LEDs enabled | Lock key LEDs enabled |
+| Manage | Manage |
+| Controls the lighting of your keyboard (if it has any). | Controls the lighting of your keyboard (if it has any). |
+| Maximum Frequency (kHz) | Maximum Frequency (kHz) |
+| Microcode | Microcode |
+| Minimum Frequency (kHz) | Minimum Frequency (kHz) |
+| Monitor graph refresh rate | Monitor graph refresh rate |
+| No keyboard backlight device found | No keyboard backlight device found |
+| No known vulnerabilities detected | No known vulnerabilities detected |
+| NumLock | NumLock |
+| Output resolution, game resolution, refresh rates and fullscreen options. | Output resolution, game resolution, refresh rates and fullscreen options. |
+| Platform controller hub | Platform controller hub |
+| Power Saver (250ms) | Power Saver (250ms) |
+| Power, clocks, fan and more | Power, clocks, fan and more |
+| Programmable buttons and macros | Programmable buttons and macros |
+| ReShade shader effect path and technique selection. | ReShade shader effect path and technique selection. |
+| Realtime (25ms) | Realtime (25ms) |
+| Reduces shading rate to boost performance (AMD RDNA2+ or Intel Arc GPUs). | Reduces shading rate to boost performance (AMD RDNA2+ or Intel Arc GPUs). |
+| SMBus and management | SMBus and management |
+| Save to Hardware | Save to Hardware |
+| Scripts that will execute every time Gamemode turns on/off | Scripts that will execute every time Gamemode turns on/off |
+| ScrollLock | ScrollLock |
+| Security | Security |
+| Set default state for lock keys when logging in. | Set default state for lock keys when logging in. |
+| Socket | Socket |
+| Socket, architecture, cores, frequencies | Socket, architecture, cores, frequencies |
+| Swap and kernel memory-pressure tuning | Swap and kernel memory-pressure tuning |
+| USB Speed | USB Speed |
+| Upscaling algorithm, filter type, sharpness and max scale factor. | Upscaling algorithm, filter type, sharpness and max scale factor. |
+
+| Hydra Classics | Hydra Classics |
+| Imported %d game from Hydra | Imported %d game from Hydra |
+| Imported %d games from Hydra | Imported %d games from Hydra |
