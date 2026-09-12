@@ -14,6 +14,7 @@ sources = files(
   'hydra-ldb.c',
   'epi-privilege.c',
   'epi-i18n.c',
+  'epi-ratbagd.c',
   'usb-ids.c',
   'pages/page-dashboard.c',
   'pages/page-games.c',

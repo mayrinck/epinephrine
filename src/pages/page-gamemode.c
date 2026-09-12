@@ -2,6 +2,7 @@
 #include "page-dashboard.h"
 #include "epi-privilege.h"
 #include "../epi-i18n.h"
+#include "../window.h"
 
 #include <string.h>
 #include <fcntl.h>
@@ -345,7 +346,9 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
       if (g_file_set_contents (cfg_path, content->str, -1, NULL))
         dashboard_show_toast (tr("Configuration saved successfully"));
       else
-        dashboard_show_toast (tr("Failed to save configuration"));
+        dashboard_show_error_toast (tr("Failed to save configuration"),
+          tr("Could not write the configuration file. "
+          "Check your permissions and disk space."));
     }
   else
     {
@@ -354,7 +357,9 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
       int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd < 0)
         {
-          dashboard_show_toast (tr("Failed to create temp file"));
+          dashboard_show_error_toast (tr("Failed to create temp file"),
+            tr("Could not create a temporary file in /tmp. "
+            "Check your permissions and disk space."));
           g_string_free (content, TRUE);
           return;
         }
@@ -379,7 +384,9 @@ on_save_clicked (GtkButton *btn, GameModePage *page)
         }
       else
         {
-          dashboard_show_toast (tr("Failed to save (elevation denied)"));
+          dashboard_show_error_toast (tr("Failed to save (elevation denied)"),
+            tr("The configuration could not be saved with administrator privileges. "
+            "You may need to authorize the elevation prompt."));
           unlink (tmp_path);
         }
       g_free (install_cmd);

@@ -3,6 +3,7 @@
 #include "page-dashboard.h"
 #include "epi-privilege.h"
 #include "../epi-i18n.h"
+#include "../window.h"
 
 #include <string.h>
 #include <fcntl.h>
@@ -307,7 +308,9 @@ on_save_defaults_clicked (GtkButton *button, GamescopePage *page)
   int fd = g_mkstemp_full (tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd < 0)
     {
-      dashboard_show_toast (tr("Failed to create temp file for elevation"));
+      dashboard_show_error_toast (tr("Failed to create temp file for elevation"),
+        tr("Could not create a temporary file in /tmp. "
+        "Check your permissions and disk space."));
       g_free (command);
       return;
     }
@@ -330,14 +333,18 @@ on_save_defaults_clicked (GtkButton *button, GamescopePage *page)
       if (exit_code == 0)
         dashboard_show_toast (tr("Saved to /etc/gamescope/epinephrine.conf (elevated)"));
       else
-        dashboard_show_toast (tr("Failed to save (permission denied)"));
+        dashboard_show_error_toast (tr("Failed to save (permission denied)"),
+          tr("The configuration could not be saved to /etc/gamescope/. "
+          "You need administrator privileges to write to this directory."));
     }
   else
     {
       if (err2)
-        dashboard_show_toast (err2->message);
+        dashboard_show_error_toast (tr("Failed to launch pkexec"), err2->message);
       else
-        dashboard_show_toast (tr("Failed to launch pkexec"));
+        dashboard_show_error_toast (tr("Failed to launch pkexec"),
+          tr("Could not launch pkexec for privilege elevation. "
+          "Make sure polkit is installed and configured."));
       g_clear_error (&err2);
     }
   g_free (install_cmd);

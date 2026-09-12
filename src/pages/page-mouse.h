@@ -4,13 +4,14 @@
 
 G_BEGIN_DECLS
 
-/* Entry parsed from MICE_INDEX.md */
+/* Entry parsed from MOUSE_INDEX.md */
 typedef struct {
     char *name;
     char *url;
     int buttons;
     gboolean white_label;
     char *white_label_vendor;
+    char *manufacturer;
 } MouseIndexEntry;
 
 typedef struct
@@ -23,9 +24,10 @@ typedef struct
   GtkWidget *dpi_label;
   GtkWidget *save_btn;
 
-  /* Branding header (from MICE_INDEX.md lookup) */
+  /* Branding header (from MOUSE_INDEX.md lookup) */
+  GtkWidget *mouse_brand_icon;
   GtkWidget *mouse_name_label;
-  GtkWidget *mouse_vendor_label;
+  GtkWidget *mouse_release_label;
   GtkWidget *mouse_website_btn;
   char *mouse_url;
 
@@ -54,7 +56,8 @@ typedef struct
   GtkWidget  *g300_section_revealer[5];   /* profiles, dpi, rate, led, buttons */
 
   /* Profile selector */
-  GtkWidget  *profile_btn[3];             /* F3/F4/F5 toggle buttons */
+  GtkWidget  *profile_btn[3];             /* Perfil 1/2/3 toggle buttons */
+  char       *profile_names[3];           /* Custom profile names (NULL = default) */
 
   /* DPI */
   GtkWidget  *dpi_scales[4];
@@ -85,17 +88,20 @@ typedef struct
   /* Save to mouse button */
   GtkWidget  *save_mouse_btn;
 
+  /* Restore factory profiles button */
+  GtkWidget  *restore_factory_btn;
+
   /* Toast overlay reference */
   GtkWidget *toast_overlay;
 
-  /* MICE_INDEX.md lookup */
+  /* MOUSE_INDEX.md lookup */
   GHashTable *mouse_index;
 } MousePage;
 
 MousePage *mouse_page_new (void);
 void mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product);
 
-/* MICE_INDEX.md name lookup (for use during device detection) */
+/* MOUSE_INDEX.md name lookup (for use during device detection) */
 const char *mouse_index_lookup_name (uint16_t vendor, uint16_t product);
 
 G_END_DECLS

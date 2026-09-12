@@ -47,16 +47,17 @@ hw_device_list_populate (HardwarePage *page)
       else
         icon_name = "chip-symbolic";
 
-      GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
-      gtk_widget_set_margin_start (row, 8);
-      gtk_widget_set_margin_end (row, 8);
-      gtk_widget_set_margin_top (row, 4);
-      gtk_widget_set_margin_bottom (row, 4);
+      GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10);
+      gtk_widget_set_margin_start (row, 4);
+      gtk_widget_set_margin_end (row, 4);
+      gtk_widget_set_margin_top (row, 6);
+      gtk_widget_set_margin_bottom (row, 6);
 
       if (icon_name)
         {
           GtkWidget *ico = gtk_image_new_from_icon_name (icon_name);
-          gtk_image_set_pixel_size (GTK_IMAGE (ico), 24);
+          gtk_image_set_pixel_size (GTK_IMAGE (ico), 20);
+          gtk_widget_set_opacity (ico, 0.7);
           gtk_box_append (GTK_BOX (row), ico);
         }
 
@@ -64,6 +65,7 @@ hw_device_list_populate (HardwarePage *page)
       GtkWidget *title = gtk_label_new (page->device_names[i]);
       gtk_widget_set_halign (title, GTK_ALIGN_START);
       gtk_widget_add_css_class (title, "body");
+      gtk_label_set_ellipsize (GTK_LABEL (title), PANGO_ELLIPSIZE_END);
       gtk_box_append (GTK_BOX (label_box), title);
 
       if (page->device_info[i] && page->device_info[i][0])
@@ -71,6 +73,7 @@ hw_device_list_populate (HardwarePage *page)
           GtkWidget *sub = gtk_label_new (page->device_info[i]);
           gtk_widget_set_halign (sub, GTK_ALIGN_START);
           gtk_widget_add_css_class (sub, "dim-label");
+          gtk_label_set_ellipsize (GTK_LABEL (sub), PANGO_ELLIPSIZE_END);
           gtk_box_append (GTK_BOX (label_box), sub);
         }
 

@@ -41,6 +41,10 @@
     <file>icons/gpu-generic.png</file>
     <file>icons/processors/amd.png</file>
     <file>icons/processors/intel.png</file>
+    <file>icons/manufacturers/logitech.png</file>
+    <file>icons/manufacturers/multilaser.png</file>
+    <file>icons/manufacturers/positivo.png</file>
+    <file>icons/manufacturers/cce-digibras.png</file>
     <file preprocess="xml-stripblanks">icons-sym/addon-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/chip-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons-sym/cpu-symbolic.svg</file>
@@ -64,7 +68,7 @@
     <file preprocess="xml-stripblanks">icons-sym/bulb-symbolic.svg</file>
     <file alias="database/GPU_INDEX.md">../database/GPU_INDEX.md</file>
     <file alias="database/JOY_INDEX.md">../database/JOY_INDEX.md</file>
-    <file alias="database/MICE_INDEX.md">../database/MICE_INDEX.md</file>
+    <file alias="database/MOUSE_INDEX.md">../database/MOUSE_INDEX.md</file>
     <file alias="database/RAM_INDEX.md">../database/RAM_INDEX.md</file>
     <file alias="lang/pt_BR.md">../lang/pt_BR.md</file>
     <file alias="lang/en_US.md">../lang/en_US.md</file>

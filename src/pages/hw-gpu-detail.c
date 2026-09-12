@@ -6,6 +6,7 @@
 #include "hw-detail.h"
 #include "../epi-privilege.h"
 #include "../epi-i18n.h"
+#include "../window.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -99,14 +100,11 @@ on_perf_level_changed (GtkDropDown *dd, GParamSpec *pspec, gpointer user_data)
     }
   else
     {
-      /* Show error toast - find parent window */
-      GtkWidget *win = gtk_widget_get_ancestor (GTK_WIDGET (dd), GTK_TYPE_WINDOW);
-      if (ADW_IS_TOAST_OVERLAY (win))
-        {
-          AdwToast *toast = adw_toast_new (
-            tr ("Permission denied. Run as root."));
-          adw_toast_overlay_add_toast (ADW_TOAST_OVERLAY (win), toast);
-        }
+      /* Show error dialog */
+      dashboard_show_error_toast (tr ("Permission denied. Run as root."),
+        tr ("Could not write to the GPU sysfs file. "
+        "This operation requires administrator privileges. "
+        "Run the application as root to configure GPU fan curves."));
     }
   g_free (path);
 }

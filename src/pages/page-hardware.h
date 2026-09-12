@@ -292,9 +292,14 @@ typedef struct
   GHashTable *controller_index;
 
   struct _UsbIds *usb_ids;
+
+  /* Track if initial hardware scan has been performed */
+  gboolean hw_scanned;
 } HardwarePage;
 
 HardwarePage *hardware_page_new (void);
+void initial_hardware_scan (HardwarePage *page);
+void hw_update_accent_color (int accent_choice);
 
 /* Frees every field of a RamStick (g_free compatible). */
 void ram_stick_free (gpointer stick);

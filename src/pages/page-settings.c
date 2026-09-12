@@ -1,4 +1,5 @@
 #include "page-settings.h"
+#include "page-hardware.h"
 
 #include "../epi-i18n.h"
 #include "../window.h"
@@ -573,6 +574,9 @@ on_accent_changed (AdwComboRow *row, GParamSpec *pspec, SettingsPage *page)
   settings_apply_accent (choice);
   save_accent (choice);
   update_theme_row_visibility (page, choice);
+
+  /* Update hardware page gradient divider */
+  hw_update_accent_color (choice);
 
   gboolean theme_on = adw_switch_row_get_active (page->apply_theme_row);
   settings_apply_full_theme (choice, theme_on);

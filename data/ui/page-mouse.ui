@@ -34,7 +34,7 @@
                 <child>
                   <object class="GtkBox">
                     <property name="orientation">vertical</property>
-                    <property name="spacing">2</property>
+                    <property name="spacing">0</property>
                     <property name="hexpand">True</property>
 
                     <child>
@@ -48,7 +48,7 @@
                     </child>
 
                     <child>
-                      <object class="GtkLabel" id="mouse_vendor_label">
+                      <object class="GtkLabel" id="mouse_release_label">
                         <property name="halign">start</property>
                         <property name="label" translatable="yes"></property>
                         <style>
@@ -182,6 +182,15 @@
                 <property name="visible">False</property>
                 <style>
                   <class name="accent"/>
+                </style>
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="mouse-restore-factory-btn">
+                <property name="label" translatable="yes">Restore Factory Profiles</property>
+                <property name="visible">False</property>
+                <style>
+                  <class name="destructive-action"/>
                 </style>
               </object>
             </child>

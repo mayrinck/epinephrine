@@ -86,6 +86,7 @@
 | Cancel | Cancel |
 | Cannot access /dev/input for key capture | Cannot access /dev/input for key capture |
 | Capture Key | Capture Key |
+| Factory profiles restored | Factory profiles restored |
 | Center Text | Center Text |
 | Characters per second when holding a key (via kbdrate). | Characters per second when holding a key (via kbdrate). |
 | Check how your PC performs with modern gaming | Check how your PC performs with modern gaming |
@@ -195,6 +196,10 @@
 | Engine Version | Engine Version |
 | Epinephrine | Epinephrine |
 | Error | Error |
+| Error Details | Error Details |
+| Copy Error | Copy Error |
+| Error copied to clipboard | Error copied to clipboard |
+| No details available. | No details available. |
 | Executed when GameMode activates, right before a game starts | Executed when GameMode activates, right before a game starts |
 | Executed when GameMode deactivates, after a game closes | Executed when GameMode deactivates, after a game closes |
 | Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards. | Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards. |
@@ -210,6 +215,8 @@
 | Failed to save configuration | Failed to save configuration |
 | Failed to set keyboard rate: kbdrate may not be installed | Failed to set keyboard rate: kbdrate may not be installed |
 | Failed to write profiles to G300s | Failed to write profiles to G300s |
+| Failed to apply memory settings | Failed to apply memory settings |
+| Unknown error | Unknown error |
 | Failed to write temp script | Failed to write temp script |
 | Fair | Fair |
 | Fan Control | Fan Control |
@@ -226,6 +233,7 @@
 | Force Grab Cursor | Force Grab Cursor |
 | Force Orientation | Force Orientation |
 | Forces the GPU to a specific performance level: auto, low power, high performance, or manual. | Forces the GPU to a specific performance level: auto, low power, high performance, or manual. |
+| FPS | FPS |
 | FPS Counter | FPS Counter |
 | FPS Limit | FPS Limit |
 | FPS limit for vsync games (0 = unlimited) | FPS limit for vsync games (0 = unlimited) |
@@ -367,6 +375,7 @@
 | Manage CPU governor, frequency scaling, and performance tuning. | Manage CPU governor, frequency scaling, and performance tuning. |
 | MangoApp | MangoApp |
 | MangoHud Configuration | MangoHud Configuration |
+| MMO | MMO |
 | Manual | Manual |
 | Manufacturer | Manufacturer |
 | Max FPS | Max FPS |
@@ -447,6 +456,7 @@
 | NVIDIA Power Limit | NVIDIA Power Limit |
 | nvidia-smi could not provide real-time data for this GPU. | nvidia-smi could not provide real-time data for this GPU. |
 | Product Website | Product Website |
+| Productivity | Productivity |
 | Offset X | Offset X |
 | Offset Y | Offset Y |
 | ondemand | ondemand |
@@ -505,6 +515,10 @@
 | This feature is under construction. | This feature is under construction. |
 | Open OpenRGB | Open OpenRGB |
 | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. |
+| ratbagd is running and will be used to configure your G300s mouse. | ratbagd is running and will be used to configure your G300s mouse. |
+| Profiles saved via ratbagd | Profiles saved via ratbagd |
+| Failed to save profiles via ratbagd | Failed to save profiles via ratbagd |
+| ratbagd was unable to write the profiles. Check that ratbagd is running properly and the device is connected. | ratbagd was unable to write the profiles. Check that ratbagd is running properly and the device is connected. |
 | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. |
 | Realtime | Realtime |
 | Recent Games | Recent Games |
@@ -514,6 +528,7 @@
 | Reduces shading rate to boost performance (RDNA2+ GPU required). | Reduces shading rate to boost performance (RDNA2+ GPU required). |
 | Refresh Rate | Refresh Rate |
 | Release: %s | Release: %s |
+| Release Date: %s | Release Date: %s |
 | Rendering Backend | Rendering Backend |
 | Repeat Delay | Repeat Delay |
 | Repeat Rate | Repeat Rate |
@@ -521,6 +536,8 @@
 | Resizable BAR | Resizable BAR |
 | Resolution (DPI) | Resolution (DPI) |
 | Restore Defaults | Restore Defaults |
+| Restore Factory Profiles | Restore Factory Profiles |
+| Restore | Restore |
 | Reverse scroll direction (content follows fingers). | Reverse scroll direction (content follows fingers). |
 | Revision | Revision |
 | Right | Right |

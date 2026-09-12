@@ -1,6 +1,7 @@
 #include "page-mangohud.h"
 #include "page-dashboard.h"
 #include "epi-i18n.h"
+#include "../window.h"
 
 #define tr(x) epi_i18n_get (x)
 
@@ -91,7 +92,7 @@ on_save_clicked (GtkButton *btn, MangoHudPage *page)
   GError *err = NULL;
   if (!g_file_set_contents (cfg_path, buf->str, -1, &err))
     {
-      dashboard_show_toast (err->message);
+      dashboard_show_error_toast (tr ("Failed to save MangoHud configuration"), err->message);
       g_error_free (err);
     }
   else

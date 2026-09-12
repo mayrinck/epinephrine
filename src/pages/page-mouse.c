@@ -2,6 +2,8 @@
 #include "page-mouse.h"
 #include "page-dashboard.h"
 #include "epi-privilege.h"
+#include "../epi-ratbagd.h"
+#include "../window.h"
 
 #include <string.h>
 #include <sys/stat.h>
@@ -31,7 +33,7 @@ test_bit (int nr, const unsigned long *addr)
 }
 #endif
 
-/* ─────────────── MICE_INDEX.md loader ─────────────── */
+/* ─────────────── MOUSE_INDEX.md loader ─────────────── */
 
 static void
 free_mouse_index_entry (gpointer data)
@@ -42,6 +44,7 @@ free_mouse_index_entry (gpointer data)
       g_free (e->name);
       g_free (e->url);
       g_free (e->white_label_vendor);
+      g_free (e->manufacturer);
       g_free (e);
     }
 }
@@ -56,7 +59,7 @@ load_mouse_index (MousePage *page)
 
   char *content = NULL;
   GBytes *gbytes = g_resources_lookup_data (
-    "/io/github/mayrinck/epinephrine/database/MICE_INDEX.md", 0, NULL);
+    "/io/github/mayrinck/epinephrine/database/MOUSE_INDEX.md", 0, NULL);
   if (gbytes)
     {
       content = g_strndup (g_bytes_get_data (gbytes, NULL),
@@ -89,12 +92,13 @@ load_mouse_index (MousePage *page)
           continue;
         }
 
-      /* Columns: Name | VID:PID | URL | Buttons | White-Label */
+      /* Columns: Name | VID:PID | URL | Buttons | White-Label | Manufacturer */
       char *name = cols[1] ? g_strstrip (cols[1]) : NULL;
       char *vidpid_str = cols[2] ? g_strstrip (cols[2]) : NULL;
       char *url_str = cols[3] ? g_strstrip (cols[3]) : NULL;
       char *btn_str = cols[4] ? g_strstrip (cols[4]) : NULL;
       char *wl_str = cols[5] ? g_strstrip (cols[5]) : NULL;
+      char *mfr_str = cols[6] ? g_strstrip (cols[6]) : NULL;
 
       if (!name || !name[0] || !vidpid_str || !vidpid_str[0])
         {
@@ -118,6 +122,7 @@ load_mouse_index (MousePage *page)
       entry->buttons = btn_str && btn_str[0] ? atoi (btn_str) : 0;
       entry->white_label = wl_str && wl_str[0] ? TRUE : FALSE;
       entry->white_label_vendor = (wl_str && wl_str[0]) ? g_strdup (wl_str) : NULL;
+      entry->manufacturer = (mfr_str && mfr_str[0]) ? g_strdup (mfr_str) : NULL;
 
       g_hash_table_insert (page->mouse_index, g_strdup (key), entry);
 
@@ -136,7 +141,43 @@ lookup_mouse (MousePage *page, uint16_t vendor, uint16_t product)
   return g_hash_table_lookup (page->mouse_index, key);
 }
 
-/* Public MICE_INDEX.md name lookup (used by hw-devices.c during detection).
+/* Get manufacturer logo resource path from USB vendor ID */
+static const char *
+mouse_vendor_logo_path (uint16_t vendor)
+{
+  switch (vendor)
+    {
+    case 0x046d: return "/io/github/mayrinck/epinephrine/icons/manufacturers/logitech.png";
+    case 0x1bcf: return "/io/github/mayrinck/epinephrine/icons/manufacturers/multilaser.png";
+    case 0x18f8: return "/io/github/mayrinck/epinephrine/icons/manufacturers/multilaser.png"; /* Warrior = Multilaser */
+    case 0x1c6e: return "/io/github/mayrinck/epinephrine/icons/manufacturers/positivo.png";
+    case 0x1d57: return "/io/github/mayrinck/epinephrine/icons/manufacturers/cce-digibras.png";
+    default:     return NULL;
+    }
+}
+
+/* Clean up lsusb vendor name: remove Corp./Co./Inc. suffixes */
+static char *
+clean_vendor_name (const char *raw)
+{
+  if (!raw || !raw[0]) return NULL;
+  char *result = g_strdup (raw);
+  /* Remove common suffixes */
+  const char *suffixes[] = { " Corp.", " Co.", " Inc.", " corp.", " co.", " inc.", NULL };
+  for (int i = 0; suffixes[i]; i++)
+    {
+      char *pos = g_strrstr (result, suffixes[i]);
+      if (pos && pos > result)
+        {
+          *pos = '\0';
+          break;
+        }
+    }
+  g_strstrip (result);
+  return result;
+}
+
+/* Public MOUSE_INDEX.md name lookup (used by hw-devices.c during detection).
  * Loads the index lazily into a module-level cache. */
 static GHashTable *s_mouse_index_cache = NULL;
 
@@ -150,7 +191,7 @@ mouse_index_lookup_name (uint16_t vendor, uint16_t product)
 
       char *content = NULL;
       GBytes *gbytes = g_resources_lookup_data (
-        "/io/github/mayrinck/epinephrine/database/MICE_INDEX.md", 0, NULL);
+        "/io/github/mayrinck/epinephrine/database/MOUSE_INDEX.md", 0, NULL);
       if (gbytes)
         {
           content = g_strndup (g_bytes_get_data (gbytes, NULL),
@@ -367,6 +408,7 @@ find_mouse_usb_info (uint16_t vendor, uint16_t product,
 
 #define G300_VID         0x046d
 #define G300_PID         0xc246
+#define G300_OLD_PID     0xc24a  /* Logitech Gaming G300 (original) */
 
 #define G300_REPORT_F0   0xF0
 #define G300_REPORT_F3   0xF3
@@ -445,6 +487,7 @@ static const char *button_func_names[] = {
   "DPI Shift",
   "DPI Default",
   "Disabled",
+  NULL,
 };
 
 static const uint8_t button_func_values[] = {
@@ -465,6 +508,85 @@ static const uint8_t button_func_values[] = {
   BTN_FUNC_DPI_SHIFT,
   BTN_FUNC_DPI_DEFAULT,
   BTN_FUNC_DISABLED,
+};
+
+/* ─────────────── G300s Factory Default Profiles ─────────────── */
+/* Based on Logitech G300s Setup Guide (g300s621-000381.pdf) */
+
+#define HID_KEY_C  0x06
+#define HID_KEY_V  0x19
+#define HID_KEY_X  0x1B
+
+/* Profile 1: MMO - Cyan LED, 500Hz, DPI 500/1000/1500/2500 (default 1000) */
+/* Buttons: G6=LCtrl, G7=LAlt, G8=ProfileSwitch, G9=DPI_Cycle */
+static const uint8_t factory_profile_mmo[35] = {
+  0xF3,       /* Report ID */
+  0x06,       /* LED: Cyan (bit2=1, bit1=1) */
+  0x03,       /* Rate: 500Hz (index 3) */
+  0x82,       /* DPI 1: 500 (0x02) */
+  0x84,       /* DPI 2: 1000 (0x04, default) */
+  0x06,       /* DPI 3: 1500 (0x06) */
+  0x0A,       /* DPI 4: 2500 (0x0A) */
+  0x00,       /* Unknown */
+  /* G1-G5: Standard mouse buttons */
+  0x01, 0x00, 0x00,  /* G1: Left Click */
+  0x02, 0x00, 0x00,  /* G2: Right Click */
+  0x03, 0x00, 0x00,  /* G3: Middle Click */
+  0x04, 0x00, 0x00,  /* G4: Back */
+  0x05, 0x00, 0x00,  /* G5: Forward */
+  /* G6-G9: MMO specific */
+  0x00, 0x01, HID_KEY_C,  /* G6: LCtrl (modifier only, no key) - actually Ctrl is modifier */
+  0x00, 0x04, 0x00,       /* G7: LAlt (modifier only) */
+  0x0D, 0x00, 0x00,       /* G8: Profile Switch */
+  0x0C, 0x00, 0x00,       /* G9: DPI Cycle */
+};
+
+/* Profile 2: FPS - White LED, 1000Hz, DPI 500/1000/1500/2500 (default 1000, shift=500) */
+/* Buttons: G6=DPI Down, G7=DPI Up, G8=ProfileSwitch, G9=DPI Shift */
+static const uint8_t factory_profile_fps[35] = {
+  0xF4,       /* Report ID */
+  0x07,       /* LED: White (all bits) */
+  0x00,       /* Rate: 1000Hz (index 0) */
+  0x82,       /* DPI 1: 500 (0x02) */
+  0x84,       /* DPI 2: 1000 (0x04, default) */
+  0x06,       /* DPI 3: 1500 (0x06) */
+  0x0A,       /* DPI 4: 2500 (0x0A) */
+  0x00,       /* Unknown */
+  /* G1-G5: Standard mouse buttons */
+  0x01, 0x00, 0x00,  /* G1: Left Click */
+  0x02, 0x00, 0x00,  /* G2: Right Click */
+  0x03, 0x00, 0x00,  /* G3: Middle Click */
+  0x04, 0x00, 0x00,  /* G4: Back */
+  0x05, 0x00, 0x00,  /* G5: Forward */
+  /* G6-G9: FPS specific */
+  0x0B, 0x00, 0x00,  /* G6: DPI Down */
+  0x0A, 0x00, 0x00,  /* G7: DPI Up */
+  0x0D, 0x00, 0x00,  /* G8: Profile Switch */
+  0x0E, 0x00, 0x00,  /* G9: DPI Shift */
+};
+
+/* Profile 3: Productivity - Blue LED, 500Hz, DPI 1000 only */
+/* Buttons: G6=Ctrl+C, G7=Ctrl+V, G8=ProfileSwitch, G9=Ctrl+X */
+static const uint8_t factory_profile_productivity[35] = {
+  0xF5,       /* Report ID */
+  0x04,       /* LED: Blue (bit2=1) */
+  0x03,       /* Rate: 500Hz (index 3) */
+  0x84,       /* DPI 1: 1000 (0x04, default) */
+  0x84,       /* DPI 2: 1000 (0x04, default) */
+  0x84,       /* DPI 3: 1000 (0x04, default) */
+  0x84,       /* DPI 4: 1000 (0x04, default) */
+  0x00,       /* Unknown */
+  /* G1-G5: Standard mouse buttons */
+  0x01, 0x00, 0x00,  /* G1: Left Click */
+  0x02, 0x00, 0x00,  /* G2: Right Click */
+  0x03, 0x00, 0x00,  /* G3: Middle Click */
+  0x04, 0x00, 0x00,  /* G4: Back */
+  0x05, 0x00, 0x00,  /* G5: Forward */
+  /* G6-G9: Productivity specific */
+  0x00, 0x01, HID_KEY_C,  /* G6: Ctrl+C */
+  0x00, 0x01, HID_KEY_V,  /* G7: Ctrl+V */
+  0x0D, 0x00, 0x00,       /* G8: Profile Switch */
+  0x00, 0x01, HID_KEY_X,  /* G9: Ctrl+X */
 };
 
 /* n_button_funcs derived from button_func_names length */
@@ -648,6 +770,8 @@ static void     on_button_func_changed     (GObject *combo, GParamSpec *pspec, M
 static void     on_capture_clicked         (GtkButton *btn, MousePage *page);
 static void     on_mod_toggled             (GtkCheckButton *cb, MousePage *page);
 static void     on_save_g300_clicked       (GtkButton *btn, MousePage *page);
+static void     on_profile_rename_request  (GtkToggleButton *btn, GParamSpec *pspec, MousePage *page);
+static void     update_led_checkmarks      (MousePage *page, int active_idx);
 
 /* ─────────────── Admin session helpers (epi-hidraw) ─────────────── */
 
@@ -797,6 +921,24 @@ g300_write_profile (const char *path, int fd, int idx, const uint8_t *data)
   return g300_feature_set (path, fd, buf, G300_PROFILE_SIZE);
 }
 
+/* Tell the mouse to switch to the given profile (0-2).
+   Report F0, byte1 = 0x80 | (idx << 4). */
+static int
+g300_set_active_profile (const char *path, int fd, int idx)
+{
+  uint8_t buf[4] = { G300_REPORT_F0, (uint8_t) (0x80 | (idx << 4)), 0x00, 0x00 };
+  return g300_feature_set (path, fd, buf, sizeof (buf));
+}
+
+/* Set the active DPI resolution within the current profile.
+   Report F0, byte1 = 0x40 | (res << 1). */
+static int
+g300_set_current_resolution (const char *path, int fd, int res)
+{
+  uint8_t buf[4] = { G300_REPORT_F0, (uint8_t) (0x40 | (res << 1)), 0x00, 0x00 };
+  return g300_feature_set (path, fd, buf, sizeof (buf));
+}
+
 /* ─────────────── HIDRAW detection ─────────────── */
 
 static int
@@ -813,7 +955,8 @@ find_g300_hidraw (void)
       char *content = NULL;
       if (g_file_get_contents (uevent, &content, NULL, NULL))
         {
-          if (strstr (content, "HID_ID=0003:0000046D:0000C246"))
+          if (strstr (content, "HID_ID=0003:0000046D:0000C246")
+              || strstr (content, "HID_ID=0003:0000046D:0000C24A"))
             {
               char *path = g_build_filename ("/dev", entry, NULL);
               int test_fd = open (path, O_RDWR);
@@ -858,7 +1001,8 @@ find_g300_hidraw_priv (void)
       char *content = NULL;
       if (g_file_get_contents (uevent, &content, NULL, NULL))
         {
-          if (strstr (content, "HID_ID=0003:0000046D:0000C246"))
+          if (strstr (content, "HID_ID=0003:0000046D:0000C246")
+              || strstr (content, "HID_ID=0003:0000046D:0000C24A"))
             {
               char *path = g_build_filename ("/dev", entry, NULL);
               char *out = NULL;
@@ -942,12 +1086,73 @@ dump_profile (const uint8_t *data, int idx)
       else if (code == BTN_FUNC_KEY)
         g_debug ("  Button %d (G%d): Key=%s mod=0x%02x", i, i + 1,
           hid_code_to_name (key), mod);
-      else if (code >= BTN_FUNC_LEFT && code <= BTN_FUNC_BTN9)
-        g_debug ("  Button %d (G%d): %s", i, i + 1,
-          code <= 0x09 ? button_func_names[code] : "?");
+      else if (code <= 0x0F)
+        g_debug ("  Button %d (G%d): %s", i, i + 1, button_func_names[code]);
       else
-        g_debug ("  Button %d (G%d): Special=0x%02x", i, i + 1, code);
+        g_debug ("  Button %d (G%d): Unknown=0x%02x", i, i + 1, code);
     }
+}
+
+/* ─────────────── Profile rename ─────────────── */
+
+static void
+on_profile_rename_response (GtkDialog *dialog, int response, gpointer user_data)
+{
+  MousePage *page = user_data;
+  if (response == GTK_RESPONSE_OK)
+    {
+      GtkEntry *entry = GTK_ENTRY (g_object_get_data (G_OBJECT (dialog), "entry"));
+      const char *name = gtk_editable_get_text (GTK_EDITABLE (entry));
+      if (name && name[0])
+        {
+          int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (dialog), "prof-idx"));
+          g_free (page->profile_names[idx]);
+          page->profile_names[idx] = g_strdup (name);
+          gtk_button_set_label (GTK_BUTTON (page->profile_btn[idx]), name);
+        }
+    }
+  gtk_window_destroy (GTK_WINDOW (dialog));
+}
+
+static void
+on_profile_rename_request (GtkToggleButton *btn, GParamSpec *pspec, MousePage *page)
+{
+  (void) pspec;
+  if (!gtk_toggle_button_get_active (btn)) return;
+
+  int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (btn), "prof-idx"));
+
+  /* Only trigger on double-click (second activation) */
+  static guint64 last_click_time = 0;
+  guint64 now = g_get_monotonic_time ();
+  if (now - last_click_time > 500000) /* 500ms */
+    { last_click_time = now; return; }
+  last_click_time = 0;
+
+  /* Show rename dialog */
+  GtkWidget *dialog = gtk_dialog_new_with_buttons (
+    tr ("Rename Profile"), NULL,
+    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+    tr ("Cancel"), GTK_RESPONSE_CANCEL,
+    tr ("Rename"), GTK_RESPONSE_OK, NULL);
+
+  GtkWidget *content = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+  gtk_widget_set_margin_top (content, 12);
+  gtk_widget_set_margin_bottom (content, 12);
+  gtk_widget_set_margin_start (content, 12);
+  gtk_widget_set_margin_end (content, 12);
+
+  GtkWidget *entry = gtk_entry_new ();
+  const char *current = page->profile_names[idx] ? page->profile_names[idx] : "";
+  gtk_editable_set_text (GTK_EDITABLE (entry), current);
+  gtk_widget_set_hexpand (entry, TRUE);
+  gtk_box_append (GTK_BOX (content), entry);
+
+  g_object_set_data (G_OBJECT (dialog), "entry", entry);
+  g_object_set_data (G_OBJECT (dialog), "prof-idx", GINT_TO_POINTER (idx));
+  g_signal_connect (dialog, "response", G_CALLBACK (on_profile_rename_response), page);
+
+  gtk_widget_show (dialog);
 }
 
 /* ─────────────── UI Construction ─────────────── */
@@ -983,7 +1188,7 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   GtkWidget *prof_section = create_g300_section (page, parent_box,
     tr ("Profiles (Onboard Memory)"),
     tr ("The G300s stores 3 profiles in its onboard memory. "
-    "Select a profile to configure its settings."), &prof_wrapper);
+    "Select a profile to configure its settings. Double-click to rename."), &prof_wrapper);
   page->g300_section_revealer[0] = prof_wrapper;
 
   GtkWidget *prof_btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
@@ -991,14 +1196,16 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   gtk_widget_set_margin_top (prof_btn_box, 6);
   for (int i = 0; i < 3; i++)
     {
-      char label[16];
-      g_snprintf (label, sizeof (label), "F%d", i + 3);
+      char label[32];
+      g_snprintf (label, sizeof (label), tr ("Profile %d"), i + 1);
       page->profile_btn[i] = gtk_toggle_button_new_with_label (label);
       g_object_set_data (G_OBJECT (page->profile_btn[i]), "prof-idx",
         GINT_TO_POINTER (i));
       if (i == 0) gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->profile_btn[i]), TRUE);
       g_signal_connect (page->profile_btn[i], "clicked",
         G_CALLBACK (on_profile_clicked), page);
+      g_signal_connect (page->profile_btn[i], "notify::active",
+        G_CALLBACK (on_profile_rename_request), page);
       gtk_box_append (GTK_BOX (prof_btn_box), page->profile_btn[i]);
     }
   gtk_box_append (GTK_BOX (prof_section), prof_btn_box);
@@ -1048,7 +1255,9 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   /* ── Polling Rate ── */
   GtkWidget *rate_wrapper = NULL;
   GtkWidget *rate_section = create_g300_section (page, parent_box,
-    tr ("Polling Rate"), NULL, &rate_wrapper);
+    tr ("Polling Rate"),
+    tr ("How often the mouse reports its position to the computer. "
+    "Higher values provide smoother cursor movement."), &rate_wrapper);
   page->g300_section_revealer[2] = rate_wrapper;
 
   GtkWidget *rate_btn_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
@@ -1072,7 +1281,9 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
   /* ── LED Color ── */
   GtkWidget *led_wrapper = NULL;
   GtkWidget *led_section = create_g300_section (page, parent_box,
-    tr ("LED Color"), NULL, &led_wrapper);
+    tr ("LED Color"),
+    tr ("Choose the color of the indicator LED on the top of the mouse. "
+    "The selected color is marked with a checkmark."), &led_wrapper);
   page->g300_section_revealer[3] = led_wrapper;
 
   GtkWidget *led_grid = gtk_grid_new ();
@@ -1083,19 +1294,29 @@ build_g300_ui (MousePage *page, GtkWidget *parent_box)
 
   for (int i = 0; i < 8; i++)
     {
-      char label[16];
+      /* Build label: checkmark + color name */
+      char label[32];
       g_snprintf (label, sizeof (label), "  %s  ", led_color_names[i]);
       page->led_btn[i] = gtk_toggle_button_new_with_label (label);
       gtk_widget_set_size_request (page->led_btn[i], 80, 36);
       g_object_set_data (G_OBJECT (page->led_btn[i]), "led-idx",
         GINT_TO_POINTER (i));
 
-      char css[128];
+      /* Colored border via CSS */
+      char css[256];
       g_snprintf (css, sizeof (css),
-        "button { background: rgb(%d,%d,%d); min-height: 30px; }",
+        "button { border: 3px solid rgb(%d,%d,%d); min-height: 30px; }",
         (int)(led_colors[i].red * 255),
         (int)(led_colors[i].green * 255),
         (int)(led_colors[i].blue * 255));
+      GtkCssProvider *prov = gtk_css_provider_new ();
+      gtk_css_provider_load_from_string (prov, css);
+      gtk_style_context_add_provider (
+        gtk_widget_get_style_context (page->led_btn[i]),
+        GTK_STYLE_PROVIDER (prov),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+      g_object_unref (prov);
+
       gtk_widget_set_name (page->led_btn[i], "mouse-led-btn");
 
       g_signal_connect (page->led_btn[i], "clicked",
@@ -1218,6 +1439,7 @@ populate_g300_widgets (MousePage *page)
       gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->led_btn[i]), i == led);
       g_signal_handlers_unblock_by_func (page->led_btn[i], on_led_clicked, page);
     }
+  update_led_checkmarks (page, led);
 
   /* Buttons */
   for (int b = 0; b < G300_NUM_BUTTONS; b++)
@@ -1233,7 +1455,7 @@ populate_g300_widgets (MousePage *page)
         func_idx = code; /* 1:1 mapping for button codes */
       else if (code >= BTN_FUNC_DPI_UP && code <= BTN_FUNC_DPI_DEFAULT)
         func_idx = code - BTN_FUNC_DPI_UP + 10; /* 10-15 */
-      else if (code == BTN_FUNC_DISABLED || (code == BTN_FUNC_KEY && key == 0 && mod == 0))
+      else if (code == BTN_FUNC_KEY && key == 0 && mod == 0)
         func_idx = 16; /* Disabled */
       else if (code == BTN_FUNC_KEY)
         func_idx = 0; /* Key */
@@ -1465,7 +1687,9 @@ start_key_capture (MousePage *page, int btn_idx)
   GDir *dir = g_dir_open ("/dev/input", 0, NULL);
   if (!dir)
     {
-      dashboard_show_toast (tr ("Cannot access /dev/input for key capture"));
+      dashboard_show_error_toast (tr ("Cannot access /dev/input for key capture"),
+        tr ("The /dev/input directory could not be opened. "
+        "This may be a permissions issue. Try running the application with sudo."));
       return;
     }
 
@@ -1500,7 +1724,9 @@ start_key_capture (MousePage *page, int btn_idx)
 
   if (found_fd < 0)
     {
-      dashboard_show_toast (tr ("No keyboard found for key capture"));
+      dashboard_show_error_toast (tr ("No keyboard found for key capture"),
+        tr ("No keyboard device was detected in /dev/input. "
+        "Make sure a keyboard is connected and try again."));
       return;
     }
 
@@ -1539,6 +1765,10 @@ on_profile_clicked (GtkButton *btn, MousePage *page)
 
   page->active_profile_idx = idx;
   populate_g300_widgets (page);
+
+  /* Tell the mouse to switch to this profile immediately */
+  if (page->hidraw_fd >= 0 || page->hidraw_path)
+    g300_set_active_profile (page->hidraw_path, page->hidraw_fd, idx);
 }
 
 static void
@@ -1589,6 +1819,22 @@ on_rate_clicked (GtkButton *btn, MousePage *page)
   page->profile_raw[pi][2] = (page->profile_raw[pi][2] & ~0x03) | idx;
 }
 
+/* ─────────────── LED checkmark update ─────────────── */
+
+static void
+update_led_checkmarks (MousePage *page, int active_idx)
+{
+  for (int i = 0; i < 8; i++)
+    {
+      char label[32];
+      if (i == active_idx)
+        g_snprintf (label, sizeof (label), "\u2713 %s", led_color_names[i]);
+      else
+        g_snprintf (label, sizeof (label), "  %s", led_color_names[i]);
+      gtk_button_set_label (GTK_BUTTON (page->led_btn[i]), label);
+    }
+}
+
 static void
 on_led_clicked (GtkButton *btn, MousePage *page)
 {
@@ -1599,6 +1845,8 @@ on_led_clicked (GtkButton *btn, MousePage *page)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->led_btn[i]), i == led_idx);
 
   page->profile_raw[pi][1] = (page->profile_raw[pi][1] & ~0x07) | led_idx;
+
+  update_led_checkmarks (page, led_idx);
 }
 
 static void
@@ -1669,7 +1917,35 @@ on_save_g300_clicked (GtkButton *btn, MousePage *page)
   /* Read all widget values into current profile */
   read_g300_widgets (page, page->active_profile_idx);
 
-  /* Write all 3 profiles to hardware */
+  /* Try ratbagd first if available */
+  if (ratbagd_is_running ())
+    {
+      /* Use ratbagd D-Bus API for proper mouse configuration */
+      /* Search for any G300 variant (VID 0x046D, PID 0xC246 or 0xC24A) */
+      RatbagdDevice *dev = ratbagd_find_device (0x046D, 0xC246);
+      if (!dev)
+        dev = ratbagd_find_device (0x046D, 0xC24A);
+
+      if (dev)
+        {
+          gboolean ok = ratbagd_apply_g300_profiles (dev->path, page->profile_raw);
+          g_free (dev->path);
+          g_free (dev->name);
+          g_free (dev->description);
+          g_free (dev->driver);
+          g_free (dev);
+
+          if (ok)
+            dashboard_show_toast (tr ("Profiles saved via ratbagd"));
+          else
+            dashboard_show_error_toast (tr ("Failed to save profiles via ratbagd"),
+              tr ("ratbagd was unable to write the profiles. "
+              "Check that ratbagd is running properly and the device is connected."));
+          return;
+        }
+    }
+
+  /* Fall back to direct HID access */
   int wrote = 0;
   for (int i = 0; i < 3; i++)
     {
@@ -1677,20 +1953,116 @@ on_save_g300_clicked (GtkButton *btn, MousePage *page)
         wrote++;
     }
 
+  /* Activate the profile that was being edited */
+  if (wrote > 0)
+    {
+      g300_set_active_profile (page->hidraw_path, page->hidraw_fd, page->active_profile_idx);
+
+      /* Find which DPI slot is marked as default */
+      int active_dpi = 0;
+      const uint8_t *data = page->profile_raw[page->active_profile_idx];
+      for (int i = 0; i < 4; i++)
+        {
+          if ((data[3 + i] & 0x80) != 0)
+            {
+              active_dpi = i;
+              break;
+            }
+        }
+      g300_set_current_resolution (page->hidraw_path, page->hidraw_fd, active_dpi);
+    }
+
   if (wrote == 3)
     dashboard_show_toast (tr ("All 3 profiles saved to G300s"));
   else if (wrote > 0)
     {
       char *partial_msg = g_strdup_printf (tr ("Partial write: only %d of 3 profiles saved"), wrote);
-      dashboard_show_toast (partial_msg);
+      dashboard_show_error_toast (partial_msg,
+        tr ("Not all profiles could be written to the mouse. "
+        "This can happen if the device is busy or disconnected. "
+        "Try unplugging and reconnecting the mouse."));
       g_free (partial_msg);
     }
   else
-    dashboard_show_toast (tr ("Failed to write profiles to G300s"));
+    dashboard_show_error_toast (tr ("Failed to write profiles to G300s"),
+      tr ("Could not write any profiles to the G300s mouse. "
+      "Make sure the device is connected and not in use by another application. "
+      "You may need to stop ratbagd if it is running."));
 
   if (wrote > 0)
     dump_profile (page->profile_raw[page->active_profile_idx],
       page->active_profile_idx);
+}
+
+/* ─────────────── Restore Factory Profiles ─────────────── */
+
+static void
+on_restore_factory_response (GtkDialog *dialog, int response, MousePage *page)
+{
+  if (response != GTK_RESPONSE_OK)
+    {
+      gtk_widget_set_visible (GTK_WIDGET (dialog), FALSE);
+      return;
+    }
+
+  /* Copy factory defaults into profile_raw */
+  memcpy (page->profile_raw[0], factory_profile_mmo, 35);
+  memcpy (page->profile_raw[1], factory_profile_fps, 35);
+  memcpy (page->profile_raw[2], factory_profile_productivity, 35);
+
+  /* Reset profile names to factory defaults */
+  g_free (page->profile_names[0]);
+  g_free (page->profile_names[1]);
+  g_free (page->profile_names[2]);
+  page->profile_names[0] = g_strdup (tr ("MMO"));
+  page->profile_names[1] = g_strdup (tr ("FPS"));
+  page->profile_names[2] = g_strdup (tr ("Productivity"));
+
+  /* Update profile button labels */
+  for (int i = 0; i < 3; i++)
+    gtk_button_set_label (GTK_BUTTON (page->profile_btn[i]), page->profile_names[i]);
+
+  /* Refresh the UI for the current profile */
+  populate_g300_widgets (page);
+
+  /* Show toast */
+  dashboard_show_toast (tr ("Factory profiles restored"));
+
+  gtk_widget_set_visible (GTK_WIDGET (dialog), FALSE);
+}
+
+static void
+on_restore_factory_clicked (GtkButton *btn, MousePage *page)
+{
+  (void) btn;
+
+  GtkWidget *dialog = gtk_dialog_new_with_buttons (
+    tr ("Restore Factory Profiles"),
+    GTK_WINDOW (gtk_widget_get_root (page->box)),
+    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+    tr ("Cancel"), GTK_RESPONSE_CANCEL,
+    tr ("Restore"), GTK_RESPONSE_OK,
+    NULL);
+
+  GtkWidget *content = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+  gtk_widget_set_margin_top (content, 12);
+  gtk_widget_set_margin_bottom (content, 12);
+  gtk_widget_set_margin_start (content, 12);
+  gtk_widget_set_margin_end (content, 12);
+
+  GtkWidget *lbl = gtk_label_new (NULL);
+  gtk_label_set_markup (GTK_LABEL (lbl),
+    tr ("This will reset all 3 profiles to factory defaults:<br><br>"
+        "<b>Profile 1 (MMO)</b>: Cyan LED, 500Hz, DPI 500/1000/1500/2500<br>"
+        "<b>Profile 2 (FPS)</b>: White LED, 1000Hz, DPI 500/1000/1500/2500<br>"
+        "<b>Profile 3 (Productivity)</b>: Blue LED, 500Hz, DPI 1000<br><br>"
+        "Profile names will also be reset to defaults."));
+  gtk_label_set_wrap (GTK_LABEL (lbl), TRUE);
+  gtk_label_set_xalign (GTK_LABEL (lbl), 0);
+  gtk_box_append (GTK_BOX (content), lbl);
+
+  g_signal_connect (dialog, "response", G_CALLBACK (on_restore_factory_response), page);
+  gtk_widget_set_visible (dialog, TRUE);
 }
 
 /* ─────────────── Wayland + X11 mouse settings ─────────────── */
@@ -1739,7 +2111,9 @@ on_mouse_save (GtkButton *btn, MousePage *page)
   /* Try 2: xinput (X11 fallback) */
   if (!g_find_program_in_path ("xinput"))
     {
-      dashboard_show_toast (tr ("No supported config tool found (gsettings or xinput)"));
+      dashboard_show_error_toast (tr ("No supported config tool found (gsettings or xinput)"),
+        tr ("Neither gsettings (GNOME) nor xinput (X11) was found on your system. "
+        "Install one of these tools to configure mouse settings."));
       return;
     }
 
@@ -1755,7 +2129,10 @@ on_mouse_save (GtkButton *btn, MousePage *page)
     {
       if (err) g_error_free (err);
       g_free (id_list);
-      dashboard_show_toast (tr ("No XInput devices found. Are you on Wayland?"));
+      dashboard_show_error_toast (tr ("No XInput devices found. Are you on Wayland?"),
+        tr ("xinput could not find any input devices. "
+        "This may happen if you are using Wayland instead of X11. "
+        "Mouse settings can only be configured on X11 with xinput."));
       return;
     }
 
@@ -1907,6 +2284,32 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
       gtk_widget_set_sensitive (page->mouse_website_btn, FALSE);
     }
 
+  /* Manufacturer logo */
+  const char *logo = mouse_vendor_logo_path (vendor);
+  if (logo)
+    {
+      gtk_image_set_from_resource (GTK_IMAGE (page->mouse_brand_icon), logo);
+      gtk_image_set_pixel_size (GTK_IMAGE (page->mouse_brand_icon), 64);
+    }
+  else
+    {
+      gtk_image_set_from_icon_name (GTK_IMAGE (page->mouse_brand_icon), "input-mouse-symbolic");
+      gtk_image_set_pixel_size (GTK_IMAGE (page->mouse_brand_icon), 64);
+    }
+
+  /* Release date */
+  const char *release_date = NULL;
+  if (vendor == 0x046d && product == 0xc246)
+    release_date = "13/01/2015";
+  if (release_date)
+    {
+      char *label = g_strdup_printf (tr ("Release Date: %s"), release_date);
+      gtk_label_set_text (GTK_LABEL (page->mouse_release_label), label);
+      g_free (label);
+    }
+  else
+    gtk_label_set_text (GTK_LABEL (page->mouse_release_label), "");
+
   /* Populate device info section */
   page->cur_vendor = vendor;
   page->cur_product = product;
@@ -1915,7 +2318,7 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
   g_snprintf (devid, sizeof (devid), "%04x:%04x", vendor, product);
   gtk_label_set_text (GTK_LABEL (page->dev_devid_value), devid);
 
-  /* Buttons count from MICE_INDEX */
+  /* Buttons count from MOUSE_INDEX */
   if (e && e->buttons > 0)
     {
       char btn_str[16];
@@ -1925,16 +2328,31 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
   else
     gtk_label_set_text (GTK_LABEL (page->dev_buttons_value), "\u2014");
 
-  /* Vendor from USB/udevadm */
-  char *usb_vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
-  find_mouse_usb_info (vendor, product, &usb_vendor, &speed, &driver, &chipset);
-  gtk_label_set_text (GTK_LABEL (page->dev_vendor_value),
-    usb_vendor && usb_vendor[0] ? usb_vendor : "\u2014");
-  gtk_label_set_text (GTK_LABEL (page->mouse_vendor_label),
-    usb_vendor && usb_vendor[0] ? usb_vendor : "");
-  g_free (usb_vendor); g_free (speed); g_free (driver); g_free (chipset);
+  /* DPI info */
+  if (vendor == G300_VID && (product == G300_PID || product == G300_OLD_PID))
+    gtk_label_set_text (GTK_LABEL (page->dpi_label), "250\u20132500");
+  else
+    gtk_label_set_text (GTK_LABEL (page->dpi_label), "\u2014");
 
-  /* White-Label Product info from MICE_INDEX */
+  /* Vendor/Manufacturer: MOUSE_INDEX -> lsusb fallback */
+  char *mfr = NULL;
+  if (e && e->manufacturer && e->manufacturer[0])
+    {
+      mfr = g_strdup (e->manufacturer);
+    }
+  else
+    {
+      char *usb_vendor = NULL, *speed = NULL, *driver = NULL, *chipset = NULL;
+      find_mouse_usb_info (vendor, product, &usb_vendor, &speed, &driver, &chipset);
+      if (usb_vendor && usb_vendor[0])
+        mfr = clean_vendor_name (usb_vendor);
+      g_free (usb_vendor); g_free (speed); g_free (driver); g_free (chipset);
+    }
+  gtk_label_set_text (GTK_LABEL (page->dev_vendor_value),
+    mfr && mfr[0] ? mfr : "\u2014");
+  g_free (mfr);
+
+  /* White-Label Product info from MOUSE_INDEX */
   if (e && e->white_label && e->white_label_vendor && e->white_label_vendor[0])
     {
       gtk_widget_set_visible (page->dev_white_label_row, TRUE);
@@ -1949,8 +2367,8 @@ mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product)
   /* Refresh DPI and other info for the new mouse */
   refresh_mouse_info (page);
 
-  /* Show/hide G300 sections based on whether this mouse is G300s */
-  gboolean is_g300 = (vendor == G300_VID && product == G300_PID);
+  /* Show/hide G300 sections based on whether this mouse is G300/G300s */
+  gboolean is_g300 = (vendor == G300_VID && (product == G300_PID || product == G300_OLD_PID));
   for (int i = 0; i < 5; i++)
     if (page->g300_section_revealer[i])
       gtk_widget_set_visible (page->g300_section_revealer[i], is_g300);
@@ -1977,6 +2395,8 @@ on_mouse_page_destroy (gpointer data, GObject *box)
   page->hidraw_path = NULL;
 
   g_free (page->mouse_url);
+  for (int i = 0; i < 3; i++)
+    g_free (page->profile_names[i]);
   if (page->mouse_index) g_hash_table_unref (page->mouse_index);
   g_free (page);
 }
@@ -2000,10 +2420,12 @@ mouse_page_new (void)
   page->natural_scroll_switch = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-natural-scroll-row"));
   page->save_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-save-btn"));
   page->save_mouse_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-save-g300-btn"));
+  page->restore_factory_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-restore-factory-btn"));
 
   /* Branding header */
+  page->mouse_brand_icon = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_brand_icon"));
   page->mouse_name_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_name_label"));
-  page->mouse_vendor_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_vendor_label"));
+  page->mouse_release_label = GTK_WIDGET (gtk_builder_get_object (builder, "mouse_release_label"));
   page->mouse_website_btn = GTK_WIDGET (gtk_builder_get_object (builder, "mouse-website-btn"));
   gtk_widget_set_sensitive (page->mouse_website_btn, FALSE);
   g_signal_connect (page->mouse_website_btn, "clicked",
@@ -2118,8 +2540,7 @@ mouse_page_new (void)
     {
       page->ratbagd_warned = TRUE;
       dashboard_show_toast (
-        tr ("ratbagd is running on your system and may conflict with G300 configuration. "
-        "Consider stopping ratbagd for exclusive access."));
+        tr ("ratbagd is running and will be used to configure your G300s mouse."));
     }
 
   /* ── Connect signals ── */
@@ -2130,6 +2551,13 @@ mouse_page_new (void)
       gtk_widget_set_visible (page->save_mouse_btn, TRUE);
       g_signal_connect (page->save_mouse_btn, "clicked",
         G_CALLBACK (on_save_g300_clicked), page);
+    }
+
+  if (page->g300_detected && page->restore_factory_btn)
+    {
+      gtk_widget_set_visible (page->restore_factory_btn, TRUE);
+      g_signal_connect (page->restore_factory_btn, "clicked",
+        G_CALLBACK (on_restore_factory_clicked), page);
     }
 
   g_object_ref_sink (page->box);

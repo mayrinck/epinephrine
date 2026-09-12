@@ -2,6 +2,7 @@
 #include "page-keyboard.h"
 #include "page-dashboard.h"
 #include "epi-privilege.h"
+#include "../window.h"
 
 #include <string.h>
 #include <sys/stat.h>
@@ -559,9 +560,11 @@ on_keyboard_save (GtkButton *btn, KeyboardPage *page)
   else
     {
       if (err && err->message)
-        dashboard_show_toast (err->message);
+        dashboard_show_error_toast (tr ("Failed to set keyboard rate"), err->message);
       else
-        dashboard_show_toast (tr ("Failed to set keyboard rate: kbdrate may not be installed"));
+        dashboard_show_error_toast (tr ("Failed to set keyboard rate: kbdrate may not be installed"),
+          tr ("The keyboard repeat rate could not be set. "
+          "Make sure 'kbdrate' is installed (e.g., 'sudo apt install kbdrate')."));
     }
   g_clear_error (&err);
 }

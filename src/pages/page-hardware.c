@@ -8,15 +8,63 @@
 #include "hw-device-list.h"
 #include "usb-ids.h"
 #include "../epi-i18n.h"
+#include "page-settings.h"
 
 #define tr(x) epi_i18n_get (x)
 
+/* Current accent color for gradient divider (RGB 0-1) */
+static double g_divider_r = 0.75, g_divider_g = 0.15, g_divider_b = 0.15;
+static GtkWidget *g_divider_widget = NULL;
+
+static void
+parse_hex_color (const char *hex, double *r, double *g, double *b)
+{
+  if (!hex || hex[0] != '#' || strlen (hex) != 7)
+    return;
+  long val = strtol (hex + 1, NULL, 16);
+  *r = ((val >> 16) & 0xFF) / 255.0;
+  *g = ((val >> 8) & 0xFF) / 255.0;
+  *b = (val & 0xFF) / 255.0;
+}
+
+void
+hw_update_accent_color (int choice)
+{
+  static const char *colors[] = {
+    NULL,        /* Follow GPU  */
+    "#c01c28",   /* AMD Red     */
+    "#0071c5",   /* Intel Blue  */
+    "#76B900",   /* NVIDIA Green */
+    "#ff8307",   /* TUX Orange  */
+  };
+
+  if (choice < 0 || choice > 4)
+    return;
+
+  /* Resolve "Follow GPU" to detected GPU brand */
+  if (choice == 0)
+    choice = (int) settings_detect_gpu_accent ();
+
+  const char *hex = colors[choice];
+  if (!hex)
+    return;
+
+  parse_hex_color (hex, &g_divider_r, &g_divider_g, &g_divider_b);
+
+  /* Redraw the divider if it exists */
+  if (g_divider_widget)
+    gtk_widget_queue_draw (g_divider_widget);
+}
+
 /* ---- Page Creation ---- */
 
-static gboolean
-initial_hardware_scan_done (gpointer user_data)
+void
+initial_hardware_scan (HardwarePage *page)
 {
-  HardwarePage *page = user_data;
+  if (!page || page->hw_scanned)
+    return;
+
+  page->hw_scanned = TRUE;
 
   /* Detect devices */
   hw_devices_detect (page);
@@ -50,8 +98,34 @@ initial_hardware_scan_done (gpointer user_data)
 
   /* NVIDIA signal connections (outside gpu check, widgets always exist) */
   hw_gpu_detail_connect_nvidia_signals (page);
+}
 
-  return G_SOURCE_REMOVE;
+/* ─────────────── Gradient Divider ─────────────── */
+
+static void
+gradient_divider_draw_func (GtkDrawingArea *area, cairo_t *cr,
+  int width, int height, gpointer user_data)
+{
+  (void) area;
+  (void) user_data;
+
+  /* Use the current accent color */
+  double r = g_divider_r;
+  double g = g_divider_g;
+  double b = g_divider_b;
+
+  /* Draw vertical gradient line: transparent at top/bottom, accent color in middle */
+  cairo_pattern_t *gradient = cairo_pattern_create_linear (0, 0, 0, height);
+  cairo_pattern_add_color_stop_rgba (gradient, 0.0, r, g, b, 0.0);
+  cairo_pattern_add_color_stop_rgba (gradient, 0.12, r, g, b, 0.7);
+  cairo_pattern_add_color_stop_rgba (gradient, 0.5, r, g, b, 1.0);
+  cairo_pattern_add_color_stop_rgba (gradient, 0.88, r, g, b, 0.7);
+  cairo_pattern_add_color_stop_rgba (gradient, 1.0, r, g, b, 0.0);
+
+  cairo_set_source (cr, gradient);
+  cairo_rectangle (cr, (width - 1) / 2.0, 0, 1, height);
+  cairo_fill (cr);
+  cairo_pattern_destroy (gradient);
 }
 
 HardwarePage *
@@ -100,9 +174,20 @@ hardware_page_new (void)
   gtk_box_append (GTK_BOX (left_panel), left_scroll);
   gtk_box_append (GTK_BOX (page->box), left_panel);
 
-  /* Separator */
-  GtkWidget *sep = gtk_separator_new (GTK_ORIENTATION_VERTICAL);
-  gtk_box_append (GTK_BOX (page->box), sep);
+  /* Gradient divider: accent color fading to transparent at top/bottom */
+  GtkWidget *divider = gtk_drawing_area_new ();
+  g_divider_widget = divider;
+  gtk_widget_set_size_request (divider, 1, -1);
+  gtk_widget_set_hexpand (divider, FALSE);
+  gtk_widget_set_vexpand (divider, TRUE);
+  gtk_drawing_area_set_draw_func (GTK_DRAWING_AREA (divider),
+    gradient_divider_draw_func, NULL, NULL);
+
+  /* Set initial accent color from saved settings */
+  AccentChoice accent = settings_load_accent ();
+  hw_update_accent_color (accent);
+
+  gtk_box_append (GTK_BOX (page->box), divider);
 
   /* Right panel: detail stack */
   GtkWidget *right_panel = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
@@ -174,11 +259,6 @@ hardware_page_new (void)
     G_CALLBACK (hw_device_list_on_reload), page);
   g_signal_connect (page->device_list, "row-selected",
     G_CALLBACK (hw_device_list_on_selected), page);
-
-  /* Defer the hardware scan so the UI is fully realized first.
-     A 1-second delay ensures display adapters and input devices
-     are ready; matching the reload flow pattern. */
-  g_timeout_add (1000, initial_hardware_scan_done, page);
 
   return page;
 }

@@ -1333,13 +1333,20 @@ on_tricks_child_exited (GPid pid, gint status, gpointer user_data)
       char *nl = strchr (one_line, '\n');
       if (nl) *nl = '\0';
       if (strlen (one_line) > 200) one_line[200] = '\0';
-      char *toast = g_strdup_printf (
+      char *short_msg = g_strdup_printf (
         ctx->is_steam
           ? tr ("Failed to launch Protontricks: %s")
           : tr ("Failed to launch Winetricks: %s"),
         one_line[0] ? one_line : "?");
-      dashboard_show_toast (toast);
-      g_free (toast);
+      char *full_details = g_strdup_printf (
+        ctx->is_steam
+          ? tr ("Protontricks failed to launch.\n\nError: %s\n\nCommand output:\n%s")
+          : tr ("Winetricks failed to launch.\n\nError: %s\n\nCommand output:\n%s"),
+        one_line[0] ? one_line : "(no output)",
+        ctx->err && ctx->err->str ? ctx->err->str : "(no stderr)");
+      dashboard_show_error_toast (short_msg, full_details);
+      g_free (short_msg);
+      g_free (full_details);
       g_free (one_line);
     }
 
@@ -1415,14 +1422,18 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
     {
       if (!protontricks_available ())
         {
-          dashboard_show_toast (tr ("Protontricks is not installed."));
+          dashboard_show_error_toast (tr ("Protontricks is not installed."),
+            tr ("Protontricks is required to run Winetricks commands on Steam games. "
+            "Install it with your package manager (e.g., 'sudo apt install protontricks')."));
           return;
         }
 
       g_autofree char *appid = extract_steam_appid (cmd);
       if (!appid)
         {
-          dashboard_show_toast (tr ("Could not find the game prefix."));
+          dashboard_show_error_toast (tr ("Could not find the game prefix."),
+            tr ("The Steam App ID could not be extracted from the command. "
+            "Make sure the game is properly added to Steam."));
           return;
         }
 
@@ -1430,7 +1441,9 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
       gboolean is_flatpak_steam = FALSE;
       if (!find_steam_prefix (appid, &prefix, &is_flatpak_steam))
         {
-          dashboard_show_toast (tr ("Launch the game once through Steam to create its prefix."));
+          dashboard_show_error_toast (tr ("Could not find the game prefix."),
+            tr ("Launch the game once through Steam to create its prefix. "
+            "The prefix directory was not found for this App ID."));
           return;
         }
 
@@ -1480,7 +1493,9 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
   /* Non-Steam launchers: winetricks against the launcher's own prefix. */
   if (!winetricks_available ())
     {
-      dashboard_show_toast (tr ("Winetricks is not installed."));
+      dashboard_show_error_toast (tr ("Winetricks is not installed."),
+        tr ("Winetricks is required to manage Wine prefixes for non-Steam games. "
+        "Install it with your package manager (e.g., 'sudo apt install winetricks')."));
       return;
     }
 
@@ -1496,7 +1511,9 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
 
   if (!key)
     {
-      dashboard_show_toast (tr ("Could not find the game prefix."));
+      dashboard_show_error_toast (tr ("Could not find the game prefix."),
+        tr ("The game identifier could not be extracted from the command. "
+        "Make sure the game is properly configured in the launcher."));
       return;
     }
 
@@ -1505,7 +1522,9 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
   if (!resolve_nonsteam_prefix (source, key, &prefix, &wine))
     {
       g_free (key);
-      dashboard_show_toast (tr ("Could not find the game prefix."));
+      dashboard_show_error_toast (tr ("Could not find the game prefix."),
+        tr ("The Wine prefix directory was not found for this game. "
+        "Try running the game once to create its prefix."));
       return;
     }
   g_free (key);
@@ -1513,7 +1532,8 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
   char *winetricks = g_find_program_in_path ("winetricks");
   if (!winetricks)
     {
-      dashboard_show_toast (tr ("Winetricks is not installed."));
+      dashboard_show_error_toast (tr ("Winetricks is not installed."),
+        tr ("Winetricks is required to manage Wine prefixes for non-Steam games. Install it with your package manager (e.g., 'sudo apt install winetricks')."));
       return;
     }
   char *argv[] = { winetricks, NULL };
@@ -3832,7 +3852,10 @@ show_gaming_score (gpointer data)
     {
       /* Score couldn't be calculated — hide module and show toast */
       gtk_widget_set_visible (page->gaming_score_box, FALSE);
-      dashboard_show_toast (tr ("Hardware couldn't be properly identified for calculations. Try again later."));
+      dashboard_show_error_toast (tr ("Hardware couldn't be properly identified for calculations. Try again later."),
+        tr ("The gaming score could not be calculated because hardware information "
+        "is not available yet. This can happen during system startup. "
+        "Please wait a moment and try again."));
     }
   else
     {

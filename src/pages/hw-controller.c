@@ -5,6 +5,7 @@
 #include "page-dashboard.h"
 #include "usb-ids.h"
 #include "../epi-i18n.h"
+#include "../window.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -1201,8 +1202,10 @@ on_controller_website_clicked (GtkButton *btn, gpointer user_data)
   g_app_info_launch_default_for_uri (page->controller_url, NULL, &err);
   if (err)
     {
+      char *details = g_strdup_printf (tr ("Could not open URL: %s\n\nError: %s"), page->controller_url, err->message);
+      dashboard_show_error_toast (tr ("Could not open URL"), details);
+      g_free (details);
       g_error_free (err);
-      dashboard_show_toast (tr ("Could not open URL"));
     }
 }
 

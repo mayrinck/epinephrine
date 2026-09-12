@@ -5,6 +5,7 @@
 #include "hw-monitor.h"
 #include "../epi-privilege.h"
 #include "../epi-i18n.h"
+#include "../window.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -667,10 +668,8 @@ ram_save_sysctl_values (HardwarePage *page)
     }
   else
     {
-      char buf[256];
-      g_snprintf (buf, sizeof (buf), "%s: %s",
-        tr ("Error"), err && err->message ? err->message : "?");
-      dashboard_show_toast (buf);
+      dashboard_show_error_toast (tr ("Failed to apply memory settings"),
+        err && err->message ? err->message : tr ("Unknown error"));
       g_clear_error (&err);
 
       /* Revert widgets to the last persisted state */
@@ -1219,8 +1218,10 @@ on_stick_website_clicked (GtkButton *btn, gpointer user_data)
   g_app_info_launch_default_for_uri (url, NULL, &err);
   if (err)
     {
+      char *details = g_strdup_printf (tr ("Could not open URL: %s\n\nError: %s"), url, err->message);
+      dashboard_show_error_toast (tr ("Could not open URL"), details);
+      g_free (details);
       g_error_free (err);
-      dashboard_show_toast (tr ("Could not open URL"));
     }
 }
 
@@ -1241,8 +1242,10 @@ on_mobo_website_clicked (GtkButton *btn, gpointer user_data)
   g_app_info_launch_default_for_uri (page->mobo_url, NULL, &err);
   if (err)
     {
+      char *details = g_strdup_printf (tr ("Could not open URL: %s\n\nError: %s"), page->mobo_url, err->message);
+      dashboard_show_error_toast (tr ("Could not open URL"), details);
+      g_free (details);
       g_error_free (err);
-      dashboard_show_toast (tr ("Could not open URL"));
     }
 }
 
@@ -1256,8 +1259,10 @@ on_ram_website_clicked (GtkButton *btn, gpointer user_data)
   g_app_info_launch_default_for_uri (page->ram_url, NULL, &err);
   if (err)
     {
+      char *details = g_strdup_printf (tr ("Could not open URL: %s\n\nError: %s"), page->ram_url, err->message);
+      dashboard_show_error_toast (tr ("Could not open URL"), details);
+      g_free (details);
       g_error_free (err);
-      dashboard_show_toast (tr ("Could not open URL"));
     }
 }
 

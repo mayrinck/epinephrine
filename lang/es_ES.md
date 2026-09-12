@@ -86,6 +86,7 @@
 | Are you sure you want to delete %d game(s)? This cannot be undone. | ¿Estás seguro de que deseas eliminar %d juego(s)? Esto no se puede deshacer. |
 | Cannot access /dev/input for key capture | No se puede acceder a /dev/input para capturar la tecla |
 | Capture Key | Capturar tecla |
+| Factory profiles restored | Perfiles de fábrica restaurados |
 | Category name: | Nombre de la categoría: |
 | Hydra Classics | Hydra Clásicos |
 | Center Text | Texto central |
@@ -196,6 +197,10 @@
 | Engine Version | Versión del motor |
 | Epinephrine | Epinephrine |
 | Error | Error |
+| Error Details | Detalles del Error |
+| Copy Error | Copiar Error |
+| Error copied to clipboard | Error copiado al portapapeles |
+| No details available. | No hay detalles disponibles. |
 | Executed when GameMode activates, right before a game starts | Se ejecuta cuando se activa GameMode, justo antes de que inicie un juego |
 | Executed when GameMode deactivates, after a game closes | Se ejecuta cuando se desactiva GameMode, después de que se cierre un juego |
 | Experimental: attempts to control keyboard backlight via HID feature reports. May not work on all keyboards. | Experimental: intenta controlar la retroiluminación del teclado a través de informes de características HID. Puede que no funcione en todos los teclados. |
@@ -211,6 +216,8 @@
 | Failed to save configuration | Error al guardar la configuración |
 | Failed to set keyboard rate: kbdrate may not be installed | Error al establecer la tasa del teclado: es posible que kbdrate no esté instalado |
 | Failed to write profiles to G300s | Error al escribir perfiles en el G300s |
+| Failed to apply memory settings | Error al aplicar configuración de memoria |
+| Unknown error | Error desconocido |
 | Failed to write temp script | Error al escribir el script temporal |
 | Fair | Regular |
 | Fan Control | Control del ventilador |
@@ -227,6 +234,7 @@
 | Force Grab Cursor | Forzar captura del cursor |
 | Force Orientation | Forzar orientación |
 | Forces the GPU to a specific performance level: auto, low power, high performance, or manual. | Fuerza a la GPU a un nivel de rendimiento específico: automático, bajo consumo, alto rendimiento o manual. |
+| FPS | FPS |
 | FPS Counter | Contador de FPS |
 | FPS Limit | Límite de FPS |
 | FPS limit for vsync games (0 = unlimited) | Límite de FPS para juegos con vsync (0 = ilimitado) |
@@ -367,6 +375,7 @@
 | Manage CPU governor, frequency scaling, and performance tuning. | Administra el regulador de la CPU, el escalado de frecuencia y el ajuste de rendimiento. |
 | MangoApp | MangoApp |
 | MangoHud Configuration | Configuración de MangoHud |
+| MMO | MMO |
 | Manual | Manual |
 | Manufacturer | Fabricante |
 | Max FPS | FPS máximo |
@@ -448,6 +457,7 @@
 | NVIDIA Power Limit | Límite de energía de NVIDIA |
 | nvidia-smi could not provide real-time data for this GPU. | nvidia-smi no pudo proporcionar datos en tiempo real para esta GPU. |
 | Product Website | Sitio Web del Producto |
+| Productivity | Productividad |
 | Offset X | Desplazamiento X |
 | Offset Y | Desplazamiento Y |
 | ondemand | bajo demanda |
@@ -506,6 +516,10 @@
 | This feature is under construction. | Esta función está en construcción. |
 | Open OpenRGB | Abrir OpenRGB |
 | ratbagd is running on your system and may conflict with G300 configuration. Consider stopping ratbagd for exclusive access. | ratbagd se está ejecutando en tu sistema y puede entrar en conflicto con la configuración del G300. Considera detener ratbagd para obtener acceso exclusivo. |
+| ratbagd is running and will be used to configure your G300s mouse. | ratbagd está ejecutándose y se usará para configurar tu mouse G300s. |
+| Profiles saved via ratbagd | Perfiles guardados via ratbagd |
+| Failed to save profiles via ratbagd | Fallo al guardar perfiles via ratbagd |
+| ratbagd was unable to write the profiles. Check that ratbagd is running properly and the device is connected. | ratbagd no pudo escribir los perfiles. Verifica que ratbagd esté funcionando correctamente y que el dispositivo esté conectado. |
 | Real-time monitoring requires nvidia-smi, which was not found on this system. Install the NVIDIA driver tools to enable live GPU metrics. | La monitorización en tiempo real requiere nvidia-smi, que no se encontró en este sistema. Instala las herramientas del controlador NVIDIA para habilitar las métricas de GPU en vivo. |
 | Realtime | Tiempo real |
 | Recent Games | Juegos recientes |
@@ -517,6 +531,7 @@
 | Reduces shading rate to boost performance (RDNA2+ GPU required). | Reduce la tasa de sombreado para aumentar el rendimiento (requiere GPU RDNA2+). |
 | Refresh Rate | Tasa de refresco |
 | Release: %s | Lanzamiento: %s |
+| Release Date: %s | Fecha de Lanzamiento: %s |
 | Rendering Backend | Backend de renderizado |
 | Repeat Delay | Retraso de repetición |
 | Repeat Rate | Tasa de repetición |
@@ -524,6 +539,8 @@
 | Resizable BAR | BAR redimensionable |
 | Resolution (DPI) | Resolución (DPI) |
 | Restore Defaults | Restaurar predeterminados |
+| Restore Factory Profiles | Restaurar Perfiles de Fábrica |
+| Restore | Restaurar |
 | Reverse scroll direction (content follows fingers). | Invertir la dirección de desplazamiento (el contenido sigue a los dedos). |
 | Revision | Revisión |
 | Right | Derecha |

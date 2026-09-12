@@ -1,0 +1,58 @@
+/* vim:set ts=4 sw=4 tw=80 et cindent ai si cino=(0,ml,\:0:
+ * ( settings from: http://datapax.com.au/code_conventions/ )
+ */
+
+/**********************************************************************
+    RatSlap
+    Copyright (C) 2014-2020 Todd Harbour
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    version 2 ONLY, as published by the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program, in the file COPYING or COPYING.txt; if
+    not, see http://www.gnu.org/licenses/ , or write to:
+      The Free Software Foundation, Inc.,
+      51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ **********************************************************************/
+
+#ifndef   LOG_H
+#define   LOG_H
+
+#include <stdio.h>
+
+// IN THE EVENT 'DEBUG_INPUT' IS ENABLED IN make.options.conf, THIS:
+//     dlog(LOG_INPUT, "TURN ON\n");
+// YIELDS LOG ENTRY, SOMETHING LIKE:
+//     20140215T175217+1100 [D]           main.c:00079:main            TURN ON
+
+// Log levels, correspond to DEBUG* defines
+#define LOG                         NULL
+#define LOG_USB                     NULL
+#define LOG_PARSE                   NULL
+#define LOG_KEY                     NULL
+
+extern FILE *_logfile;
+
+int log_init(void);
+int log_end(void);
+
+extern void std_output(FILE *strm, const char *srcfile, const int line
+    , const char *func, const char *head, const char *text, ...);
+
+#define dlog(LOGLEV, OUTPUT, args...) std_output((LOGLEV), (__FILE__)\
+    , (__LINE__), (__FUNCTION__), "[D]", (OUTPUT), ## args)
+
+#define ilog(        OUTPUT, args...) std_output(_logfile, (__FILE__)\
+    , (__LINE__), (__FUNCTION__), "[I]", (OUTPUT), ## args)
+
+#define elog(        OUTPUT, args...) std_output(_logfile, (__FILE__)\
+    , (__LINE__), (__FUNCTION__), "[E]", (OUTPUT), ## args)
+
+#endif /* LOG_H */
