@@ -21,6 +21,7 @@ O Epinephrine reúne monitoramento de hardware, tuning de performance e configur
 - Card por jogo com ícone, tempo de jogo, FPS médio, espaço para comandos de inicialização e botão de **play**.
 
 ### Hardware Control (Controle de Hardware)
+- Layout de dois painéis com **divisor gradiente** usando a cor accent do tema.
 - **GPU**: informações detalhadas, monitor de uso/temperatura, e gerenciamento por recurso detectado:
   - Performance level, power profile, power limit, Frame Rate Target Control
   - AMD Radeon Chill, Anti-Lag, Variable Rate Shading, Zero RPM fan
@@ -30,7 +31,9 @@ O Epinephrine reúne monitoramento de hardware, tuning de performance e configur
 - **CPU**: governor, frequência min/máx, arquitetura, cores.
 - **Teclado**: informação do dispositivo, numlock/capslock/scrolllock, repetição de teclas, layout e backlight.
 - **Mouse**: velocidade, perfil de aceleração, scroll natural (libinput/gsettings/xinput) e configuração especial para dispositivos gamer como o mouse **Logitech G300s**:
-  - Perfis on-board (F3/F4/F5), DPI, polling rate, cor de LED e remapeamento de botões (G1–G9) via HID raw.
+  - Perfis on-board (F3/F4/F5), DPI, polling rate, cor de LED e remapeamento de botões (G1–G9).
+  - Suporte a **ratbagd** via D-Bus API para configuração quando disponível.
+  - Perfis de fábrica restauráveis (MMO, FPS, Produtividade).
 - **Controles (joystick)**: teste em tempo real com visual de botões/analógicos (layouts padrão e arcade), indicadores de input, botões extras (M1–M4) detectados por `EVIOCGBIT`, e nome/URL vindos de banco de dados.
 
 ### Utilities (Utilitários)
@@ -42,14 +45,21 @@ O Epinephrine reúne monitoramento de hardware, tuning de performance e configur
 ### Settings (Configurações)
 - **Tema**: sistema, libadwaita ou Breeze.
 - **Cor de destaque**: seguir a GPU detectada, ou forçar AMD/Intel/NVIDIA/Tux.
-- **Idioma**: português do Brasil (`pt_BR`) e inglês.
+- **Idioma**: português do Brasil (`pt_BR`), inglês (`en_US`) e espanhol (`es_ES`).
+
+### Sistema de Erros Padronizado
+- Toast com resumo do erro e botão **"Details"**.
+- Ao clicar em "Details", abre um overlay com:
+  - Explicação detalhada do erro.
+  - Output de terminal (quando disponível).
+  - Botões **"Copy Error"** e **"OK"**.
 
 ### Banco de dados de hardware (INDEX)
 O app carrega bancos de dados em Markdown (compilados como recursos) para exibir nome, URL oficial e specs dos dispositivos detectados:
 - `database/GPU_INDEX.md` — specs, VRAM e data de lançamento de GPUs.
 - `database/JOY_INDEX.md` — controles (nome, categoria, URL, features).
 - `database/KEYBOARD_INDEX.md` — teclados.
-- `database/MOUSE_INDEX.md` — mouses.
+- `database/MOUSE_INDEX.md` — mouses (inclui fabricante, ano de lançamento).
 
 Também consulta o banco **usb.ids** do sistema (`/usr/share/hwdata/usb.ids`) com refresh assíncrono via `curl`, usado como fallback de nomeação de dispositivos USB.
 
@@ -89,17 +99,23 @@ sudo pacman -S meson gtk4 libadwaita fontconfig
 | `openrgb` | Editar iluminação no OpenRGB |
 | `libinput` | Detecção de DPI do mouse |
 | `nvidia-smi` | Gerenciamento de GPU NVIDIA |
+| `ratbagd` | Configuração de mice gamer via D-Bus |
 | `pkexec` | Operações privilegiadas (instalação de utilitários, tuning) |
 | `curl` | Refresh do banco usb.ids |
 
 ## Build
 
 ```sh
-meson setup _build
-meson compile -C _build
+meson setup builddir
+meson compile -C builddir
 ```
 
-O binário será gerado em `_build/src/epinephrine`.
+O binário será gerado em `builddir/src/epinephrine`.
+
+Para executar diretamente do build:
+```sh
+./builddir/src/epinephrine
+```
 
 Consulte [BUILDING.md](BUILDING.md) para instruções detalhadas de build (incluindo builds com Address Sanitizer), instalação e limpeza.
 
@@ -110,13 +126,15 @@ epinephrine/
 ├── meson.build                 # Configuração do Meson
 ├── data/                       # UI XML (GResources), ícones, fonts, desktop/metainfo
 │   └── ui/                     # Páginas em formato GTK Builder (.ui)
-├── database/                   # Bancos de dados INDEX (GPU, JOY, KEYBOARD, MICE)
-├── po/                         # Traduções (pt_BR, templates .pot)
+├── database/                   # Bancos de dados INDEX (GPU, JOY, KEYBOARD, MOUSE)
+├── lang/                       # Traduções (en_US.md, pt_BR.md, es_ES.md)
 ├── src/
 │   ├── main.c, application.c   # Bootstrap da aplicação
-│   ├── window.c                # Janela principal e abas
+│   ├── window.c                # Janela principal, abas e sistema de erros
 │   ├── command-builder.c       # Gerador de comando do Gamescope
 │   ├── epi-privilege.c         # Execução privilegiada via pkexec
+│   ├── epi-ratbagd.c/h         # Integração com ratbagd via D-Bus
+│   ├── epi-i18n.c/h            # Internacionalização
 │   ├── usb-ids.c               # Banco usb.ids (sistema + refresh online)
 │   └── pages/                  # Páginas do app (dashboard, games, hardware, ...)
 └── BUILDING.md                 # Guia de build detalhado
@@ -131,16 +149,21 @@ epinephrine/
    - **GPU**: `GPU_INDEX.md` (nome exibido por `vulkaninfo`, VRAM, URL, specs, data de lançamento).
    - **Controle**: `JOY_INDEX.md` (nome, VID:PID, categoria, URL, features, conexão, botões).
    - **Teclado**: `KEYBOARD_INDEX.md` (nome, VID:PID, keyset, URL, features, conexão).
-   - **Mouse**: `MICE_INDEX.md` (nome, VID:PID, URL, número de botões).
+   - **Mouse**: `MOUSE_INDEX.md` (nome, VID:PID, URL, fabricante, ano de lançamento, número de botões).
 
 ### Traduções
-Os arquivos de tradução estão em `po/` (gettext). Execute `meson compile -C _build epinephrine-pot` para regenerar o template `.pot` e atualize/adicione `.po` dos idiomas desejados.
+Os arquivos de tradução estão em `lang/` como Markdown com tabelas key-text.
+- Cada arquivo contém uma tabela com coluna `Chave` e `Texto`.
+- Novas strings devem ser adicionadas a todos os arquivos de idioma.
+- Strings do código usam `tr()` ou `epi_i18n_get()`.
+- Strings em arquivos `.ui` são traduzidas via `epi_i18n_apply_widgets()`.
 
 ### Código
 - Padrão da linguagem: **C17**.
 - O código usa **GTK 4** com **Builder (.ui)** e **libadwaita** (widgets `Adw`).
 - Mantenha o padrão das páginas existentes (cada página tem `page-<nome>.c`/`.h` e um arquivo `.ui` em `data/ui/`).
 - Os INDEX files são parseados como recursos compilados (ver `load_controller_index` em `page-hardware.c` como referência).
+- Erros devem usar `dashboard_show_error_toast(short_msg, details)` para padronização.
 
 ## Autor
 
