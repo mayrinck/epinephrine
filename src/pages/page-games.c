@@ -8,6 +8,10 @@
 
 #define tr(x) epi_i18n_get (x)
 
+/* Every game icon in the library is rendered into a box of this size, so
+   cards of all services share the same dimensions. */
+#define GAME_CARD_ICON_SIZE 128
+
 static void on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, DashboardPage *page);
 static void on_add_game_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_toggled (GtkCheckButton *check, DashboardPage *page);
@@ -72,16 +76,26 @@ create_game_card_grid (DashboardPage *page, int idx)
   if (page->running_game_idx == idx)
     gtk_widget_add_css_class (card, "game-running");
 
-  /* Icon with source badge overlay */
+  /* Game icon inside a fixed 128x128 area so every card (Steam, Hydra,
+     Heroic, ...) ends up with exactly the same size, whatever the artwork
+     behind it looks like. The platform badge stays small at its corner. */
   const char *icon_name = page->games[idx].icon;
   if (!icon_name || icon_name[0] == '\0')
     icon_name = "input-gaming-symbolic";
-  GtkWidget *icon = create_game_icon_widget (icon_name, 32);
-  gtk_widget_add_css_class (icon, "game-icon");
+  GtkWidget *icon = create_game_icon_widget (icon_name, GAME_CARD_ICON_SIZE);
+  gtk_widget_set_halign (icon, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign (icon, GTK_ALIGN_CENTER);
+
+  GtkWidget *icon_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_widget_set_size_request (icon_box, GAME_CARD_ICON_SIZE, GAME_CARD_ICON_SIZE);
+  gtk_widget_set_halign (icon_box, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign (icon_box, GTK_ALIGN_CENTER);
+  gtk_widget_add_css_class (icon_box, "game-icon");
+  gtk_box_append (GTK_BOX (icon_box), icon);
 
   GtkWidget *overlay = gtk_overlay_new ();
   gtk_widget_set_halign (overlay, GTK_ALIGN_CENTER);
-  gtk_overlay_set_child (GTK_OVERLAY (overlay), icon);
+  gtk_overlay_set_child (GTK_OVERLAY (overlay), icon_box);
 
   const char *src_icon_path = get_source_icon (page->games[idx].source);
   if (src_icon_path)
@@ -156,15 +170,18 @@ create_game_card_grid (DashboardPage *page, int idx)
   gtk_box_append (GTK_BOX (card), launch_btn);
 
   /* Selection checkbox (always visible, top-right of the card). Checking it
-     selects the game and enters edit mode when not already in it. */
+     is the only way to select a game: it enters edit mode when not already
+     in it, while clicking anywhere else on the card opens the edit dialog. */
   GtkWidget *check = gtk_check_button_new ();
   gtk_check_button_set_active (GTK_CHECK_BUTTON (check),
     page->selected && page->selected[idx]);
   gtk_widget_add_css_class (check, "game-select-check");
-  gtk_widget_set_halign (check, GTK_ALIGN_START);
+  gtk_widget_set_halign (check, GTK_ALIGN_END);
   gtk_widget_set_valign (check, GTK_ALIGN_START);
-  gtk_widget_set_margin_start (check, 4);
+  gtk_widget_set_margin_start (check, 0);
+  gtk_widget_set_margin_end (check, 4);
   gtk_widget_set_margin_top (check, 4);
+  gtk_widget_set_margin_bottom (check, 0);
   g_object_set_data (G_OBJECT (check), "game-idx", GINT_TO_POINTER (idx + 1));
   g_signal_connect (check, "toggled", G_CALLBACK (on_select_toggled), page);
   gtk_overlay_add_overlay (GTK_OVERLAY (card_ov), check);
@@ -199,15 +216,9 @@ on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, Dash
   int idx = find_game_idx_from_widget (widget);
   if (idx < 0 || idx >= page->n_games) return;
 
-  if (page->edit_mode)
-    {
-      if (page->selected)
-        page->selected[idx] = !page->selected[idx];
-      refresh_games_grid (page);
-      refresh_edit_actions (page);
-      return;
-    }
-
+  /* Clicking a card always opens the edit dialog. Selection is reserved for
+     the checkbox at the card's top-right corner, so a click never ends up
+     selecting (or leaving the grid in edit mode) instead of editing. */
   open_edit_dialog (page, idx);
 }
 
