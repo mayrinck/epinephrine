@@ -1673,6 +1673,20 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
    still needed for proper animated GIF support and pre-scaled static images. */
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
+static gboolean
+game_icon_name_exists (const char *name)
+{
+  if (!name || !name[0]) return FALSE;
+
+  GdkDisplay *display = gdk_display_get_default ();
+  if (!display) return TRUE; /* no display yet: let GTK decide */
+
+  GtkIconTheme *theme = gtk_icon_theme_get_for_display (display);
+  if (!theme) return TRUE;
+
+  return gtk_icon_theme_has_icon (theme, name);
+}
+
 GtkWidget *
 create_game_icon_widget (const char *icon, int pixel_size)
 {
@@ -1682,42 +1696,34 @@ create_game_icon_widget (const char *icon, int pixel_size)
         ? g_build_filename (g_get_home_dir (), icon + 1, NULL)
         : g_strdup (icon);
 
-      /* Check if this is an animated GIF */
-      GError *err = NULL;
-      GdkPixbufAnimation *anim = gdk_pixbuf_animation_new_from_file (path, &err);
-      if (anim && !gdk_pixbuf_animation_is_static_image (anim))
+      if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
         {
-          /* Animated GIF: GtkImage handles animation automatically */
-          GtkWidget *img = gtk_image_new_from_file (path);
-          gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
-          g_object_unref (anim);
-          g_free (path);
-          return img;
+          /* Static image (PNG, JPEG, GIF, WebP, ICO, BMP, TIFF, SVG).
+             Always scaled to fit pixel_size x pixel_size preserving the
+             aspect ratio — up or down — so every icon takes the same area
+             no matter how large its source artwork is. GTK 4's GtkImage has
+             no animation support, so the first frame is all we can show. */
+          GError *err = NULL;
+          GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_size (path, pixel_size, pixel_size, &err);
+          if (pixbuf)
+            {
+              GtkWidget *img = gtk_image_new_from_pixbuf (pixbuf);
+              g_object_unref (pixbuf);
+              g_free (path);
+              return img;
+            }
+          if (err) g_error_free (err);
         }
-      if (anim) g_object_unref (anim);
-      if (err) g_error_free (err);
 
-      /* Static image (PNG, JPEG, GIF single-frame, WebP, ICO, BMP, TIFF) */
-      err = NULL;
-      GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_size (path, pixel_size, pixel_size, &err);
-      if (pixbuf)
-        {
-          GtkWidget *img = gtk_image_new_from_pixbuf (pixbuf);
-          g_object_unref (pixbuf);
-          g_free (path);
-          return img;
-        }
-      if (err) g_error_free (err);
-
-      /* Last resort: let GTK try to load it */
-      GtkWidget *img = gtk_image_new_from_file (path);
-      gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
       g_free (path);
-      return img;
+      /* Unreadable file: fall through to the themed-icon path below. */
     }
 
-  GtkWidget *img = gtk_image_new_from_icon_name (
-    icon && icon[0] ? icon : "input-gaming-symbolic");
+  const char *name = (icon && icon[0]) ? icon : "input-gaming-symbolic";
+  if (!game_icon_name_exists (name))
+    name = "input-gaming-symbolic";
+
+  GtkWidget *img = gtk_image_new_from_icon_name (name);
   gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
   return img;
 }
@@ -2614,6 +2620,227 @@ import_lutris_games (DashboardPage *page)
   return count;
 }
 
+/* ---- Hydra game icon download ----
+ *
+ * Hydra stores an "iconUrl" per game. Downloads go to the user cache and are
+ * attached to the matching game entry as a file path, so the cards show the
+ * same kind of artwork as Steam/Heroic (which resolve themed icon names).
+ * Everything runs on the main loop through GSubprocess: never blocking. */
+
+#define HYDRA_ICON_MAX_PARALLEL 3
+
+typedef struct
+{
+  DashboardPage *page;
+  char *command; /* key: the game's launch command */
+  char *url;
+  char *dest;
+} HydraIconJob;
+
+static GQueue *hydra_icon_queue = NULL;
+static int hydra_icon_active = 0;
+static guint hydra_icon_flush_id = 0;
+
+static void hydra_icon_start_next (void);
+
+static void
+hydra_icon_job_free (HydraIconJob *job)
+{
+  if (!job) return;
+  g_free (job->command);
+  g_free (job->url);
+  g_free (job->dest);
+  g_free (job);
+}
+
+static gboolean
+hydra_icon_file_ok (const char *path)
+{
+  if (!path || !path[0] || !g_file_test (path, G_FILE_TEST_IS_REGULAR))
+    return FALSE;
+
+  /* Reject anything that is not a loadable image (404 pages, empty files). */
+  GError *err = NULL;
+  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file (path, &err);
+  if (err) g_error_free (err);
+  if (!pixbuf) return FALSE;
+  g_object_unref (pixbuf);
+  return TRUE;
+}
+
+static char *
+hydra_icon_dest_path (const char *url)
+{
+  static const char *exts[] = {
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg", NULL
+  };
+
+  const char *q = strchr (url, '?');
+  size_t len = q ? (size_t) (q - url) : strlen (url);
+
+  const char *ext = ".png";
+  for (int i = 0; exts[i]; i++)
+    {
+      size_t n = strlen (exts[i]);
+      if (len > n && g_ascii_strncasecmp (url + len - n, exts[i], n) == 0)
+        { ext = exts[i]; break; }
+    }
+
+  char *dir = g_build_filename (g_get_user_cache_dir (),
+    "epinephrine", "hydra-icons", NULL);
+  g_mkdir_with_parents (dir, 0755);
+
+  g_autofree char *sum = g_compute_checksum_for_string (G_CHECKSUM_SHA1, url, -1);
+  char *dest = g_strdup_printf ("%s/%s%s", dir, sum, ext);
+  g_free (dir);
+  return dest;
+}
+
+static gboolean
+hydra_icon_flush (gpointer user_data)
+{
+  DashboardPage *page = user_data;
+  hydra_icon_flush_id = 0;
+  save_games_config (page);
+  refresh_games_grid (page);
+  return G_SOURCE_REMOVE;
+}
+
+static void
+hydra_icon_schedule_flush (DashboardPage *page)
+{
+  if (hydra_icon_flush_id)
+    return;
+  hydra_icon_flush_id = g_timeout_add (400, hydra_icon_flush, page);
+}
+
+static void
+hydra_icon_apply (HydraIconJob *job, gboolean ok)
+{
+  DashboardPage *page = job->page;
+
+  if (ok)
+    {
+      for (int i = 0; i < page->n_games; i++)
+        {
+          if (g_strcmp0 (page->games[i].command, job->command) != 0)
+            continue;
+
+          const char *cur = page->games[i].icon;
+          if (cur && cur[0] && g_strcmp0 (cur, "input-gaming-symbolic") != 0)
+            break; /* the user picked another icon already */
+
+          g_free (page->games[i].icon);
+          page->games[i].icon = g_strdup (job->dest);
+          hydra_icon_schedule_flush (page);
+          break;
+        }
+    }
+
+  hydra_icon_job_free (job);
+}
+
+static void
+hydra_icon_done (GObject *source, GAsyncResult *res, gpointer user_data)
+{
+  HydraIconJob *job = user_data;
+
+  g_subprocess_wait_finish (G_SUBPROCESS (source), res, NULL);
+  g_object_unref (G_SUBPROCESS (source));
+  hydra_icon_active--;
+
+  gboolean ok = hydra_icon_file_ok (job->dest);
+  if (!ok)
+    unlink (job->dest); /* remove partial/error output, if any */
+
+  hydra_icon_apply (job, ok);
+  hydra_icon_start_next ();
+}
+
+static void
+hydra_icon_start_next (void)
+{
+  if (!hydra_icon_queue) return;
+
+  while (hydra_icon_active < HYDRA_ICON_MAX_PARALLEL)
+    {
+      HydraIconJob *job = g_queue_pop_head (hydra_icon_queue);
+      if (!job) return;
+
+      if (hydra_icon_file_ok (job->dest))
+        {
+          hydra_icon_apply (job, TRUE);
+          continue;
+        }
+
+      if (!g_find_program_in_path ("curl"))
+        {
+          hydra_icon_job_free (job);
+          continue;
+        }
+
+      const char *argv[] = { "curl", "-sfL", "--max-time", "20",
+                             "-o", job->dest, job->url, NULL };
+
+      GError *err = NULL;
+      GSubprocessLauncher *launcher = g_subprocess_launcher_new (
+        G_SUBPROCESS_FLAGS_STDOUT_SILENCE | G_SUBPROCESS_FLAGS_STDERR_SILENCE);
+      GSubprocess *proc = g_subprocess_launcher_spawnv (launcher,
+        (const char * const *) argv, &err);
+      g_object_unref (launcher);
+
+      if (!proc)
+        {
+          if (err) g_error_free (err);
+          hydra_icon_job_free (job);
+          continue;
+        }
+
+      hydra_icon_active++;
+      g_subprocess_wait_async (proc, NULL, hydra_icon_done, job);
+      return; /* resuming happens in hydra_icon_done() */
+    }
+}
+
+/* Queue the icon of a Hydra game (by its launch command) for download. */
+static void
+hydra_queue_game_icon (DashboardPage *page, const char *command,
+                       const char *icon_url)
+{
+  if (!icon_url || !g_str_has_prefix (icon_url, "http"))
+    return;
+  if (!command || !command[0])
+    return;
+
+  if (!hydra_icon_queue)
+    hydra_icon_queue = g_queue_new ();
+
+  /* Skip games that already show a real icon, and jobs already queued. */
+  for (int i = 0; i < page->n_games; i++)
+    {
+      if (g_strcmp0 (page->games[i].command, command) != 0)
+        continue;
+      const char *cur = page->games[i].icon;
+      if (cur && cur[0] && g_strcmp0 (cur, "input-gaming-symbolic") != 0)
+        return;
+    }
+  for (GList *l = hydra_icon_queue->head; l; l = l->next)
+    {
+      HydraIconJob *j = l->data;
+      if (g_strcmp0 (j->command, command) == 0)
+        return;
+    }
+
+  HydraIconJob *job = g_new0 (HydraIconJob, 1);
+  job->page = page;
+  job->command = g_strdup (command);
+  job->url = g_strdup (icon_url);
+  job->dest = hydra_icon_dest_path (icon_url);
+  g_queue_push_tail (hydra_icon_queue, job);
+
+  hydra_icon_start_next ();
+}
+
 /* ---- Hydra Launcher import ---- */
 
 typedef struct
@@ -2645,6 +2872,8 @@ on_hydra_game (const HydraGame *g, void *user_data)
   g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
 
   add_game_entry (ctx->page, g->title, cmd, NULL, "hydra");
+  if (g->icon_url && g->icon_url[0])
+    hydra_queue_game_icon (ctx->page, cmd, g->icon_url);
   ctx->count++;
 }
 
@@ -2684,6 +2913,8 @@ hydra_import_from_python (DashboardPage *page, const char *db_dir,
               g_autofree char *q_uri = g_shell_quote (uri);
               g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
               add_game_entry (page, f[0], cmd, NULL, "hydra");
+              if (g_strv_length (f) >= 5 && f[4][0])
+                hydra_queue_game_icon (page, cmd, f[4]);
               ctx.count++;
             }
         }
