@@ -1,5 +1,6 @@
 #include "page-dashboard.h"
 #include "page-games.h"
+#include "game-artwork.h"
 #include "window.h"
 #include "epi-privilege.h"
 #include "hw-detail.h"
@@ -36,22 +37,11 @@ static const GamingResourceDef RESOURCES[DASHBOARD_N_RESOURCES] = {
 };
 
 static const char *detected_pm = NULL;
-static const char *GAMES_CONFIG_PATH = NULL;
 
 void
 dashboard_show_toast (const char *message)
 {
   epinephrine_show_toast (message);
-}
-
-static void
-init_config_path (void)
-{
-  const char *home = g_get_home_dir ();
-  char *dir = g_build_filename (home, ".config", "epinephrine", NULL);
-  g_mkdir_with_parents (dir, 0755);
-  GAMES_CONFIG_PATH = g_build_filename (dir, "games.ini", NULL);
-  g_free (dir);
 }
 
 /*
@@ -257,169 +247,6 @@ format_time_ago (gint64 last_played)
   return g_strdup_printf (tr ("%d years ago"), (int)(diff / 31536000));
 }
 
-static void
-free_games (DashboardPage *page)
-{
-  for (int i = 0; i < page->n_games; i++)
-    {
-      g_free (page->games[i].name);
-      g_free (page->games[i].command);
-      g_free (page->games[i].icon);
-      g_free (page->games[i].workdir);
-      g_free (page->games[i].source);
-      g_free (page->games[i].startup_cmd);
-      g_free (page->games[i].group);
-    }
-  g_free (page->games);
-  page->games = NULL;
-  page->n_games = 0;
-  g_free (page->selected);
-  page->selected = NULL;
-  page->edit_mode = FALSE;
-  g_clear_pointer (&page->active_group, g_free);
-  g_clear_pointer (&page->active_service, g_free);
-}
-
-const char *
-detect_source_from_command (const char *cmd)
-{
-  if (!cmd || cmd[0] == '\0')
-    return "local";
-  if (g_str_has_prefix (cmd, "steam steam://rungameid/"))
-    return "steam";
-  if (g_str_has_prefix (cmd, "xdg-open hydralauncher://"))
-    return "hydra";
-  if (g_str_has_prefix (cmd, "heroic "))
-    return "heroic";
-  if (g_str_has_prefix (cmd, "lutris "))
-    return "lutris";
-  if (g_str_has_prefix (cmd, "bottles"))
-    return "bottles";
-  return "local";
-}
-
-static void
-load_games_config (DashboardPage *page)
-{
-  free_games (page);
-
-  if (!GAMES_CONFIG_PATH)
-    init_config_path ();
-
-  GKeyFile *keyfile = g_key_file_new ();
-  GError *err = NULL;
-
-  if (!g_key_file_load_from_file (keyfile, GAMES_CONFIG_PATH, G_KEY_FILE_NONE, &err))
-    {
-      g_error_free (err);
-      g_key_file_free (keyfile);
-      return;
-    }
-
-  gsize num_games = 0;
-  char **groups = g_key_file_get_groups (keyfile, &num_games);
-
-  page->games = g_new0 (GameShortcut, num_games);
-  page->selected = g_new0 (gboolean, num_games);
-  page->n_games = 0;
-
-  for (gsize i = 0; i < num_games; i++)
-    {
-      if (g_str_has_prefix (groups[i], "game_"))
-        {
-          char *name = g_key_file_get_string (keyfile, groups[i], "name", NULL);
-          char *command = g_key_file_get_string (keyfile, groups[i], "command", NULL);
-          char *icon = g_key_file_get_string (keyfile, groups[i], "icon", NULL);
-          char *workdir = g_key_file_get_string (keyfile, groups[i], "workdir", NULL);
-          char *source = g_key_file_get_string (keyfile, groups[i], "source", NULL);
-          int play_time = g_key_file_get_integer (keyfile, groups[i], "play_time", NULL);
-          double avg_fps = g_key_file_get_double (keyfile, groups[i], "avg_fps", NULL);
-          gint64 last_played = g_key_file_get_int64 (keyfile, groups[i], "last_played", NULL);
-
-          if (name && command)
-            {
-              page->games[page->n_games].name = name;
-              page->games[page->n_games].command = command;
-              page->games[page->n_games].icon = icon ? icon : g_strdup ("input-gaming-symbolic");
-              page->games[page->n_games].workdir = workdir;
-              if (source && g_strcmp0 (source, "appimage") == 0)
-                {
-                  g_free (source);
-                  source = g_strdup ("local");
-                }
-              page->games[page->n_games].source = source ? source : g_strdup ("local");
-              page->games[page->n_games].startup_cmd = g_key_file_get_string (keyfile, groups[i], "startup_cmd", NULL);
-              page->games[page->n_games].group = g_key_file_get_string (keyfile, groups[i], "group", NULL);
-              page->games[page->n_games].feral_gamemode = g_key_file_get_boolean (keyfile, groups[i], "feral_gamemode", NULL);
-              page->games[page->n_games].mangohud = g_key_file_get_boolean (keyfile, groups[i], "mangohud", NULL);
-              page->games[page->n_games].play_time_secs = play_time;
-              page->games[page->n_games].avg_fps = (float) avg_fps;
-              page->games[page->n_games].last_played = last_played;
-              page->n_games++;
-            }
-          else
-            {
-              g_free (name);
-              g_free (command);
-              g_free (icon);
-              g_free (workdir);
-              g_free (source);
-            }
-        }
-    }
-
-  g_strfreev (groups);
-  g_key_file_free (keyfile);
-}
-
-void
-save_games_config (DashboardPage *page)
-{
-  if (!GAMES_CONFIG_PATH)
-    init_config_path ();
-
-  GKeyFile *keyfile = g_key_file_new ();
-
-  for (int i = 0; i < page->n_games; i++)
-    {
-      char group[64];
-      snprintf (group, sizeof (group), "game_%d", i);
-
-      g_key_file_set_string (keyfile, group, "name", page->games[i].name);
-      g_key_file_set_string (keyfile, group, "command", page->games[i].command);
-      g_key_file_set_string (keyfile, group, "icon", page->games[i].icon);
-      if (page->games[i].workdir)
-        g_key_file_set_string (keyfile, group, "workdir", page->games[i].workdir);
-      g_key_file_set_string (keyfile, group, "source",
-        page->games[i].source ? page->games[i].source : "local");
-      g_key_file_set_integer (keyfile, group, "play_time", page->games[i].play_time_secs);
-      g_key_file_set_double (keyfile, group, "avg_fps", page->games[i].avg_fps);
-      g_key_file_set_int64 (keyfile, group, "last_played", page->games[i].last_played);
-      if (page->games[i].startup_cmd)
-        g_key_file_set_string (keyfile, group, "startup_cmd", page->games[i].startup_cmd);
-      if (page->games[i].group)
-        g_key_file_set_string (keyfile, group, "group", page->games[i].group);
-      g_key_file_set_boolean (keyfile, group, "feral_gamemode", page->games[i].feral_gamemode);
-      g_key_file_set_boolean (keyfile, group, "mangohud", page->games[i].mangohud);
-    }
-
-  GError *err = NULL;
-  char *data = g_key_file_to_data (keyfile, NULL, &err);
-
-  if (data)
-    {
-      g_file_set_contents (GAMES_CONFIG_PATH, data, -1, NULL);
-      g_free (data);
-    }
-  else
-    {
-      g_warning ("Failed to save games config: %s", err->message);
-      g_error_free (err);
-    }
-
-  g_key_file_free (keyfile);
-}
-
 /* ---- Recent Games (Overview) ---- */
 
 static void
@@ -432,55 +259,44 @@ on_recent_play_clicked (GtkButton *btn, DashboardPage *page)
   on_game_launch_clicked (btn, page);
 }
 
+static void
+on_recent_details_clicked (GtkButton *button, DashboardPage *page)
+{
+  int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "game-idx")) - 1;
+  games_page_show_game (page, idx);
+  dashboard_navigate_to_games ();
+}
+
 static GtkWidget *
 create_recent_card (DashboardPage *page, int idx)
 {
   GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
-  gtk_widget_set_halign (card, GTK_ALIGN_FILL);
-  gtk_widget_set_valign (card, GTK_ALIGN_FILL);
-  gtk_widget_set_hexpand (card, TRUE);
-  gtk_widget_set_size_request (card, -1, 160);
-  gtk_widget_add_css_class (card, "game-shortcut");
-
-  if (page->running_game_idx == idx)
-    gtk_widget_add_css_class (card, "game-running");
-
-  const char *icon_name = page->games[idx].icon;
-  if (!icon_name || icon_name[0] == '\0')
-    icon_name = "input-gaming-symbolic";
-  GtkWidget *icon = create_game_icon_widget (icon_name, 48);
-  gtk_widget_add_css_class (icon, "game-icon");
-  gtk_box_append (GTK_BOX (card), icon);
-
-  GtkWidget *name = gtk_label_new (
-    page->games[idx].name && page->games[idx].name[0]
-    ? page->games[idx].name : tr ("?"));
-  gtk_widget_add_css_class (name, "game-name");
+  gtk_widget_set_halign (card, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign (card, GTK_ALIGN_START);
+  GtkWidget *cover = gtk_button_new ();
+  gtk_widget_add_css_class (cover, "library-cover-button");
+  gtk_widget_set_tooltip_text (cover, page->games[idx].name);
+  gtk_button_set_child (GTK_BUTTON (cover), game_artwork_cover (&page->games[idx], 150, 225));
+  g_object_set_data (G_OBJECT (cover), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (cover, "clicked", G_CALLBACK (on_recent_details_clicked), page);
+  gtk_box_append (GTK_BOX (card), cover);
+  GtkWidget *name = gtk_label_new (page->games[idx].name);
   gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
-  gtk_label_set_max_width_chars (GTK_LABEL (name), 15);
+  gtk_label_set_max_width_chars (GTK_LABEL (name), 18);
+  gtk_label_set_xalign (GTK_LABEL (name), 0);
+  gtk_widget_add_css_class (name, "heading");
   gtk_box_append (GTK_BOX (card), name);
-
-  char *time_str = format_time_ago (page->games[idx].last_played);
-  GtkWidget *stats_label = gtk_label_new (time_str);
-  gtk_widget_add_css_class (stats_label, "game-stats");
-  gtk_box_append (GTK_BOX (card), stats_label);
-  g_free (time_str);
-
-  const char *btn_label = (page->running_game_idx == idx)
-    ? tr ("Running...")
-    : tr ("Play Now");
-  GtkWidget *launch_btn = gtk_button_new_with_label (btn_label);
-  gtk_widget_add_css_class (launch_btn, "suggested-action");
-  gtk_widget_add_css_class (launch_btn, "play-now-btn");
-  if (page->running_game_idx == idx)
-    {
-      gtk_widget_set_sensitive (launch_btn, FALSE);
-      gtk_widget_add_css_class (launch_btn, "play-btn");
-    }
-  g_object_set_data (G_OBJECT (launch_btn), "game-idx", GINT_TO_POINTER (idx + 1));
-  g_signal_connect (launch_btn, "clicked", G_CALLBACK (on_recent_play_clicked), page);
-  gtk_box_append (GTK_BOX (card), launch_btn);
-
+  g_autofree char *time = format_time_ago (page->games[idx].last_played);
+  GtkWidget *stats = gtk_label_new (time);
+  gtk_label_set_xalign (GTK_LABEL (stats), 0);
+  gtk_widget_add_css_class (stats, "dim-label");
+  gtk_box_append (GTK_BOX (card), stats);
+  GtkWidget *play = gtk_button_new_with_label (page->running_game_idx == idx ? tr ("Running...") : tr ("Play Now"));
+  gtk_widget_add_css_class (play, "suggested-action");
+  gtk_widget_set_sensitive (play, page->running_game_idx < 0);
+  g_object_set_data (G_OBJECT (play), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (play, "clicked", G_CALLBACK (on_recent_play_clicked), page);
+  gtk_box_append (GTK_BOX (card), play);
   return card;
 }
 
@@ -492,8 +308,10 @@ refresh_recent_games (DashboardPage *page)
   GtkWidget *child;
   while ((child = gtk_widget_get_first_child (page->recent_box)))
     {
-      if (GTK_IS_WIDGET (child))
-        gtk_widget_unparent (child);
+      if (GTK_IS_FLOW_BOX (page->recent_box))
+        gtk_flow_box_remove (GTK_FLOW_BOX (page->recent_box), child);
+      else
+        gtk_box_remove (GTK_BOX (page->recent_box), child);
     }
 
   /* Sort games by last_played descending */
@@ -510,16 +328,10 @@ refresh_recent_games (DashboardPage *page)
   for (int i = 0; i < count; i++)
     {
       GtkWidget *card = create_recent_card (page, sorted[i]);
-      gtk_box_append (GTK_BOX (page->recent_box), card);
-    }
-
-  /* Fill remaining slots with empty placeholders */
-  for (int i = count; i < DASHBOARD_N_RECENT; i++)
-    {
-      GtkWidget *placeholder = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-      gtk_widget_set_hexpand (placeholder, TRUE);
-      gtk_widget_set_size_request (placeholder, 120, 160);
-      gtk_box_append (GTK_BOX (page->recent_box), placeholder);
+      if (GTK_IS_FLOW_BOX (page->recent_box))
+        gtk_flow_box_append (GTK_FLOW_BOX (page->recent_box), card);
+      else
+        gtk_box_append (GTK_BOX (page->recent_box), card);
     }
 
   g_free (sorted);
@@ -536,12 +348,9 @@ has_child_process (GPid parent_pid)
   g_spawn_sync (NULL,
     (char *[]){ "ps", "--ppid", pid_str, "-o", "pid=", NULL },
     NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
-  if (out)
-    {
-      g_free (out);
-      return TRUE;
-    }
-  return FALSE;
+  gboolean found = out && *g_strstrip (out);
+  g_free (out);
+  return found;
 }
 
 static gboolean
@@ -700,6 +509,7 @@ steam_game_watch_cb (gpointer user_data)
 
     save_games_config (page);
     refresh_recent_games (page);
+    refresh_games_grid (page);
   }
 
   return G_SOURCE_REMOVE;
@@ -746,6 +556,7 @@ game_poll_cb (gpointer user_data)
 
       save_games_config (page);
       refresh_recent_games (page);
+      refresh_games_grid (page);
 
       return G_SOURCE_REMOVE;
     }
@@ -797,6 +608,7 @@ on_steam_exit (GPid pid, int status, gpointer user_data)
 
       save_games_config (page);
       refresh_recent_games (page);
+      refresh_games_grid (page);
     }
 }
 
@@ -1540,8 +1352,45 @@ on_protontricks_clicked (GtkButton *btn, DashboardPage *page)
   launch_tricks_process (FALSE, argv, NULL, prefix, wine);
 }
 
+static void launch_game_ready (GtkButton *btn, DashboardPage *page);
+typedef struct { DashboardPage *page; int idx; char *command; } LaunchRequest;
+static void free_launch_request (gpointer data) {
+  LaunchRequest *request = data; g_free (request->command); g_free (request);
+}
+static void shutdown_steam_worker (GTask *task, gpointer source, gpointer data, GCancellable *cancel) {
+  (void) source; (void) data; (void) cancel;
+  g_spawn_sync (NULL, (char *[]) { "steam", "-shutdown", NULL }, NULL,
+    G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL);
+  g_usleep (G_USEC_PER_SEC);
+  g_task_return_boolean (task, TRUE);
+}
+static void shutdown_steam_ready (GObject *source, GAsyncResult *result, gpointer data) {
+  (void) source; (void) data;
+  LaunchRequest *request = g_task_get_task_data (G_TASK (result));
+  DashboardPage *page = request->page; page->launch_pending = FALSE;
+  if (request->idx >= page->n_games || g_strcmp0 (page->games[request->idx].command, request->command) != 0) return;
+  GtkWidget *button = gtk_button_new (); g_object_ref_sink (button);
+  g_object_set_data (G_OBJECT (button), "game-idx", GINT_TO_POINTER (request->idx+1));
+  launch_game_ready (GTK_BUTTON (button), page); g_object_unref (button);
+}
 void
 on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
+{
+  int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (btn), "game-idx"))-1;
+  if (idx < 0 || idx >= page->n_games || page->running_game_idx >= 0 || page->launch_pending) return;
+  if (g_strcmp0 (page->games[idx].source, "steam") != 0 || !page->games[idx].mangohud || !mangohud_available ())
+    { launch_game_ready (btn, page); return; }
+  page->launch_pending = TRUE;
+  LaunchRequest *request = g_new0 (LaunchRequest, 1);
+  request->page = page; request->idx = idx; request->command = g_strdup (page->games[idx].command);
+  GTask *task = g_task_new (NULL, NULL, shutdown_steam_ready, NULL);
+  g_task_set_task_data (task, request, free_launch_request);
+  g_task_run_in_thread (task, shutdown_steam_worker); g_object_unref (task);
+}
+
+static void
+launch_game_ready (GtkButton *btn, DashboardPage *page)
 {
   int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (btn), "game-idx")) - 1;
   if (idx < 0 || idx >= page->n_games) return;
@@ -1562,20 +1411,6 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
   page->is_steam_game = (g_strcmp0 (page->games[idx].source, "steam") == 0);
   page->steam_watch_id = 0;
   page->steam_watch_idle_secs = 0;
-
-  /* For Steam games with mangohud: shut down the running Steam daemon first so
-     the new Steam process inherits mangohud's LD_PRELOAD and propagates it to
-     the game child.  The shutdown is done synchronously here, NOT chained into
-     the launch shell, to avoid process-group confusion. */
-  if (page->is_steam_game
-      && page->games[idx].mangohud && mangohud_available ())
-    {
-      /* Ignore errors — Steam may not be running, which is fine */
-      g_spawn_sync (NULL,
-        (char *[]) { "/bin/sh", "-c",
-          "steam -shutdown 2>/dev/null; sleep 1", NULL },
-        NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, NULL, NULL);
-    }
 
   GError *err = NULL;
   GPid child_pid = 0;
@@ -1617,11 +1452,6 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
     g_free (cfg_path);
   }
 
-  if (page->games[idx].startup_cmd && page->games[idx].startup_cmd[0])
-    {
-      g_string_append_printf (launch, "%s && ", page->games[idx].startup_cmd);
-      use_shell = TRUE;
-    }
   if (page->games[idx].feral_gamemode && gamemode_available ())
     {
       g_string_append (launch, "gamemoderun ");
@@ -1634,6 +1464,21 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
       use_shell = TRUE;
     }
   g_string_append (launch, cmd);
+  const char *startup = page->games[idx].startup_cmd;
+  if (startup && *startup)
+    {
+      g_autoptr(GString) wrapped = g_string_new ("");
+      if (strstr (startup, "%command%"))
+        {
+          const char *cursor = startup, *match;
+          while ((match = strstr (cursor, "%command%")))
+            { g_string_append_len (wrapped, cursor, match-cursor); g_string_append (wrapped, launch->str); cursor = match+9; }
+          g_string_append (wrapped, cursor);
+        }
+      else g_string_append_printf (wrapped, "%s && %s", startup, launch->str);
+      g_string_assign (launch, wrapped->str);
+      use_shell = TRUE;
+    }
 
   if (use_shell)
     {
@@ -1667,66 +1512,12 @@ on_game_launch_clicked (GtkButton *btn, DashboardPage *page)
 
   page->game_pid = child_pid;
   g_child_watch_add (child_pid, on_steam_exit, page);
+  refresh_games_grid (page);
 }
 
 /* GdkPixbufAnimation / gtk_image_new_from_pixbuf are deprecated in GTK4 but
    still needed for proper animated GIF support and pre-scaled static images. */
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-
-static gboolean
-game_icon_name_exists (const char *name)
-{
-  if (!name || !name[0]) return FALSE;
-
-  GdkDisplay *display = gdk_display_get_default ();
-  if (!display) return TRUE; /* no display yet: let GTK decide */
-
-  GtkIconTheme *theme = gtk_icon_theme_get_for_display (display);
-  if (!theme) return TRUE;
-
-  return gtk_icon_theme_has_icon (theme, name);
-}
-
-GtkWidget *
-create_game_icon_widget (const char *icon, int pixel_size)
-{
-  if (icon && (icon[0] == '/' || icon[0] == '~'))
-    {
-      char *path = (icon[0] == '~')
-        ? g_build_filename (g_get_home_dir (), icon + 1, NULL)
-        : g_strdup (icon);
-
-      if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
-        {
-          /* Static image (PNG, JPEG, GIF, WebP, ICO, BMP, TIFF, SVG).
-             Always scaled to fit pixel_size x pixel_size preserving the
-             aspect ratio — up or down — so every icon takes the same area
-             no matter how large its source artwork is. GTK 4's GtkImage has
-             no animation support, so the first frame is all we can show. */
-          GError *err = NULL;
-          GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_size (path, pixel_size, pixel_size, &err);
-          if (pixbuf)
-            {
-              GtkWidget *img = gtk_image_new_from_pixbuf (pixbuf);
-              g_object_unref (pixbuf);
-              g_free (path);
-              return img;
-            }
-          if (err) g_error_free (err);
-        }
-
-      g_free (path);
-      /* Unreadable file: fall through to the themed-icon path below. */
-    }
-
-  const char *name = (icon && icon[0]) ? icon : "input-gaming-symbolic";
-  if (!game_icon_name_exists (name))
-    name = "input-gaming-symbolic";
-
-  GtkWidget *img = gtk_image_new_from_icon_name (name);
-  gtk_image_set_pixel_size (GTK_IMAGE (img), pixel_size);
-  return img;
-}
 
 G_GNUC_END_IGNORE_DEPRECATIONS
 
@@ -1742,6 +1533,7 @@ on_delete_game_clicked (GtkButton *btn, gpointer user_data)
 
   if (idx < 0 || idx >= page->n_games) return;
 
+  g_free (page->games[idx].id);
   g_free (page->games[idx].name);
   g_free (page->games[idx].command);
   g_free (page->games[idx].icon);
@@ -1875,6 +1667,12 @@ on_edit_confirm (GtkButton *btn, gpointer user_data)
   guint src_idx = gtk_drop_down_get_selected (source_drop);
   const char *source = (src_idx < 7) ? source_keys[src_idx] : "local";
 
+  if (!game_artwork_move_identity (page->games[idx].command, cmd)) return;
+  if (g_strcmp0 (page->focused_game_command, page->games[idx].command) == 0)
+    {
+      g_free (page->focused_game_command);
+      page->focused_game_command = g_strdup (cmd);
+    }
   g_free (page->games[idx].name);
   g_free (page->games[idx].command);
   g_free (page->games[idx].icon);
@@ -2178,1007 +1976,6 @@ open_edit_dialog (DashboardPage *page, int idx)
   g_signal_connect (save_btn, "clicked", G_CALLBACK (on_edit_confirm), page);
 
   adw_dialog_present (dialog, GTK_WIDGET (page->box));
-}
-
-/* ---- Import Games ---- */
-
-static void
-add_game_entry (DashboardPage *page, const char *name, const char *cmd,
-                const char *icon, const char *source)
-{
-  for (int i = 0; i < page->n_games; i++)
-    {
-      if (g_strcmp0 (page->games[i].command, cmd) == 0)
-        return;
-    }
-
-  page->n_games++;
-  page->games = g_realloc (page->games,
-    page->n_games * sizeof (GameShortcut));
-  page->selected = g_realloc (page->selected,
-    page->n_games * sizeof (gboolean));
-  page->selected[page->n_games - 1] = FALSE;
-
-  GameShortcut *g = &page->games[page->n_games - 1];
-  g->name = g_strdup (name);
-  g->command = g_strdup (cmd);
-  g->icon = g_strdup (icon ? icon : "input-gaming-symbolic");
-  g->workdir = NULL;
-  g->source = g_strdup (source ? source : "local");
-  g->startup_cmd = NULL;
-  g->group = NULL;
-  g->feral_gamemode = FALSE;
-  g->mangohud = FALSE;
-  g->play_time_secs = 0;
-  g->avg_fps = 0;
-  g->last_played = 0;
-}
-
-static gboolean
-is_steam_non_game (const char *name)
-{
-  if (!name) return FALSE;
-  if (g_str_has_prefix (name, "Steam Linux Runtime")) return TRUE;
-  if (g_str_has_prefix (name, "Proton")) return TRUE;
-  if (g_str_has_prefix (name, "Steamworks Common")) return TRUE;
-  return FALSE;
-}
-
-int
-import_steam_games (DashboardPage *page)
-{
-  int count = 0;
-  const char *home = g_get_home_dir ();
-
-  /* Collect all steamapps directories to scan */
-  GPtrArray *steamapps_dirs = g_ptr_array_new_with_free_func (g_free);
-
-  /* 1. Parse libraryfolders.vdf for Steam library paths */
-  char *libraryfolders = g_build_filename (home, ".steam", "steam", "steamapps", "libraryfolders.vdf", NULL);
-  char *vdf_content = NULL;
-  if (g_file_get_contents (libraryfolders, &vdf_content, NULL, NULL))
-    {
-      /* Extract "path" "..." lines */
-      char **lines = g_strsplit (vdf_content, "\n", -1);
-      for (int i = 0; lines[i]; i++)
-        {
-          const char *p = strstr (lines[i], "\"path\"");
-          if (!p) continue;
-          p = strchr (p + 6, '"');
-          if (!p) continue;
-          p++;
-          const char *end = strchr (p, '"');
-          if (!end) continue;
-          int len = end - p;
-          char *path = g_strndup (p, len);
-          char *steamapps = g_build_filename (path, "steamapps", NULL);
-          g_ptr_array_add (steamapps_dirs, steamapps);
-          g_free (path);
-        }
-      g_strfreev (lines);
-    }
-  g_free (vdf_content);
-  g_free (libraryfolders);
-
-  /* 2. Also check ~/.steam/steam/steamapps as fallback (default library) */
-  char *default_sa = g_build_filename (home, ".steam", "steam", "steamapps", NULL);
-  gboolean found_default = FALSE;
-  for (guint i = 0; i < steamapps_dirs->len; i++)
-    {
-      if (g_strcmp0 (g_ptr_array_index (steamapps_dirs, i), default_sa) == 0)
-        { found_default = TRUE; break; }
-    }
-  if (!found_default)
-    g_ptr_array_add (steamapps_dirs, default_sa);
-  else
-    g_free (default_sa);
-
-  /* 3. Also check ~/.local/share/Steam/steamapps */
-  char *local_sa = g_build_filename (home, ".local", "share", "Steam", "steamapps", NULL);
-  gboolean found_local = FALSE;
-  for (guint i = 0; i < steamapps_dirs->len; i++)
-    {
-      if (g_strcmp0 (g_ptr_array_index (steamapps_dirs, i), local_sa) == 0)
-        { found_local = TRUE; break; }
-    }
-  if (!found_local)
-    g_ptr_array_add (steamapps_dirs, local_sa);
-  else
-    g_free (local_sa);
-
-  /* 4. Also check flatpak Steam path */
-  char *flatpak_sa = g_build_filename (home, ".var", "app", "com.valvesoftware.Steam", "data", "Steam", "steamapps", NULL);
-  if (g_file_test (flatpak_sa, G_FILE_TEST_IS_DIR))
-    {
-      gboolean found_flatpak = FALSE;
-      for (guint i = 0; i < steamapps_dirs->len; i++)
-        {
-          if (g_strcmp0 (g_ptr_array_index (steamapps_dirs, i), flatpak_sa) == 0)
-            { found_flatpak = TRUE; break; }
-        }
-      if (!found_flatpak)
-        g_ptr_array_add (steamapps_dirs, flatpak_sa);
-      else
-        g_free (flatpak_sa);
-    }
-  else
-    g_free (flatpak_sa);
-
-  /* 5. Scan each steamapps directory for appmanifest_*.acf files */
-  for (guint p = 0; p < steamapps_dirs->len; p++)
-    {
-      const char *sa_dir = g_ptr_array_index (steamapps_dirs, p);
-
-      GDir *dir = g_dir_open (sa_dir, 0, NULL);
-      if (!dir) continue;
-
-      const char *entry;
-      while ((entry = g_dir_read_name (dir)) != NULL)
-        {
-          if (!g_str_has_prefix (entry, "appmanifest_") || !g_str_has_suffix (entry, ".acf"))
-            continue;
-
-          char *full_path = g_build_filename (sa_dir, entry, NULL);
-
-          /* Extract game name from ACF file */
-          char *acf_content = NULL;
-          char *appname = NULL;
-          if (g_file_get_contents (full_path, &acf_content, NULL, NULL))
-            {
-              /* Parse: "name"    "GameName" */
-              const char *np = strstr (acf_content, "\"name\"");
-              if (np)
-                {
-                  np = strchr (np + 6, '"');
-                  if (np)
-                    {
-                      np++;
-                      const char *end = strchr (np, '"');
-                      if (end)
-                        appname = g_strndup (np, end - np);
-                    }
-                }
-            }
-
-          if (appname)
-            {
-              if (is_steam_non_game (appname))
-                {
-                  g_free (appname);
-                  g_free (acf_content);
-                  g_free (full_path);
-                  continue;
-                }
-              /* Extract app ID from filename: appmanifest_<ID>.acf */
-              const char *appid_start = entry + 12; /* skip "appmanifest_" */
-              int appid_len = (int)(strlen (entry) - 12 - 4); /* - ".acf" */
-              char *appid = g_strndup (appid_start, appid_len);
-              char *launch_cmd = g_strdup_printf ("steam steam://rungameid/%s", appid);
-              g_free (appid);
-              char *icon_name = g_strdup_printf ("steam_icon_%.*s", appid_len, appid_start);
-              add_game_entry (page, appname, launch_cmd, icon_name, "steam");
-              count++;
-              g_free (icon_name);
-              g_free (launch_cmd);
-              g_free (appname);
-            }
-          g_free (acf_content);
-          g_free (full_path);
-        }
-      g_dir_close (dir);
-    }
-
-  g_ptr_array_unref (steamapps_dirs);
-  return count;
-}
-
-int
-import_bottles_games (DashboardPage *page)
-{
-  int count = 0;
-  const char *home = g_get_home_dir ();
-
-  /* Possible Bottles data directories */
-  const char *bottles_candidates[] = {
-    ".var/app/org.usebottles.bottles/data/bottles/bottles",
-    ".local/share/bottles/bottles",
-    NULL
-  };
-
-  for (int c = 0; bottles_candidates[c]; c++)
-    {
-      char *bottles_dir = g_build_filename (home, bottles_candidates[c], NULL);
-      if (!g_file_test (bottles_dir, G_FILE_TEST_IS_DIR))
-        {
-          g_free (bottles_dir);
-          continue;
-        }
-
-      GDir *dir = g_dir_open (bottles_dir, 0, NULL);
-      if (!dir)
-        {
-          g_free (bottles_dir);
-          continue;
-        }
-
-      const char *bottle_name;
-      while ((bottle_name = g_dir_read_name (dir)))
-        {
-          char *bottle_path = g_build_filename (bottles_dir, bottle_name, NULL);
-          if (!g_file_test (bottle_path, G_FILE_TEST_IS_DIR))
-            {
-              g_free (bottle_path);
-              continue;
-            }
-
-          /* Try programs.yml (Bottles < 51) */
-          char *prog_yml = g_build_filename (bottle_path, "programs.yml", NULL);
-          if (g_file_test (prog_yml, G_FILE_TEST_EXISTS))
-            {
-              char *prog_content = NULL;
-              if (g_file_get_contents (prog_yml, &prog_content, NULL, NULL))
-                {
-                  char **lines = g_strsplit (prog_content, "\n", -1);
-                  g_free (prog_content);
-                  for (int i = 0; lines[i]; i++)
-                    {
-                      g_strstrip (lines[i]);
-                      if (g_str_has_prefix (lines[i], "name:"))
-                        {
-                          char *prog_name = g_strstrip (lines[i] + 5);
-                          if (prog_name[0])
-                            {
-                              char *q_bottle = g_shell_quote (bottle_name);
-                              char *q_prog = g_shell_quote (prog_name);
-                              char *launch_cmd = g_strdup_printf (
-                                "bottles-cli run -b %s -p %s", q_bottle, q_prog);
-                              g_free (q_bottle);
-                              g_free (q_prog);
-                              add_game_entry (page, prog_name, launch_cmd,
-                                NULL, "bottles");
-                              count++;
-                              g_free (launch_cmd);
-                            }
-                          break;
-                        }
-                    }
-                  g_strfreev (lines);
-                }
-            }
-          g_free (prog_yml);
-
-          /* Try programs/ directory (Bottles >= 51) */
-          char *progs_dir = g_build_filename (bottle_path, "programs", NULL);
-          if (g_file_test (progs_dir, G_FILE_TEST_IS_DIR))
-            {
-              GDir *prog_dir = g_dir_open (progs_dir, 0, NULL);
-              if (prog_dir)
-                {
-                  const char *prog_entry;
-                  while ((prog_entry = g_dir_read_name (prog_dir)))
-                    {
-                      if (!g_str_has_suffix (prog_entry, ".yml")) continue;
-                      char *prog_file = g_build_filename (progs_dir, prog_entry, NULL);
-                      char *content = NULL;
-                      if (g_file_get_contents (prog_file, &content, NULL, NULL))
-                        {
-                          char **plines = g_strsplit (content, "\n", -1);
-                          g_free (content);
-                          char *prog_name = NULL;
-                          for (int j = 0; plines[j]; j++)
-                            {
-                              g_strstrip (plines[j]);
-                              if (g_str_has_prefix (plines[j], "name:"))
-                                {
-                                  prog_name = g_strstrip (plines[j] + 5);
-                                  break;
-                                }
-                            }
-                          if (prog_name && prog_name[0])
-                            {
-                              char *q_bottle = g_shell_quote (bottle_name);
-                              char *q_prog = g_shell_quote (prog_name);
-                              char *launch_cmd = g_strdup_printf (
-                                "bottles-cli run -b %s -p %s", q_bottle, q_prog);
-                              g_free (q_bottle);
-                              g_free (q_prog);
-                              add_game_entry (page, prog_name, launch_cmd,
-                                NULL, "bottles");
-                              count++;
-                              g_free (launch_cmd);
-                            }
-                          g_strfreev (plines);
-                        }
-                      g_free (prog_file);
-                    }
-                  g_dir_close (prog_dir);
-                }
-            }
-          g_free (progs_dir);
-          g_free (bottle_path);
-        }
-      g_dir_close (dir);
-      g_free (bottles_dir);
-    }
-  return count;
-}
-
-int
-import_heroic_games (DashboardPage *page)
-{
-  int count = 0;
-  const char *home = g_get_home_dir ();
-  char *heroic_dir = g_build_filename (home, ".config", "heroic", "games", NULL);
-
-  GDir *dir = g_dir_open (heroic_dir, 0, NULL);
-  if (!dir)
-    {
-      g_free (heroic_dir);
-      return 0;
-    }
-
-  const char *entry;
-  while ((entry = g_dir_read_name (dir)) != NULL)
-    {
-      char *game_json = g_build_filename (heroic_dir, entry, NULL);
-      char *content = NULL;
-      char *game_name = NULL;
-      if (g_file_get_contents (game_json, &content, NULL, NULL))
-        {
-          /* Parse JSON "app_name":"..." */
-          const char *np = strstr (content, "\"app_name\"");
-          if (np)
-            {
-              np = strchr (np + 10, '"');
-              if (np)
-                {
-                  np++;
-                  const char *end = strchr (np, '"');
-                  if (end)
-                    game_name = g_strndup (np, end - np);
-                }
-            }
-        }
-
-      if (game_name)
-        {
-          char *q_name = g_shell_quote (game_name);
-          char *launch_cmd = g_strdup_printf ("heroic launch %s", q_name);
-          g_free (q_name);
-          add_game_entry (page, game_name, launch_cmd, "heroic-icon", "heroic");
-          count++;
-          g_free (launch_cmd);
-          g_free (game_name);
-        }
-      g_free (content);
-      g_free (game_json);
-    }
-
-  g_dir_close (dir);
-  g_free (heroic_dir);
-  return count;
-}
-
-int
-import_lutris_games (DashboardPage *page)
-{
-  int count = 0;
-  const char *home = g_get_home_dir ();
-  char *lutris_dir = g_build_filename (home, ".local", "share", "lutris", "games", NULL);
-
-  GDir *dir = g_dir_open (lutris_dir, 0, NULL);
-  if (!dir)
-    {
-      g_free (lutris_dir);
-      return 0;
-    }
-
-  const char *entry;
-  while ((entry = g_dir_read_name (dir)) != NULL)
-    {
-      char *game_dir = g_build_filename (lutris_dir, entry, NULL);
-      if (!g_file_test (game_dir, G_FILE_TEST_IS_DIR))
-        { g_free (game_dir); continue; }
-
-      char *game_yml = g_build_filename (game_dir, "game.yml", NULL);
-      char *yml_content = NULL;
-      char *game_name = NULL;
-      if (g_file_get_contents (game_yml, &yml_content, NULL, NULL))
-        {
-          /* Parse "name: GameName" */
-          char **lines = g_strsplit (yml_content, "\n", -1);
-          for (int j = 0; lines[j]; j++)
-            {
-              if (g_str_has_prefix (lines[j], "name:"))
-                {
-                  const char *n = lines[j] + 5;
-                  while (*n == ' ') n++;
-                  if (*n)
-                    { game_name = g_strdup (n); break; }
-                }
-            }
-          g_strfreev (lines);
-          g_free (yml_content);
-        }
-
-      if (!game_name)
-        game_name = g_strdup (entry);
-
-      char *q_name = g_shell_quote (game_name);
-      char *launch_cmd = g_strdup_printf ("lutris -L %s", q_name);
-      g_free (q_name);
-      add_game_entry (page, game_name, launch_cmd, "lutris-icon", "lutris");
-      count++;
-      g_free (launch_cmd);
-      g_free (game_name);
-      g_free (game_yml);
-      g_free (game_dir);
-    }
-
-  g_dir_close (dir);
-  g_free (lutris_dir);
-  return count;
-}
-
-/* ---- Hydra game icon download ----
- *
- * Hydra stores an "iconUrl" per game. Downloads go to the user cache and are
- * attached to the matching game entry as a file path, so the cards show the
- * same kind of artwork as Steam/Heroic (which resolve themed icon names).
- * Everything runs on the main loop through GSubprocess: never blocking. */
-
-#define HYDRA_ICON_MAX_PARALLEL 3
-
-typedef struct
-{
-  DashboardPage *page;
-  char *command; /* key: the game's launch command */
-  char *url;
-  char *dest;
-} HydraIconJob;
-
-static GQueue *hydra_icon_queue = NULL;
-static int hydra_icon_active = 0;
-static guint hydra_icon_flush_id = 0;
-
-static void hydra_icon_start_next (void);
-
-static void
-hydra_icon_job_free (HydraIconJob *job)
-{
-  if (!job) return;
-  g_free (job->command);
-  g_free (job->url);
-  g_free (job->dest);
-  g_free (job);
-}
-
-static gboolean
-hydra_icon_file_ok (const char *path)
-{
-  if (!path || !path[0] || !g_file_test (path, G_FILE_TEST_IS_REGULAR))
-    return FALSE;
-
-  /* Reject anything that is not a loadable image (404 pages, empty files). */
-  GError *err = NULL;
-  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file (path, &err);
-  if (err) g_error_free (err);
-  if (!pixbuf) return FALSE;
-  g_object_unref (pixbuf);
-  return TRUE;
-}
-
-static char *
-hydra_icon_dest_path (const char *url)
-{
-  static const char *exts[] = {
-    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg", NULL
-  };
-
-  const char *q = strchr (url, '?');
-  size_t len = q ? (size_t) (q - url) : strlen (url);
-
-  const char *ext = ".png";
-  for (int i = 0; exts[i]; i++)
-    {
-      size_t n = strlen (exts[i]);
-      if (len > n && g_ascii_strncasecmp (url + len - n, exts[i], n) == 0)
-        { ext = exts[i]; break; }
-    }
-
-  char *dir = g_build_filename (g_get_user_cache_dir (),
-    "epinephrine", "hydra-icons", NULL);
-  g_mkdir_with_parents (dir, 0755);
-
-  g_autofree char *sum = g_compute_checksum_for_string (G_CHECKSUM_SHA1, url, -1);
-  char *dest = g_strdup_printf ("%s/%s%s", dir, sum, ext);
-  g_free (dir);
-  return dest;
-}
-
-static gboolean
-hydra_icon_flush (gpointer user_data)
-{
-  DashboardPage *page = user_data;
-  hydra_icon_flush_id = 0;
-  save_games_config (page);
-  refresh_games_grid (page);
-  return G_SOURCE_REMOVE;
-}
-
-static void
-hydra_icon_schedule_flush (DashboardPage *page)
-{
-  if (hydra_icon_flush_id)
-    return;
-  hydra_icon_flush_id = g_timeout_add (400, hydra_icon_flush, page);
-}
-
-static void
-hydra_icon_apply (HydraIconJob *job, gboolean ok)
-{
-  DashboardPage *page = job->page;
-
-  if (ok)
-    {
-      for (int i = 0; i < page->n_games; i++)
-        {
-          if (g_strcmp0 (page->games[i].command, job->command) != 0)
-            continue;
-
-          const char *cur = page->games[i].icon;
-          if (cur && cur[0] && g_strcmp0 (cur, "input-gaming-symbolic") != 0)
-            break; /* the user picked another icon already */
-
-          g_free (page->games[i].icon);
-          page->games[i].icon = g_strdup (job->dest);
-          hydra_icon_schedule_flush (page);
-          break;
-        }
-    }
-
-  hydra_icon_job_free (job);
-}
-
-static void
-hydra_icon_done (GObject *source, GAsyncResult *res, gpointer user_data)
-{
-  HydraIconJob *job = user_data;
-
-  g_subprocess_wait_finish (G_SUBPROCESS (source), res, NULL);
-  g_object_unref (G_SUBPROCESS (source));
-  hydra_icon_active--;
-
-  gboolean ok = hydra_icon_file_ok (job->dest);
-  if (!ok)
-    unlink (job->dest); /* remove partial/error output, if any */
-
-  hydra_icon_apply (job, ok);
-  hydra_icon_start_next ();
-}
-
-static void
-hydra_icon_start_next (void)
-{
-  if (!hydra_icon_queue) return;
-
-  while (hydra_icon_active < HYDRA_ICON_MAX_PARALLEL)
-    {
-      HydraIconJob *job = g_queue_pop_head (hydra_icon_queue);
-      if (!job) return;
-
-      if (hydra_icon_file_ok (job->dest))
-        {
-          hydra_icon_apply (job, TRUE);
-          continue;
-        }
-
-      if (!g_find_program_in_path ("curl"))
-        {
-          hydra_icon_job_free (job);
-          continue;
-        }
-
-      const char *argv[] = { "curl", "-sfL", "--max-time", "20",
-                             "-o", job->dest, job->url, NULL };
-
-      GError *err = NULL;
-      GSubprocessLauncher *launcher = g_subprocess_launcher_new (
-        G_SUBPROCESS_FLAGS_STDOUT_SILENCE | G_SUBPROCESS_FLAGS_STDERR_SILENCE);
-      GSubprocess *proc = g_subprocess_launcher_spawnv (launcher,
-        (const char * const *) argv, &err);
-      g_object_unref (launcher);
-
-      if (!proc)
-        {
-          if (err) g_error_free (err);
-          hydra_icon_job_free (job);
-          continue;
-        }
-
-      hydra_icon_active++;
-      g_subprocess_wait_async (proc, NULL, hydra_icon_done, job);
-      return; /* resuming happens in hydra_icon_done() */
-    }
-}
-
-/* Queue the icon of a Hydra game (by its launch command) for download. */
-static void
-hydra_queue_game_icon (DashboardPage *page, const char *command,
-                       const char *icon_url)
-{
-  if (!icon_url || !g_str_has_prefix (icon_url, "http"))
-    return;
-  if (!command || !command[0])
-    return;
-
-  if (!hydra_icon_queue)
-    hydra_icon_queue = g_queue_new ();
-
-  /* Skip games that already show a real icon, and jobs already queued. */
-  for (int i = 0; i < page->n_games; i++)
-    {
-      if (g_strcmp0 (page->games[i].command, command) != 0)
-        continue;
-      const char *cur = page->games[i].icon;
-      if (cur && cur[0] && g_strcmp0 (cur, "input-gaming-symbolic") != 0)
-        return;
-    }
-  for (GList *l = hydra_icon_queue->head; l; l = l->next)
-    {
-      HydraIconJob *j = l->data;
-      if (g_strcmp0 (j->command, command) == 0)
-        return;
-    }
-
-  HydraIconJob *job = g_new0 (HydraIconJob, 1);
-  job->page = page;
-  job->command = g_strdup (command);
-  job->url = g_strdup (icon_url);
-  job->dest = hydra_icon_dest_path (icon_url);
-  g_queue_push_tail (hydra_icon_queue, job);
-
-  hydra_icon_start_next ();
-}
-
-/* ---- Hydra Launcher import ---- */
-
-typedef struct
-{
-  DashboardPage *page;
-  int count;
-  gboolean classics; /* TRUE: only emulator (launchbox) games; FALSE: skip them */
-} HydraImportCtx;
-
-static void
-on_hydra_game (const HydraGame *g, void *user_data)
-{
-  HydraImportCtx *ctx = user_data;
-
-  /* Classics = emulator ROMs imported via Hydra's "launchbox" shop.  The
-   * main import skips them (they get their own "Classics" option); the
-   * classics-only pass imports nothing else. */
-  gboolean is_emu = (g_strcmp0 (g->shop, "launchbox") == 0);
-  if (ctx->classics != is_emu) return;
-
-  /* Deep-link into Hydra: hydralauncher://run?shop=<shop>&objectId=<oid>.
-   * xdg-open resolves the x-scheme-handler/hydralauncher handler (registered
-   * by hydra.desktop), falling back to launching the AppImage.  This is the
-   * primary path; game launches themselves are handled by Hydra, so per-game
-   * mangohud/gamemode wrapping from this app does not apply. */
-  g_autofree char *uri = g_strdup_printf (
-    "hydralauncher://run?shop=%s&objectId=%s", g->shop, g->object_id);
-  g_autofree char *q_uri = g_shell_quote (uri);
-  g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
-
-  add_game_entry (ctx->page, g->title, cmd, NULL, "hydra");
-  if (g->icon_url && g->icon_url[0])
-    hydra_queue_game_icon (ctx->page, cmd, g->icon_url);
-  ctx->count++;
-}
-
-static int
-hydra_import_from_python (DashboardPage *page, const char *db_dir,
-                          gboolean classics)
-{
-  g_autofree char *script = g_build_filename (
-    DATADIR, "epinephrine", "scripts", "hydra_games.py", NULL);
-  if (!g_file_test (script, G_FILE_TEST_IS_REGULAR)) return 0;
-
-  g_autofree char *python = g_find_program_in_path ("python3");
-  if (!python) return 0;
-
-  g_autofree char *stdout_str = NULL;
-  g_autoptr(GError) err = NULL;
-  char *argv[] = { python, script, (char *) db_dir,
-                   classics ? "classics" : "all", NULL };
-  if (!g_spawn_sync (NULL, argv, NULL, G_SPAWN_SEARCH_PATH,
-                     NULL, NULL, &stdout_str, NULL, NULL, &err))
-    return 0;
-
-  HydraImportCtx ctx = { .page = page, .count = 0, .classics = classics };
-  char **lines = g_strsplit (stdout_str, "\n", -1);
-  for (int i = 0; lines[i]; i++)
-    {
-      g_strstrip (lines[i]);
-      if (!lines[i][0]) continue;
-      char **f = g_strsplit (lines[i], "\t", 5);
-      if (g_strv_length (f) >= 3)
-        {
-          gboolean is_emu = (g_strcmp0 (f[2], "launchbox") == 0);
-          if (ctx.classics == is_emu)
-            {
-              g_autofree char *uri = g_strdup_printf (
-                "hydralauncher://run?shop=%s&objectId=%s", f[2], f[1]);
-              g_autofree char *q_uri = g_shell_quote (uri);
-              g_autofree char *cmd = g_strdup_printf ("xdg-open %s", q_uri);
-              add_game_entry (page, f[0], cmd, NULL, "hydra");
-              if (g_strv_length (f) >= 5 && f[4][0])
-                hydra_queue_game_icon (page, cmd, f[4]);
-              ctx.count++;
-            }
-        }
-      g_strfreev (f);
-    }
-  g_strfreev (lines);
-  return ctx.count;
-}
-
-static int
-import_hydra_filtered (DashboardPage *page, gboolean classics)
-{
-  const char *home = g_get_home_dir ();
-  g_autofree char *db_dir = g_build_filename (
-    home, ".config", "hydralauncher", "hydra-db", NULL);
-
-  if (!g_file_test (db_dir, G_FILE_TEST_IS_DIR))
-    return 0;
-
-  GDir *dir = g_dir_open (db_dir, 0, NULL);
-  if (!dir)
-    return 0;
-
-  GPtrArray *ldb_files = g_ptr_array_new_with_free_func (g_free);
-  const char *entry;
-  while ((entry = g_dir_read_name (dir)) != NULL)
-    if (g_str_has_suffix (entry, ".ldb"))
-      g_ptr_array_add (ldb_files, g_strdup (entry));
-  g_dir_close (dir);
-
-  /* Newest .ldb first so overlapping entries prefer fresh data */
-  g_ptr_array_sort (ldb_files, (GCompareFunc) g_strcmp0);
-  for (guint i = 0, j = ldb_files->len - 1; i < j; i++, j--)
-    {
-      gpointer tmp = g_ptr_array_index (ldb_files, i);
-      g_ptr_array_index (ldb_files, i) = g_ptr_array_index (ldb_files, j);
-      g_ptr_array_index (ldb_files, j) = tmp;
-    }
-
-  HydraImportCtx ctx = { .page = page, .count = 0, .classics = classics };
-  for (guint i = 0; i < ldb_files->len; i++)
-    {
-      g_autofree char *full = g_build_filename (
-        db_dir, g_ptr_array_index (ldb_files, i), NULL);
-      g_autofree char *content = NULL;
-      gsize len = 0;
-      if (g_file_get_contents (full, &content, &len, NULL))
-        {
-          int n = hydra_ldb_parse ((const uint8_t *) content, len,
-                                   on_hydra_game, &ctx);
-          if (n > 0)
-            break; /* newest table yielded games — stop */
-        }
-    }
-  g_ptr_array_unref (ldb_files);
-
-  /* Fallback: if the native parser found nothing (format drift), use the
-   * bundled Python reader. */
-  if (ctx.count == 0)
-    ctx.count = hydra_import_from_python (page, db_dir, classics);
-
-  return ctx.count;
-}
-
-/* ---- Linux Games (from .desktop files) ---- */
-
-static gboolean
-categories_contain_game (const char *categories)
-{
-  if (!categories)
-    return FALSE;
-  if (strstr (categories, "Game;"))
-    return TRUE;
-  if (strstr (categories, "ActionGame;"))
-    return TRUE;
-  if (strstr (categories, "AdventureGame;"))
-    return TRUE;
-  if (strstr (categories, "ArcadeGame;"))
-    return TRUE;
-  if (strstr (categories, "BoardGame;"))
-    return TRUE;
-  if (strstr (categories, "BlocksGame;"))
-    return TRUE;
-  if (strstr (categories, "CardGame;"))
-    return TRUE;
-  if (strstr (categories, "KidsGame;"))
-    return TRUE;
-  if (strstr (categories, "LogicGame;"))
-    return TRUE;
-  if (strstr (categories, "RolePlaying;"))
-    return TRUE;
-  if (strstr (categories, "Simulation;"))
-    return TRUE;
-  if (strstr (categories, "SportsGame;"))
-    return TRUE;
-  if (strstr (categories, "StrategyGame;"))
-    return TRUE;
-  if (strstr (categories, "Emulator;"))
-    return TRUE;
-  return FALSE;
-}
-
-static gboolean
-is_launcher_binary (const char *exec)
-{
-  if (!exec || exec[0] == '\0')
-    return FALSE;
-  const char *launchers[] = {
-    "steam", "steam-native", "steam-runtime",
-    "heroic", "lutris", "bottles",
-    "mangohud", "gamemoderun", "gamescope", "protontricks",
-    NULL
-  };
-  for (int i = 0; launchers[i]; i++)
-    {
-      size_t len = strlen (launchers[i]);
-      if (g_ascii_strncasecmp (exec, launchers[i], len) == 0 &&
-          (exec[len] == '\0' || exec[len] == ' '))
-        return TRUE;
-    }
-  return FALSE;
-}
-
-static void
-strip_exec_field_codes (char *exec)
-{
-  if (!exec)
-    return;
-  char *src = exec, *dst = exec;
-  while (*src)
-    {
-      if (*src == '%' && (src[1] == 'f' || src[1] == 'F' ||
-                          src[1] == 'u' || src[1] == 'U' ||
-                          src[1] == 'd' || src[1] == 'D' ||
-                          src[1] == 'n' || src[1] == 'N' ||
-                          src[1] == 'i' || src[1] == 'c' ||
-                          src[1] == 'k'))
-        {
-          src += 2;
-        }
-      else if (*src == '%' && src[1] == '%')
-        {
-          *dst++ = '%';
-          src += 2;
-        }
-      else
-        {
-          *dst++ = *src++;
-        }
-    }
-  *dst = '\0';
-}
-
-static void
-scan_desktop_dir (const char *dir_path, DashboardPage *page, int *count)
-{
-  GDir *dir = g_dir_open (dir_path, 0, NULL);
-  if (!dir)
-    return;
-
-  const char *name;
-  while ((name = g_dir_read_name (dir)) != NULL)
-    {
-      if (!g_str_has_suffix (name, ".desktop"))
-        continue;
-
-      g_autofree char *full_path = g_build_filename (dir_path, name, NULL);
-
-      GKeyFile *kf = g_key_file_new ();
-      GError *err = NULL;
-      if (!g_key_file_load_from_file (kf, full_path, G_KEY_FILE_NONE, &err))
-        {
-          g_error_free (err);
-          g_key_file_free (kf);
-          continue;
-        }
-
-      /* Skip hidden/deleted entries */
-      if (g_key_file_get_boolean (kf, "Desktop Entry", "Hidden", NULL))
-        { g_key_file_free (kf); continue; }
-      if (g_key_file_get_boolean (kf, "Desktop Entry", "NoDisplay", NULL))
-        { g_key_file_free (kf); continue; }
-
-      /* Only Application type */
-      g_autofree char *type = g_key_file_get_string (kf, "Desktop Entry", "Type", NULL);
-      if (!type || g_strcmp0 (type, "Application") != 0)
-        { g_key_file_free (kf); continue; }
-
-      /* Must have Game category */
-      g_autofree char *categories = g_key_file_get_string (kf, "Desktop Entry", "Categories", NULL);
-      if (!categories_contain_game (categories))
-        { g_key_file_free (kf); continue; }
-
-      /* Must have Exec */
-      g_autofree char *exec = g_key_file_get_string (kf, "Desktop Entry", "Exec", NULL);
-      if (!exec || exec[0] == '\0')
-        { g_key_file_free (kf); continue; }
-
-      /* Skip if Exec is a launcher binary */
-      if (is_launcher_binary (exec))
-        { g_key_file_free (kf); continue; }
-
-      /* Clean field codes */
-      strip_exec_field_codes (exec);
-
-      /* Get name and icon */
-      g_autofree char *display_name = g_key_file_get_locale_string (kf, "Desktop Entry", "Name", NULL, NULL);
-      g_autofree char *icon = g_key_file_get_string (kf, "Desktop Entry", "Icon", NULL);
-
-      if (!display_name || display_name[0] == '\0')
-        { g_key_file_free (kf); continue; }
-
-      add_game_entry (page, display_name, exec, icon, "linux");
-      page->games[page->n_games - 1].group = g_strdup ("Nativo");
-      (*count)++;
-
-      g_key_file_free (kf);
-    }
-  g_dir_close (dir);
-}
-
-int
-import_desktop_games (DashboardPage *page)
-{
-  int count = 0;
-
-  /* User data dir */
-  g_autofree char *user_data = g_build_filename (g_get_user_data_dir (), "applications", NULL);
-  scan_desktop_dir (user_data, page, &count);
-
-  /* System data dirs */
-  const gchar * const *sys_dirs = g_get_system_data_dirs ();
-  for (int i = 0; sys_dirs[i]; i++)
-    {
-      g_autofree char *app_dir = g_build_filename (sys_dirs[i], "applications", NULL);
-      scan_desktop_dir (app_dir, page, &count);
-    }
-
-  /* Flatpak system exports */
-  scan_desktop_dir ("/var/lib/flatpak/exports/share/applications", page, &count);
-
-  /* Flatpak user exports */
-  g_autofree char *flatpak_user = g_build_filename (g_get_home_dir (),
-    ".local", "share", "flatpak", "exports", "share", "applications", NULL);
-  scan_desktop_dir (flatpak_user, page, &count);
-
-  /* Snap */
-  scan_desktop_dir ("/var/lib/snapd/desktop/applications", page, &count);
-
-  return count;
-}
-
-/* ---- Hydra ---- */
-
-int
-import_hydra_games (DashboardPage *page)
-{
-  return import_hydra_filtered (page, FALSE);
-}
-
-int
-import_hydra_classics_games (DashboardPage *page)
-{
-  return import_hydra_filtered (page, TRUE);
 }
 
 /* ---- Install ---- */

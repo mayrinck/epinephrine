@@ -58,10 +58,13 @@
 
             <!-- Recent games list -->
             <child>
-              <object class="GtkBox" id="recent-games-box">
-                <property name="orientation">horizontal</property>
-                <property name="spacing">8</property>
-                <property name="homogeneous">False</property>
+              <object class="GtkFlowBox" id="recent-games-box">
+                <property name="selection-mode">none</property>
+                <property name="column-spacing">14</property>
+                <property name="row-spacing">14</property>
+                <property name="min-children-per-line">1</property>
+                <property name="max-children-per-line">5</property>
+                <property name="homogeneous">True</property>
               </object>
             </child>
 

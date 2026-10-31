@@ -7,7 +7,6 @@ resources = gnome.compile_resources('epinephrine-resources',
 )
 
 sources = files(
-  'main.c',
   'application.c',
   'window.c',
   'command-builder.c',
@@ -18,6 +17,11 @@ sources = files(
   'usb-ids.c',
   'pages/page-dashboard.c',
   'pages/page-games.c',
+  'pages/game-details.c',
+  'pages/game-artwork.c',
+  'pages/game-icons.c',
+  'pages/game-store.c',
+  'pages/game-importers.c',
   'pages/page-hardware.c',
   'pages/hw-gpu.c',
   'pages/hw-monitor.c',
@@ -36,11 +40,12 @@ sources = files(
   'pages/page-settings.c',
 )
 
-executable('epinephrine',
-  sources, resources,
-  dependencies: [gtk4_dep, libadwaita_dep, gdk_pixbuf_dep, m_dep, fontconfig_dep],
-  install: true,
-)
+core_deps = [gtk4_dep, libadwaita_dep, gdk_pixbuf_dep, m_dep, fontconfig_dep]
+core = static_library('epinephrine-core', sources, resources, dependencies: core_deps)
+executable('epinephrine', 'main.c', link_whole: core, dependencies: core_deps, install: true)
+ui_test = executable('test-library-ui', '../tests/test-library-ui.c',
+  include_directories: include_directories('.'), link_whole: core, dependencies: core_deps)
+test('library-ui', ui_test)
 
 executable('epi-hidraw',
   'epi-hidraw.c',
@@ -60,3 +65,10 @@ install_data('../lang/es_ES.md',
 install_data('../scripts/hydra_games.py',
   install_dir: join_paths(get_option('datadir'), 'epinephrine', 'scripts'),
 )
+
+icon_test = executable('test-game-icons', '../tests/test-game-icons.c',
+  'pages/game-icons.c', include_directories: include_directories('.'),
+  dependencies: [gtk4_dep, libadwaita_dep, gdk_pixbuf_dep])
+test('game-icons', icon_test)
+
+executable('epi-admin', 'epi-admin.c', resources, dependencies: [gtk4_dep], install: true, install_dir: join_paths(get_option('libexecdir'), 'epinephrine'))

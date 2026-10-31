@@ -784,3 +784,55 @@
 | Hydra Classics | Hydra Classics |
 | Imported %d game from Hydra | Imported %d game from Hydra |
 | Imported %d games from Hydra | Imported %d games from Hydra |
+| IN YOUR LIBRARY | IN YOUR LIBRARY |
+| Time played | Time played |
+| Last played | Last played |
+| Average FPS | Average FPS |
+| Not measured | Not measured |
+| LINUX COMPATIBILITY | LINUX COMPATIBILITY |
+| Checking ProtonDB… | Checking ProtonDB… |
+| Compatibility reports from the community | Compatibility reports from the community |
+| No compatibility data | No compatibility data |
+| Service unavailable or game not linked. You can still play and consult the reports. | Service unavailable or game not linked. You can still play and consult the reports. |
+| %s community reports · %s | %s community reports · %s |
+| Cached data | Cached data |
+| Community rating | Community rating |
+| ProtonDB reports ↗ | ProtonDB reports ↗ |
+| Launch configuration | Launch configuration |
+| Edit launch options | Edit launch options |
+| Enabled | Enabled |
+| Disabled | Disabled |
+| Artwork and online services | Artwork and online services |
+| SteamGridDB API key | SteamGridDB API key |
+| Get a SteamGridDB key | Get a SteamGridDB key |
+| Steam App ID (optional) | Steam App ID (optional) |
+| Link games from any launcher to Steam for artwork and ProtonDB. Steam games are detected automatically. | Link games from any launcher to Steam for artwork and ProtonDB. Steam games are detected automatically. |
+| The selected game's name or Steam ID is sent to the artwork and compatibility services. Results are cached locally. | The selected game's name or Steam ID is sent to the artwork and compatibility services. Results are cached locally. |
+| Enter a numeric Steam App ID. | Enter a numeric Steam App ID. |
+| Could not save online services. | Could not save online services. |
+| SteamGridDB artwork unavailable. Check your API key or try again later. | SteamGridDB artwork unavailable. Check your API key or try again later. |
+| Install Python 3 to load artwork and compatibility data. | Install Python 3 to load artwork and compatibility data. |
+| %d games | %d games |
+| Select game | Select game |
+| No games found. Import games or adjust your filters. | No games found. Import games or adjust your filters. |
+| Recorded by Epinephrine | Recorded by Epinephrine |
+| List view | List view |
+| Grid view | Grid view |
+| Back to library | Back to library |
+| Customize artwork | Customize artwork |
+| Cover | Cover |
+| Banner | Banner |
+| Search artwork | Search artwork |
+| Choose local image… | Choose local image… |
+| Restore automatic artwork | Restore automatic artwork |
+| Choose artwork | Choose artwork |
+| Images | Images |
+| Custom artwork | Custom artwork |
+| Choose a valid image file. | Choose a valid image file. |
+| Image unavailable or larger than 12 MB. | Image unavailable or larger than 12 MB. |
+| Could not save artwork. | Could not save artwork. |
+| Choose an image to apply it. | Choose an image to apply it. |
+| No artwork found. Search for another title, configure SteamGridDB, or choose a local image. | No artwork found. Search for another title, configure SteamGridDB, or choose a local image. |
+| Loading artwork… | Loading artwork… |
+| No games found. | No games found. |
+| More choices are available with a SteamGridDB key in Artwork and online services. | More choices are available with a SteamGridDB key in Artwork and online services. |
