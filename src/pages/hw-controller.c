@@ -15,6 +15,22 @@
 #include <glib-unix.h>
 #include <linux/input.h>
 
+/* These gamepad paddle codes were added to the Linux UAPI after older
+   distributions shipped their input-event-codes.h. Keep builds portable
+   while retaining the standard event values. */
+#ifndef BTN_GRIPL
+#define BTN_GRIPL  0x224
+#endif
+#ifndef BTN_GRIPR
+#define BTN_GRIPR  0x225
+#endif
+#ifndef BTN_GRIPL2
+#define BTN_GRIPL2 0x226
+#endif
+#ifndef BTN_GRIPR2
+#define BTN_GRIPR2 0x227
+#endif
+
 #define tr(x) epi_i18n_get (x)
 
 /* Bit manipulation helpers for evdev capability queries */
