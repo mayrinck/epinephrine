@@ -783,3 +783,55 @@
 | There are no registered games...\nYet. | No hay juegos registrados...\nTodavía. |
 | USB Speed | Velocidad USB |
 | Upscaling algorithm, filter type, sharpness and max scale factor. | Algoritmo de escalado, tipo de filtro, nitidez y factor de escala máximo. |
+| IN YOUR LIBRARY | EN TU BIBLIOTECA |
+| Time played | Tiempo jugado |
+| Last played | Última sesión |
+| Average FPS | FPS medio |
+| Not measured | Sin medición |
+| LINUX COMPATIBILITY | COMPATIBILIDAD CON LINUX |
+| Checking ProtonDB… | Consultando ProtonDB… |
+| Compatibility reports from the community | Informes de compatibilidad de la comunidad |
+| No compatibility data | Sin datos de compatibilidad |
+| Service unavailable or game not linked. You can still play and consult the reports. | Servicio no disponible o juego sin vincular. Puedes jugar y consultar los informes. |
+| %s community reports · %s | %s informes de la comunidad · %s |
+| Cached data | Datos en caché |
+| Community rating | Valoración de la comunidad |
+| ProtonDB reports ↗ | Informes de ProtonDB ↗ |
+| Launch configuration | Configuración de inicio |
+| Edit launch options | Editar opciones de inicio |
+| Enabled | Activado |
+| Disabled | Desactivado |
+| Artwork and online services | Imágenes y servicios en línea |
+| SteamGridDB API key | Clave de API de SteamGridDB |
+| Get a SteamGridDB key | Obtener clave de SteamGridDB |
+| Steam App ID (optional) | Steam App ID (opcional) |
+| Link games from any launcher to Steam for artwork and ProtonDB. Steam games are detected automatically. | Vincula juegos de cualquier lanzador con Steam para obtener imágenes y datos de ProtonDB. Los juegos de Steam se detectan automáticamente. |
+| The selected game's name or Steam ID is sent to the artwork and compatibility services. Results are cached locally. | El nombre o Steam ID del juego seleccionado se envía a los servicios de imágenes y compatibilidad. Los resultados se guardan en caché local. |
+| Enter a numeric Steam App ID. | Introduce un Steam App ID numérico. |
+| Could not save online services. | No se pudieron guardar los servicios en línea. |
+| SteamGridDB artwork unavailable. Check your API key or try again later. | Imágenes de SteamGridDB no disponibles. Revisa tu clave de API o inténtalo más tarde. |
+| Install Python 3 to load artwork and compatibility data. | Instala Python 3 para cargar imágenes y datos de compatibilidad. |
+| %d games | %d juegos |
+| Select game | Seleccionar juego |
+| No games found. Import games or adjust your filters. | No se encontraron juegos. Importa juegos o ajusta los filtros. |
+| Recorded by Epinephrine | Registrado por Epinephrine |
+| List view | Vista de lista |
+| Grid view | Vista de cuadrícula |
+| Back to library | Volver a la biblioteca |
+| Customize artwork | Personalizar imágenes |
+| Cover | Portada |
+| Banner | Banner |
+| Search artwork | Buscar imágenes |
+| Choose local image… | Elegir imagen local… |
+| Restore automatic artwork | Restaurar imagen automática |
+| Choose artwork | Elegir imagen |
+| Images | Imágenes |
+| Custom artwork | Imagen personalizada |
+| Choose a valid image file. | Elige un archivo de imagen válido. |
+| Image unavailable or larger than 12 MB. | Imagen no disponible o mayor de 12 MB. |
+| Could not save artwork. | No se pudo guardar la imagen. |
+| Choose an image to apply it. | Elige una imagen para aplicarla. |
+| No artwork found. Search for another title, configure SteamGridDB, or choose a local image. | No se encontraron imágenes. Busca otro título, configura SteamGridDB o elige una imagen local. |
+| Loading artwork… | Cargando imágenes… |
+| No games found. | No se encontraron juegos. |
+| More choices are available with a SteamGridDB key in Artwork and online services. | Hay más opciones con una clave de SteamGridDB en Imágenes y servicios en línea. |

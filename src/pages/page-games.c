@@ -1,6 +1,8 @@
 #include "page-games.h"
 #include "page-dashboard.h"
 #include "page-settings.h"
+#include "game-details.h"
+#include "game-artwork.h"
 
 #include "../epi-i18n.h"
 
@@ -8,11 +10,6 @@
 
 #define tr(x) epi_i18n_get (x)
 
-/* Every game icon in the library is rendered into a box of this size, so
-   cards of all services share the same dimensions. */
-#define GAME_CARD_ICON_SIZE 128
-
-static void on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, DashboardPage *page);
 static void on_add_game_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_toggled (GtkCheckButton *check, DashboardPage *page);
 static void refresh_edit_actions (DashboardPage *page);
@@ -27,23 +24,6 @@ static void on_select_group_clicked (GtkButton *btn, DashboardPage *page);
 static void on_select_service_clicked (GtkButton *btn, DashboardPage *page);
 
 static const char *
-get_source_icon (const char *source)
-{
-  if (!source) return NULL;
-  if (g_strcmp0 (source, "steam") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/launchers/steam.png";
-  if (g_strcmp0 (source, "heroic") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/launchers/heroic.png";
-  if (g_strcmp0 (source, "lutris") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/launchers/lutris.png";
-  if (g_strcmp0 (source, "bottles") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/launchers/bottles.png";
-  if (g_strcmp0 (source, "hydra") == 0)
-    return "/io/github/mayrinck/epinephrine/icons/launchers/hydra.svg";
-  return NULL;
-}
-
-static const char *
 get_source_label (const char *source)
 {
   if (!source) return NULL;
@@ -56,170 +36,129 @@ get_source_label (const char *source)
   return "Other";
 }
 
-static GtkWidget *
-create_game_card_grid (DashboardPage *page, int idx)
+void
+games_page_show_game (DashboardPage *page, int idx)
 {
-  /* Outer overlay so the selection checkbox floats at the card's top-right. */
-  GtkWidget *card_ov = gtk_overlay_new ();
-  gtk_widget_set_halign (card_ov, GTK_ALIGN_START);
-  gtk_widget_set_valign (card_ov, GTK_ALIGN_START);
-  g_object_set_data (G_OBJECT (card_ov), "game-idx", GINT_TO_POINTER (idx + 1));
-
-  GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
-  gtk_widget_set_halign (card, GTK_ALIGN_START);
-  gtk_widget_set_valign (card, GTK_ALIGN_START);
-  gtk_widget_set_size_request (card, 180, -1);
-  gtk_widget_add_css_class (card, "game-card");
-  g_object_set_data (G_OBJECT (card), "game-idx", GINT_TO_POINTER (idx + 1));
-  gtk_overlay_set_child (GTK_OVERLAY (card_ov), card);
-
-  if (page->running_game_idx == idx)
-    gtk_widget_add_css_class (card, "game-running");
-
-  /* Game icon inside a fixed 128x128 area so every card (Steam, Hydra,
-     Heroic, ...) ends up with exactly the same size, whatever the artwork
-     behind it looks like. The platform badge stays small at its corner. */
-  const char *icon_name = page->games[idx].icon;
-  if (!icon_name || icon_name[0] == '\0')
-    icon_name = "input-gaming-symbolic";
-  GtkWidget *icon = create_game_icon_widget (icon_name, GAME_CARD_ICON_SIZE);
-  gtk_widget_set_halign (icon, GTK_ALIGN_CENTER);
-  gtk_widget_set_valign (icon, GTK_ALIGN_CENTER);
-
-  GtkWidget *icon_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
-  gtk_widget_set_size_request (icon_box, GAME_CARD_ICON_SIZE, GAME_CARD_ICON_SIZE);
-  gtk_widget_set_halign (icon_box, GTK_ALIGN_CENTER);
-  gtk_widget_set_valign (icon_box, GTK_ALIGN_CENTER);
-  gtk_widget_add_css_class (icon_box, "game-icon");
-  gtk_box_append (GTK_BOX (icon_box), icon);
-
-  GtkWidget *overlay = gtk_overlay_new ();
-  gtk_widget_set_halign (overlay, GTK_ALIGN_CENTER);
-  gtk_overlay_set_child (GTK_OVERLAY (overlay), icon_box);
-
-  const char *src_icon_path = get_source_icon (page->games[idx].source);
-  if (src_icon_path)
+  if (idx < 0 || idx >= page->n_games || !page->games_stack) return;
+  g_free (page->focused_game_command);
+  page->focused_game_command = g_strdup (page->games[idx].command);
+  page->library_detail_open = TRUE;
+  GtkSingleSelection *selection = GTK_SINGLE_SELECTION (gtk_list_view_get_model (GTK_LIST_VIEW (page->games_grid)));
+  for (guint i=0; i<g_list_model_get_n_items (G_LIST_MODEL (page->library_model)); i++)
     {
-      GtkWidget *src_img = gtk_image_new_from_resource (src_icon_path);
-      gtk_image_set_pixel_size (GTK_IMAGE (src_img), 14);
-      gtk_widget_set_halign (src_img, GTK_ALIGN_END);
-      gtk_widget_set_valign (src_img, GTK_ALIGN_END);
-      gtk_widget_set_margin_end (src_img, 2);
-      gtk_widget_set_margin_bottom (src_img, 2);
-      gtk_overlay_add_overlay (GTK_OVERLAY (overlay), src_img);
+      g_autoptr(GObject) entry = g_list_model_get_item (G_LIST_MODEL (page->library_model), i);
+      if (GPOINTER_TO_INT (g_object_get_data (entry, "game-idx"))-1 == idx)
+        { gtk_single_selection_set_selected (selection, i); break; }
     }
 
-  GtkGesture *icon_click = gtk_gesture_click_new ();
-  gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (icon_click), GDK_BUTTON_PRIMARY);
-  g_signal_connect (icon_click, "pressed", G_CALLBACK (on_card_clicked), page);
-  gtk_widget_add_controller (overlay, GTK_EVENT_CONTROLLER (icon_click));
-  gtk_box_append (GTK_BOX (card), overlay);
-
-  /* Game name */
-  GtkWidget *name = gtk_label_new (
-    page->games[idx].name && page->games[idx].name[0]
-    ? page->games[idx].name : "?");
-  gtk_widget_add_css_class (name, "game-name");
-  gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
-  gtk_label_set_max_width_chars (GTK_LABEL (name), 18);
-  gtk_label_set_xalign (GTK_LABEL (name), 0.0f);
-
-  GtkGesture *name_click = gtk_gesture_click_new ();
-  gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (name_click), GDK_BUTTON_PRIMARY);
-  g_signal_connect (name_click, "pressed", G_CALLBACK (on_card_clicked), page);
-  gtk_widget_add_controller (name, GTK_EVENT_CONTROLLER (name_click));
-  gtk_box_append (GTK_BOX (card), name);
-
-  /* Time ago + source label */
-  char *time_str = format_time_ago (page->games[idx].last_played);
-  const char *src_label = get_source_label (page->games[idx].source);
-  char *stats_text = NULL;
-  if (src_label && time_str && time_str[0])
-    stats_text = g_strdup_printf ("%s \u2022 %s", src_label, time_str);
-  else if (time_str && time_str[0])
-    stats_text = g_strdup (time_str);
-  else if (src_label)
-    stats_text = g_strdup (src_label);
+  if (page->library_grid_mode)
+    {
+      game_details_show (page->library_grid_detail, page, idx);
+      gtk_stack_set_visible_child_name (page->games_stack, "detail");
+    }
   else
-    stats_text = g_strdup ("");
-  GtkWidget *stats_label = gtk_label_new (stats_text);
-  gtk_widget_add_css_class (stats_label, "game-stats");
-  gtk_label_set_xalign (GTK_LABEL (stats_label), 0.0f);
-  g_free (stats_text);
-
-  GtkGesture *stats_click = gtk_gesture_click_new ();
-  gtk_gesture_single_set_button (GTK_GESTURE_SINGLE (stats_click), GDK_BUTTON_PRIMARY);
-  g_signal_connect (stats_click, "pressed", G_CALLBACK (on_card_clicked), page);
-  gtk_widget_add_controller (stats_label, GTK_EVENT_CONTROLLER (stats_click));
-  gtk_box_append (GTK_BOX (card), stats_label);
-  g_free (time_str);
-
-  /* Play Now button */
-  const char *btn_label = (page->running_game_idx == idx)
-    ? tr ("Running...")
-    : tr ("Play Now");
-  GtkWidget *launch_btn = gtk_button_new_with_label (btn_label);
-  gtk_widget_add_css_class (launch_btn, "play-now-btn");
-  gtk_widget_add_css_class (launch_btn, "suggested-action");
-  if (page->running_game_idx == idx)
     {
-      gtk_widget_set_sensitive (launch_btn, FALSE);
+      game_details_show (page->library_detail, page, idx);
+      gtk_stack_set_visible_child_name (page->games_stack, "grid");
     }
-  g_object_set_data (G_OBJECT (launch_btn), "game-idx", GINT_TO_POINTER (idx + 1));
-  g_signal_connect (launch_btn, "clicked", G_CALLBACK (on_game_launch_clicked), page);
-  gtk_box_append (GTK_BOX (card), launch_btn);
 
-  /* Selection checkbox (always visible, top-right of the card). Checking it
-     is the only way to select a game: it enters edit mode when not already
-     in it, while clicking anywhere else on the card opens the edit dialog. */
-  GtkWidget *check = gtk_check_button_new ();
-  gtk_check_button_set_active (GTK_CHECK_BUTTON (check),
-    page->selected && page->selected[idx]);
-  gtk_widget_add_css_class (check, "game-select-check");
-  gtk_widget_set_halign (check, GTK_ALIGN_END);
-  gtk_widget_set_valign (check, GTK_ALIGN_START);
-  gtk_widget_set_margin_start (check, 0);
-  gtk_widget_set_margin_end (check, 4);
-  gtk_widget_set_margin_top (check, 4);
-  gtk_widget_set_margin_bottom (check, 0);
-  g_object_set_data (G_OBJECT (check), "game-idx", GINT_TO_POINTER (idx + 1));
-  g_signal_connect (check, "toggled", G_CALLBACK (on_select_toggled), page);
-  gtk_overlay_add_overlay (GTK_OVERLAY (card_ov), check);
-  if (page->selected && page->selected[idx])
-    gtk_widget_add_css_class (card, "game-selected");
-
-  return card_ov;
-}
-
-static int
-find_game_idx_from_widget (GtkWidget *widget)
-{
-  GtkWidget *w = widget;
-  while (w)
-    {
-      gpointer val = g_object_get_data (G_OBJECT (w), "game-idx");
-      if (val)
-        {
-          int idx = GPOINTER_TO_INT (val) - 1;
-          if (idx >= 0) return idx;
-        }
-      w = gtk_widget_get_parent (w);
-    }
-  return -1;
 }
 
 static void
-on_card_clicked (GtkGestureClick *gesture, int n_press, double x, double y, DashboardPage *page)
+on_library_game_clicked (GtkButton *button, DashboardPage *page)
 {
-  (void) n_press; (void) x; (void) y;
-  GtkWidget *widget = gtk_event_controller_get_widget (GTK_EVENT_CONTROLLER (gesture));
-  int idx = find_game_idx_from_widget (widget);
-  if (idx < 0 || idx >= page->n_games) return;
+  int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "game-idx")) - 1;
+  games_page_show_game (page, idx);
+}
 
-  /* Clicking a card always opens the edit dialog. Selection is reserved for
-     the checkbox at the card's top-right corner, so a click never ends up
-     selecting (or leaving the grid in edit mode) instead of editing. */
-  open_edit_dialog (page, idx);
+static void
+on_back_to_covers (GtkButton *button, DashboardPage *page)
+{
+  (void) button;
+  page->library_detail_open = FALSE;
+  gtk_stack_set_visible_child_name (page->games_stack, "covers");
+  GtkWidget *child = gtk_widget_get_first_child (page->library_grid_detail);
+  if (child) gtk_box_remove (GTK_BOX (page->library_grid_detail), child);
+}
+
+static void
+on_library_view_changed (GtkToggleButton *button, DashboardPage *page)
+{
+  if (!gtk_toggle_button_get_active (button)) return;
+  page->library_grid_mode = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (button), "grid-mode"));
+  page->library_detail_open = FALSE;
+  g_autoptr(GKeyFile) config = game_artwork_config_load ();
+  g_key_file_set_string (config, "library", "view", page->library_grid_mode ? "grid" : "list");
+  game_artwork_config_save (config);
+  refresh_games_grid (page);
+}
+
+static GtkWidget *
+create_game_card_grid (DashboardPage *page, int idx)
+{
+  GtkWidget *row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 4);
+  gtk_widget_set_hexpand (row, TRUE);
+  GtkWidget *button = gtk_button_new ();
+  gtk_widget_add_css_class (button, "flat");
+  gtk_widget_add_css_class (button, "library-game-row");
+  gtk_widget_set_hexpand (button, TRUE);
+  GtkWidget *content = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10);
+  gtk_box_append (GTK_BOX (content), create_game_icon_widget (page->games[idx].icon, 28));
+  GtkWidget *text = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+  gtk_widget_set_hexpand (text, TRUE);
+  GtkWidget *name = gtk_label_new (page->games[idx].name);
+  gtk_label_set_xalign (GTK_LABEL (name), 0);
+  gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
+  gtk_label_set_max_width_chars (GTK_LABEL (name), 22);
+  gtk_box_append (GTK_BOX (text), name);
+  GtkWidget *source = gtk_label_new (page->running_game_idx == idx ? tr ("Running...") : get_source_label (page->games[idx].source));
+  gtk_label_set_xalign (GTK_LABEL (source), 0);
+  gtk_widget_add_css_class (source, "library-row-source");
+  gtk_box_append (GTK_BOX (text), source);
+  gtk_box_append (GTK_BOX (content), text);
+  gtk_button_set_child (GTK_BUTTON (button), content);
+  g_object_set_data (G_OBJECT (button), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (button, "clicked", G_CALLBACK (on_library_game_clicked), page);
+  GtkWidget *check = gtk_check_button_new ();
+  gtk_widget_set_tooltip_text (check, tr ("Select game"));
+  gtk_check_button_set_active (GTK_CHECK_BUTTON (check), page->selected && page->selected[idx]);
+  g_object_set_data (G_OBJECT (check), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (check, "toggled", G_CALLBACK (on_select_toggled), page);
+  gtk_widget_set_margin_start (check, 4);
+  gtk_widget_set_valign (check, GTK_ALIGN_CENTER);
+  gtk_box_append (GTK_BOX (row), check);
+  gtk_box_append (GTK_BOX (row), button);
+  return row;
+}
+
+static GtkWidget *
+create_cover_card (DashboardPage *page, int idx)
+{
+  GtkWidget *card = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+  gtk_widget_set_halign (card, GTK_ALIGN_CENTER);
+  GtkWidget *button = gtk_button_new ();
+  gtk_widget_add_css_class (button, "library-cover-button");
+  gtk_button_set_child (GTK_BUTTON (button), game_artwork_cover (&page->games[idx], 164, 246));
+  g_object_set_data (G_OBJECT (button), "game-idx", GINT_TO_POINTER (idx + 1));
+  gtk_widget_set_tooltip_text (button, page->games[idx].name);
+  g_signal_connect (button, "clicked", G_CALLBACK (on_library_game_clicked), page);
+  gtk_box_append (GTK_BOX (card), button);
+  GtkWidget *caption = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
+  GtkWidget *check = gtk_check_button_new ();
+  gtk_widget_set_tooltip_text (check, tr ("Select game"));
+  gtk_check_button_set_active (GTK_CHECK_BUTTON (check), page->selected && page->selected[idx]);
+  g_object_set_data (G_OBJECT (check), "game-idx", GINT_TO_POINTER (idx + 1));
+  g_signal_connect (check, "toggled", G_CALLBACK (on_select_toggled), page);
+  gtk_box_append (GTK_BOX (caption), check);
+  GtkWidget *name = gtk_label_new (page->games[idx].name);
+  gtk_label_set_xalign (GTK_LABEL (name), 0);
+  gtk_label_set_ellipsize (GTK_LABEL (name), PANGO_ELLIPSIZE_END);
+  gtk_label_set_max_width_chars (GTK_LABEL (name), 18);
+  gtk_widget_set_hexpand (name, TRUE);
+  gtk_widget_add_css_class (name, "heading");
+  gtk_box_append (GTK_BOX (caption), name);
+  gtk_box_append (GTK_BOX (card), caption);
+  return card;
 }
 
 static void
@@ -500,6 +439,7 @@ confirm_delete_selected (GtkButton *confirm_btn, DashboardPage *page)
     {
       if (!page->selected || !page->selected[i]) continue;
 
+      g_free (page->games[i].id);
       g_free (page->games[i].name);
       g_free (page->games[i].command);
       g_free (page->games[i].icon);
@@ -868,31 +808,90 @@ game_in_active_service (DashboardPage *page, int idx)
   return g_strcmp0 (page->games[idx].source, page->active_service) == 0;
 }
 
+static void
+library_bind (GtkSignalListItemFactory *factory, GtkListItem *item, DashboardPage *page)
+{
+  GObject *entry = gtk_list_item_get_item (item);
+  int idx = GPOINTER_TO_INT (g_object_get_data (entry, "game-idx"))-1;
+  gboolean cover = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (factory), "cover"));
+  gtk_list_item_set_child (item, cover ? create_cover_card (page, idx) : create_game_card_grid (page, idx));
+}
+
+static void
+library_unbind (GtkSignalListItemFactory *factory, GtkListItem *item, gpointer data)
+{
+  (void) factory; (void) data;
+  gtk_list_item_set_child (item, NULL);
+}
+
+static GtkWidget *
+library_view_new (DashboardPage *page, gboolean covers)
+{
+  GtkListItemFactory *factory = gtk_signal_list_item_factory_new ();
+  g_object_set_data (G_OBJECT (factory), "cover", GINT_TO_POINTER (covers));
+  g_signal_connect (factory, "bind", G_CALLBACK (library_bind), page);
+  g_signal_connect (factory, "unbind", G_CALLBACK (library_unbind), NULL);
+  GtkSelectionModel *selection;
+  if (!covers)
+    {
+      GtkSingleSelection *single = gtk_single_selection_new (G_LIST_MODEL (g_object_ref (page->library_model)));
+      gtk_single_selection_set_autoselect (single, FALSE);
+      gtk_single_selection_set_can_unselect (single, TRUE);
+      return gtk_list_view_new (GTK_SELECTION_MODEL (single), factory);
+    }
+  selection = GTK_SELECTION_MODEL (gtk_no_selection_new (G_LIST_MODEL (g_object_ref (page->library_model))));
+  GtkWidget *view = gtk_grid_view_new (selection, factory);
+  gtk_grid_view_set_min_columns (GTK_GRID_VIEW (view), 1);
+  gtk_grid_view_set_max_columns (GTK_GRID_VIEW (view), 12);
+  return view;
+}
+
 void
 refresh_games_grid (DashboardPage *page)
 {
-  if (!page->games_grid || !GTK_IS_FLOW_BOX (page->games_grid)) return;
-
-  /* Remove all children from the flow box */
-  GtkWidget *child;
-  while ((child = gtk_widget_get_first_child (page->games_grid)))
-    gtk_flow_box_remove (GTK_FLOW_BOX (page->games_grid), child);
-
+  if (!page->library_model || !GTK_IS_LIST_VIEW (page->games_grid)) return;
+  g_autoptr(GPtrArray) entries = g_ptr_array_new_with_free_func (g_object_unref);
+  guint selected_position = GTK_INVALID_LIST_POSITION;
+  int focused = -1, first = -1;
+  for (int i = 0; i < page->n_games; i++)
+    {
+      if (!game_matches_search (page, i) || !game_in_active_group (page, i) || !game_in_active_service (page, i)) continue;
+      if (first < 0) first = i;
+      if (g_strcmp0 (page->focused_game_command, page->games[i].command) == 0) focused = i;
+    }
+  if (focused < 0) focused = first;
+  g_free (page->focused_game_command);
+  page->focused_game_command = focused >= 0 ? g_strdup (page->games[focused].command) : NULL;
+  if (page->library_detail)
+    game_details_show (page->library_detail, page, page->library_grid_mode ? -1 : focused);
+  if (page->library_grid_detail)
+    game_details_show (page->library_grid_detail, page,
+      page->library_grid_mode && page->library_detail_open ? focused : -1);
+  if (page->library_count)
+    {
+      g_autofree char *count = g_strdup_printf (tr ("%d games"), page->n_games);
+      gtk_label_set_text (GTK_LABEL (page->library_count), count);
+    }
   int shown = 0;
   for (int i = 0; i < page->n_games; i++)
     {
       if (!game_matches_search (page, i)) continue;
       if (!game_in_active_group (page, i)) continue;
       if (!game_in_active_service (page, i)) continue;
-      GtkWidget *card = create_game_card_grid (page, i);
-      gtk_flow_box_append (GTK_FLOW_BOX (page->games_grid), card);
+      GObject *entry = g_object_new (G_TYPE_OBJECT, NULL);
+      g_object_set_data (entry, "game-idx", GINT_TO_POINTER (i+1));
+      g_ptr_array_add (entries, entry);
+      if (i == focused) selected_position = shown;
       shown++;
     }
 
+  g_list_store_splice (page->library_model, 0,
+    g_list_model_get_n_items (G_LIST_MODEL (page->library_model)), entries->pdata, entries->len);
+  gtk_single_selection_set_selected (GTK_SINGLE_SELECTION (gtk_list_view_get_model (GTK_LIST_VIEW (page->games_grid))), selected_position);
   if (page->games_stack)
     {
       gtk_stack_set_visible_child_name (page->games_stack,
-        shown > 0 ? "grid" : "empty");
+        shown == 0 ? "empty" : !page->library_grid_mode ? "grid" : page->library_detail_open ? "detail" : "covers");
     }
 }
 
@@ -1130,6 +1129,7 @@ on_add_confirm (GtkButton *btn, gpointer user_data)
   page->selected[page->n_games - 1] = FALSE;
 
   GameShortcut *g = &page->games[page->n_games - 1];
+  g->id = g_uuid_string_random ();
   g->name = g_strdup (name);
   g->command = g_strdup (cmd);
   g->icon = (icon_text && icon_text[0] != '\0')
@@ -1382,6 +1382,13 @@ games_page_new (DashboardPage *dash_page)
   gtk_widget_set_margin_top (page_box, 24);
   gtk_widget_set_margin_bottom (page_box, 16);
 
+  g_autoptr(GKeyFile) config = game_artwork_config_load ();
+  g_autofree char *view = g_key_file_get_string (config, "library", "view", NULL);
+  dash_page->library_grid_mode = g_strcmp0 (view, "list") != 0;
+
+  dash_page->library_model = g_list_store_new (G_TYPE_OBJECT);
+  g_object_set_data_full (G_OBJECT (page_box), "library-model", dash_page->library_model, g_object_unref);
+
   /* Title */
   GtkWidget *title = gtk_label_new (tr ("Games"));
   gtk_widget_set_halign (title, GTK_ALIGN_START);
@@ -1389,6 +1396,7 @@ games_page_new (DashboardPage *dash_page)
   gtk_box_append (GTK_BOX (page_box), title);
 
   GtkWidget *subtitle = gtk_label_new (tr ("Your game library"));
+  dash_page->library_count = subtitle;
   gtk_widget_set_halign (subtitle, GTK_ALIGN_START);
   gtk_widget_set_opacity (subtitle, 0.7);
   gtk_box_append (GTK_BOX (page_box), subtitle);
@@ -1415,6 +1423,23 @@ games_page_new (DashboardPage *dash_page)
     G_CALLBACK (on_service_dropdown_changed), dash_page);
   gtk_box_append (GTK_BOX (toolbar), service_dd);
   dash_page->service_dropdown = service_dd;
+
+  GtkWidget *view_buttons = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_widget_add_css_class (view_buttons, "linked");
+  GtkWidget *list_button = gtk_toggle_button_new ();
+  gtk_button_set_icon_name (GTK_BUTTON (list_button), "view-list-symbolic");
+  gtk_widget_set_tooltip_text (list_button, tr ("List view"));
+  GtkWidget *grid_button = gtk_toggle_button_new ();
+  gtk_button_set_icon_name (GTK_BUTTON (grid_button), "view-grid-symbolic");
+  gtk_widget_set_tooltip_text (grid_button, tr ("Grid view"));
+  gtk_toggle_button_set_group (GTK_TOGGLE_BUTTON (grid_button), GTK_TOGGLE_BUTTON (list_button));
+  g_object_set_data (G_OBJECT (grid_button), "grid-mode", GINT_TO_POINTER (TRUE));
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (dash_page->library_grid_mode ? grid_button : list_button), TRUE);
+  g_signal_connect (list_button, "toggled", G_CALLBACK (on_library_view_changed), dash_page);
+  g_signal_connect (grid_button, "toggled", G_CALLBACK (on_library_view_changed), dash_page);
+  gtk_box_append (GTK_BOX (view_buttons), list_button);
+  gtk_box_append (GTK_BOX (view_buttons), grid_button);
+  gtk_box_append (GTK_BOX (toolbar), view_buttons);
 
   /* Import button */
   GtkWidget *import_btn = gtk_button_new_with_label (tr ("Import Games"));
@@ -1518,21 +1543,46 @@ games_page_new (DashboardPage *dash_page)
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scroll),
     GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 
-  /* Responsive game grid: children flow left-to-right and wrap to as many
-     columns as the window width allows (no fixed per-line limit). */
-  GtkWidget *flow = gtk_flow_box_new ();
-  gtk_flow_box_set_selection_mode (GTK_FLOW_BOX (flow), GTK_SELECTION_NONE);
-  gtk_flow_box_set_column_spacing (GTK_FLOW_BOX (flow), 12);
-  gtk_flow_box_set_row_spacing (GTK_FLOW_BOX (flow), 12);
-  gtk_flow_box_set_min_children_per_line (GTK_FLOW_BOX (flow), 1);
-  gtk_flow_box_set_max_children_per_line (GTK_FLOW_BOX (flow), -1);
+  /* One compact row per game; the detail panel owns the artwork and actions. */
+  GtkWidget *flow = library_view_new (dash_page, FALSE);
   gtk_widget_set_halign (flow, GTK_ALIGN_FILL);
   gtk_widget_set_valign (flow, GTK_ALIGN_START);
   gtk_widget_set_hexpand (flow, TRUE);
   gtk_widget_add_css_class (flow, "games-grid");
   dash_page->games_grid = flow;
 
+  gtk_scrolled_window_set_overlay_scrolling (GTK_SCROLLED_WINDOW (scroll), FALSE);
+  gtk_widget_set_margin_end (flow, 8);
   gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (scroll), flow);
+  gtk_widget_add_css_class (scroll, "library-sidebar");
+  gtk_widget_set_size_request (scroll, 248, -1);
+  GtkWidget *detail = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  dash_page->library_detail = detail;
+  GtkWidget *split = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
+  gtk_paned_set_start_child (GTK_PANED (split), scroll);
+  gtk_paned_set_end_child (GTK_PANED (split), detail);
+  gtk_paned_set_resize_start_child (GTK_PANED (split), FALSE);
+  gtk_paned_set_shrink_start_child (GTK_PANED (split), FALSE);
+  gtk_paned_set_shrink_end_child (GTK_PANED (split), FALSE);
+  gtk_paned_set_position (GTK_PANED (split), 270);
+
+  GtkWidget *covers = library_view_new (dash_page, TRUE);
+  gtk_widget_set_valign (covers, GTK_ALIGN_START);
+  gtk_widget_set_margin_end (covers, 12);
+  dash_page->library_cover_grid = covers;
+  GtkWidget *cover_scroll = gtk_scrolled_window_new ();
+  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (cover_scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+  gtk_scrolled_window_set_overlay_scrolling (GTK_SCROLLED_WINDOW (cover_scroll), FALSE);
+  gtk_scrolled_window_set_child (GTK_SCROLLED_WINDOW (cover_scroll), covers);
+  GtkWidget *detail_page = gtk_box_new (GTK_ORIENTATION_VERTICAL, 8);
+  GtkWidget *back = gtk_button_new_with_label (tr ("Back to library"));
+  gtk_widget_set_halign (back, GTK_ALIGN_START);
+  gtk_widget_add_css_class (back, "flat");
+  g_signal_connect (back, "clicked", G_CALLBACK (on_back_to_covers), dash_page);
+  gtk_box_append (GTK_BOX (detail_page), back);
+  dash_page->library_grid_detail = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+  gtk_widget_set_vexpand (dash_page->library_grid_detail, TRUE);
+  gtk_box_append (GTK_BOX (detail_page), dash_page->library_grid_detail);
 
   /* Empty state */
   GtkWidget *empty_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
@@ -1548,7 +1598,7 @@ games_page_new (DashboardPage *dash_page)
 
   GtkWidget *empty_label = gtk_label_new (NULL);
   gtk_label_set_markup (GTK_LABEL (empty_label),
-    tr ("There are no registered games...\nYet."));
+    tr ("No games found. Import games or adjust your filters."));
   gtk_widget_set_halign (empty_label, GTK_ALIGN_CENTER);
   gtk_widget_set_opacity (empty_label, 0.5);
   gtk_widget_set_margin_top (empty_label, 8);
@@ -1558,8 +1608,10 @@ games_page_new (DashboardPage *dash_page)
   GtkWidget *stack = gtk_stack_new ();
   gtk_stack_set_transition_type (GTK_STACK (stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
   gtk_stack_set_transition_duration (GTK_STACK (stack), 200);
-  gtk_stack_add_titled (GTK_STACK (stack), scroll, "grid", tr ("Grid"));
+  gtk_stack_add_titled (GTK_STACK (stack), split, "grid", tr ("Grid"));
   gtk_stack_add_titled (GTK_STACK (stack), empty_box, "empty", tr ("Empty"));
+  gtk_stack_add_named (GTK_STACK (stack), cover_scroll, "covers");
+  gtk_stack_add_named (GTK_STACK (stack), detail_page, "detail");
   gtk_widget_set_vexpand (stack, TRUE);
   gtk_widget_set_hexpand (stack, TRUE);
   dash_page->games_stack = GTK_STACK (stack);

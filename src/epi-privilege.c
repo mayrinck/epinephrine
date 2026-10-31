@@ -1,6 +1,10 @@
 #include "epi-privilege.h"
+#include <glib/gstdio.h>
+#include <sys/stat.h>
 
 static GSubprocess *helper = NULL;
+static GRecMutex session_lock;
+static GCancellable *io_cancel;
 static GOutputStream *helper_stdin = NULL;
 static GDataInputStream *helper_stdout = NULL;
 static gboolean init_attempted = FALSE;
@@ -21,6 +25,7 @@ epi_privilege_get_error (void)
 gboolean
 epi_privilege_init (GError **error)
 {
+  g_autoptr(GRecMutexLocker) lock = g_rec_mutex_locker_new (&session_lock);
   if (helper) return TRUE;
 
   /* The admin session is only requested once, at application start.
@@ -42,22 +47,31 @@ epi_privilege_init (GError **error)
       return FALSE;
     }
 
-  /* Each sync command carries a random per-call tag.  The helper echoes the
-     exit code as "EXIT:<tag>:<code>" so that a command whose own output
-     contains "EXIT:..." can no longer spoof the result. */
+  /* Only the installed, root-owned helper may be elevated. Development
+     checkouts and writable installation prefixes are never used as root. */
+  char *check = g_strdup (LIBEXECDIR "/epinephrine/epi-admin");
+  gboolean trusted = TRUE;
+  while (TRUE)
+    {
+      GStatBuf info;
+      if (g_file_test (check, G_FILE_TEST_IS_SYMLINK) || g_stat (check, &info) != 0 ||
+          info.st_uid != 0 || (info.st_mode & 0022)) { trusted = FALSE; break; }
+      if (g_strcmp0 (check, "/") == 0) break;
+      char *parent = g_path_get_dirname (check); g_free (check); check = parent;
+    }
+  g_free (check);
+  if (!trusted)
+    {
+      g_free (pkexec_path);
+      last_error = g_strdup ("Install the root-owned epi-admin helper with meson install before using administrative features.");
+      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED, last_error);
+      return FALSE;
+    }
+
   helper = g_subprocess_new (
     G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE,
     error,
-    pkexec_path, "/bin/sh", "-c",
-    "while IFS= read -r line; do "
-      "case $line in "
-        "SYNC:*) __c=${line#SYNC:}; __t=${__c%% *}; __c=${__c#* }; "
-          "eval \"$__c\" 2>&1; echo \"EXIT:$__t:$?\"; ;; "
-        "ASYNC:*) eval \"${line#ASYNC:}\" >/dev/null 2>&1 ;; "
-        "exit) exit 0 ;; "
-        "*) : ;; "
-      "esac; "
-    "done",
+    pkexec_path, LIBEXECDIR "/epinephrine/epi-admin",
     NULL);
   g_free (pkexec_path);
 
@@ -70,10 +84,11 @@ epi_privilege_init (GError **error)
       return FALSE;
     }
 
-  helper_stdin = g_subprocess_get_stdin_pipe (helper);
+  io_cancel = g_cancellable_new ();
+  helper_stdin = g_object_ref (g_subprocess_get_stdin_pipe (helper));
   GInputStream *in = g_subprocess_get_stdout_pipe (helper);
   helper_stdout = g_data_input_stream_new (in);
-  g_object_unref (in);
+  /* get_stdout_pipe returns a borrowed reference owned by helper. */
 
   return TRUE;
 }
@@ -89,10 +104,11 @@ read_until_exit_marker (const char *tag, int *out_exit_code,
   while (TRUE)
     {
       gsize len;
-      char *line = g_data_input_stream_read_line (helper_stdout, &len, NULL, error);
+      char *line = g_data_input_stream_read_line (helper_stdout, &len, io_cancel, error);
       if (!line)
         {
-          if (error && *error) break;
+          if (error && *error)
+            { g_string_free (output, TRUE); g_free (marker); return FALSE; }
           g_string_free (output, TRUE);
           g_free (marker);
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_BROKEN_PIPE,
@@ -135,7 +151,7 @@ privilege_send (const char *cmd, GError **error)
 
   char *buf = g_strdup_printf ("%s\n", cmd);
   gboolean ok = g_output_stream_write_all (helper_stdin, buf, strlen (buf),
-    NULL, NULL, error);
+    NULL, io_cancel, error);
   g_free (buf);
 
   if (!ok)
@@ -150,6 +166,7 @@ gboolean
 epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
                          char **out_stdout, GError **error)
 {
+  g_autoptr(GRecMutexLocker) lock = g_rec_mutex_locker_new (&session_lock);
   if (!helper && !epi_privilege_init (error))
     return FALSE;
 
@@ -165,12 +182,14 @@ epi_privilege_exec_sync (const char *cmd, int *out_exit_code,
 
   gboolean ok = read_until_exit_marker (tag, out_exit_code, out_stdout, error);
   g_free (tag);
+  if (!ok) epi_privilege_reset ();
   return ok;
 }
 
 gboolean
 epi_privilege_exec_async (const char *cmd)
 {
+  g_autoptr(GRecMutexLocker) lock = g_rec_mutex_locker_new (&session_lock);
   GError *err = NULL;
   if (!helper && !epi_privilege_init (&err))
     {
@@ -187,6 +206,7 @@ epi_privilege_exec_async (const char *cmd)
 void
 epi_privilege_reset (void)
 {
+  g_autoptr(GRecMutexLocker) lock = g_rec_mutex_locker_new (&session_lock);
   /* Tear the helper down but keep init_attempted set: the admin session
      is requested only once per application run. */
   if (helper)
@@ -197,7 +217,7 @@ epi_privilege_reset (void)
           g_output_stream_write_all (helper_stdin, exit_cmd, strlen (exit_cmd),
             NULL, NULL, NULL);
         }
-      g_subprocess_wait (helper, NULL, NULL);
+      g_subprocess_force_exit (helper);
     }
 
   if (helper_stdin) { g_object_unref (helper_stdin); helper_stdin = NULL; }
@@ -208,7 +228,10 @@ epi_privilege_reset (void)
 void
 epi_privilege_shutdown (void)
 {
+  if (io_cancel) g_cancellable_cancel (io_cancel);
+  g_autoptr(GRecMutexLocker) lock = g_rec_mutex_locker_new (&session_lock);
   epi_privilege_reset ();
   init_attempted = FALSE;
+  g_clear_object (&io_cancel);
   g_clear_pointer (&last_error, g_free);
 }

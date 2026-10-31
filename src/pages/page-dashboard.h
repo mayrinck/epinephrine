@@ -9,6 +9,7 @@ G_BEGIN_DECLS
 
 typedef struct
 {
+  char *id;
   char *name;
   char *command;
   char *icon;
@@ -32,8 +33,16 @@ typedef struct
 
   GtkWidget *recent_box;
 
+  GListStore *library_model;
   GtkWidget *games_grid;
   GtkStack *games_stack;
+  GtkWidget *library_detail;
+  GtkWidget *library_count;
+  char *focused_game_command;
+  GtkWidget *library_cover_grid;
+  GtkWidget *library_grid_detail;
+  gboolean library_grid_mode;
+  gboolean library_detail_open;
 
   AdwActionRow *cpu_row;
   AdwActionRow *ram_row;
@@ -69,6 +78,7 @@ typedef struct
   GtkWidget *service_dropdown; /* filter dropdown of sources in use */
   GtkWidget *edit_actions; /* box with Delete / Group / Ungroup while in edit */
 
+  gboolean launch_pending;
   int running_game_idx;
   GPid game_pid;
   guint poll_timer_id;
@@ -104,6 +114,9 @@ int import_bottles_games (DashboardPage *page);
 int import_hydra_games (DashboardPage *page);
 int import_hydra_classics_games (DashboardPage *page);
 int import_desktop_games (DashboardPage *page);
+void init_config_path (void);
+void load_games_config (DashboardPage *page);
+void add_game_entry (DashboardPage *page, const char *name, const char *cmd, const char *icon, const char *source);
 void save_games_config (DashboardPage *page);
 void refresh_recent_games (DashboardPage *page);
 void open_edit_dialog (DashboardPage *page, int idx);

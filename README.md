@@ -13,6 +13,56 @@ O Epinephrine reúne monitoramento de hardware, tuning de performance e configur
 - Atalho para **lançamento rápido de jogos recentes**.
 
 ### Game Library (Biblioteca de Jogos)
+
+A biblioteca alterna entre uma grade de capas com nome abaixo e uma lista lateral
+com painel detalhado. A preferência fica salva. Clique na capa para abrir banner,
+ações, estatísticas registradas pelo Epinephrine e configuração de inicialização.
+Lista e grade usam as views virtualizadas do GTK: widgets são criados apenas
+para uma faixa próxima da área visível. Cada jogo recebe um UUID persistente em
+`games.ini`; associações anteriores por comando são migradas para esse UUID.
+
+A Visão geral também mostra capas nos jogos recentes; clicar nelas abre os detalhes.
+As cores acompanham o tema e a cor de destaque selecionados no aplicativo.
+Busca, filtros por serviço e categoria e seleção para ações em lote continuam
+disponíveis; os checkboxes ficam à esquerda da lista, fora da área da barra de
+rolagem. A engrenagem abre a edição das opções de inicialização.
+
+Em **Artes e serviços online**, configure sua chave de API do
+[SteamGridDB](https://www.steamgriddb.com/profile/preferences/api) para carregar
+banners com crédito ao artista. A variável `STEAMGRIDDB_API_KEY` também é aceita.
+Sem chave, jogos associados à Steam usam o banner público da Steam quando disponível.
+Para jogos de outros launchers, informe o Steam App ID nessa mesma janela para
+obter artes e compatibilidade da edição correspondente. A descoberta automática
+por nome aceita apenas uma correspondência exata e única,
+inclusive na busca pública da Steam. Atalhos do Hydra com `shop=steam` aproveitam
+o ID de catálogo que já vem no comando importado. A associação automática de
+artes por nome não atribui uma classificação do ProtonDB a uma edição não confirmada.
+
+No botão **Personalizar artes** (ícone de imagem ao lado da engrenagem), escolha
+**Capa** ou **Banner**. A galeria oferece as artes disponíveis na Steam e no
+SteamGridDB; pesquise outro título e selecione o jogo correto quando a importação
+trouxer um nome diferente. Também é possível escolher uma imagem local (até 12 MB)
+ou restaurar a escolha automática. Imagens escolhidas são copiadas para
+`$XDG_DATA_HOME/epinephrine/artwork` (padrão `~/.local/share/epinephrine/artwork`),
+com os créditos da fonte preservados. As escolhas continuam funcionando sem rede
+e acompanham alterações no comando do jogo. O título em texto aparece fora do
+banner para permanecer legível com qualquer arte.
+
+A classificação e o número de relatos vêm do resumo público do **ProtonDB**;
+esse endpoint não é uma API estável e pode ficar indisponível. SteamDB e
+HowLongToBeat abrem consultas no navegador, sem coleta automática ou estimativas
+inventadas. A compatibilidade de uma edição Steam pode diferir da de outro launcher.
+
+O carregamento precisa de **Python 3**, usa HTTPS em segundo plano, limita a três
+processos simultâneos para capas e galeria e não bloqueia a interface. A seleção
+envia o nome ou App ID do jogo aos provedores correspondentes.
+Os resultados ficam por 24 horas em `$XDG_CACHE_HOME/epinephrine/library`
+(padrão `~/.cache/epinephrine/library`); falhas são reconsultadas após 5 minutos,
+preservando dados anteriores quando possível. Chave e associações ficam em
+`$XDG_CONFIG_HOME/epinephrine/library.ini` (padrão `~/.config/epinephrine/library.ini`),
+com permissão de leitura e escrita apenas para o usuário. As configurações de
+execução dos jogos continuam em `games.ini`.
+
 - Importação automática de jogos a partir de:
   - **Steam** (parse de `libraryfolders.vdf`)
   - **Heroic Games Launcher**
@@ -177,3 +227,14 @@ Creditos para: Renan Mayrinck, Emerson Lourenço.
 ### AI notice
 
 This project was built with **Opencode**, an AI coding assistant. The code is fully functional, but may not follow the best practices adopted by professional developers. Contributions and suggestions are welcome via [pull requests or issues](https://github.com/mayrinck/epinephrine/issues).
+
+### Organização do código da biblioteca
+
+- `game-store.c`: leitura, gravação e migração de IDs.
+- `game-importers.c`: importadores dos launchers e do sistema.
+- `game-icons.c`: normalização dos ícones.
+- `game-artwork.c` e `game-details.c`: artes e painel detalhado.
+- `page-games.c`: filtros, seleção e views virtualizadas.
+
+As operações administrativas agora dependem do auxiliar instalado `epi-admin`.
+Consulte [BUILDING.md](BUILDING.md) para instalação e testes.

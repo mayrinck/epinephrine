@@ -70,6 +70,8 @@
     <file alias="database/JOY_INDEX.md">../database/JOY_INDEX.md</file>
     <file alias="database/MOUSE_INDEX.md">../database/MOUSE_INDEX.md</file>
     <file alias="database/RAM_INDEX.md">../database/RAM_INDEX.md</file>
+    <file alias="scripts/admin_helper.py">../scripts/admin_helper.py</file>
+    <file alias="scripts/game_metadata.py">../scripts/game_metadata.py</file>
     <file alias="lang/pt_BR.md">../lang/pt_BR.md</file>
     <file alias="lang/en_US.md">../lang/en_US.md</file>
     <file alias="lang/es_ES.md">../lang/es_ES.md</file>

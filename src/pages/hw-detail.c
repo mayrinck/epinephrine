@@ -117,69 +117,14 @@ detect_chipset (HardwarePage *page)
   g_dir_close (dir);
 }
 
-static const char smbus_enable_script[] =
-  "#!/bin/sh\n"
-  "cp /etc/default/grub /etc/default/grub.bak.epi 2>/dev/null || true\n"
-  "if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub 2>/dev/null; then\n"
-  "  if grep -q 'acpi_enforce_resources=lax' /etc/default/grub 2>/dev/null; then\n"
-  "    rm -f /etc/default/grub.bak.epi; exit 0\n"
-  "  fi\n"
-  "  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=\"\\(.*\\)\"/GRUB_CMDLINE_LINUX_DEFAULT=\"\\1 acpi_enforce_resources=lax\"/' /etc/default/grub\n"
-  "else\n"
-  "  echo 'GRUB_CMDLINE_LINUX_DEFAULT=\"quiet splash acpi_enforce_resources=lax\"' >> /etc/default/grub\n"
-  "fi\n"
-  "r=0\n"
-  "if command -v update-grub >/dev/null 2>&1; then update-grub; r=$?\n"
-  "elif command -v grub2-mkconfig >/dev/null 2>&1; then grub2-mkconfig -o /boot/grub2/grub.cfg; r=$?\n"
-  "elif command -v grub-mkconfig >/dev/null 2>&1; then grub-mkconfig -o /boot/grub/grub.cfg; r=$?\n"
-  "else r=1; fi\n"
-  "if [ \"$r\" -ne 0 ]; then\n"
-  "  cp /etc/default/grub.bak.epi /etc/default/grub 2>/dev/null || true\n"
-  "fi\n"
-  "rm -f /etc/default/grub.bak.epi\n"
-  "exit $r\n";
-
-static const char smbus_disable_script[] =
-  "#!/bin/sh\n"
-  "cp /etc/default/grub /etc/default/grub.bak.epi 2>/dev/null || true\n"
-  "sed -i 's/[[:space:]]*acpi_enforce_resources=lax//g' /etc/default/grub\n"
-  "sed -i 's/^acpi_enforce_resources=lax[[:space:]]*//g' /etc/default/grub\n"
-  "r=0\n"
-  "if command -v update-grub >/dev/null 2>&1; then update-grub; r=$?\n"
-  "elif command -v grub2-mkconfig >/dev/null 2>&1; then grub2-mkconfig -o /boot/grub2/grub.cfg; r=$?\n"
-  "elif command -v grub-mkconfig >/dev/null 2>&1; then grub-mkconfig -o /boot/grub/grub.cfg; r=$?\n"
-  "else r=1; fi\n"
-  "if [ \"$r\" -ne 0 ]; then\n"
-  "  cp /etc/default/grub.bak.epi /etc/default/grub 2>/dev/null || true\n"
-  "fi\n"
-  "rm -f /etc/default/grub.bak.epi\n"
-  "exit $r\n";
-
 static gboolean
 run_smbus_pkexec (gboolean enable, char **out_error)
 {
-  int fd;
-  char tmp[] = "/tmp/epi-smbus-XXXXXX";
-  fd = g_mkstemp (tmp);
-  if (fd < 0) { *out_error = g_strdup (tr ("Failed to create temp file")); return FALSE; }
-
-  const char *script = enable ? smbus_enable_script : smbus_disable_script;
-  gsize len = strlen (script);
-  if (write (fd, script, len) != (ssize_t) len)
-    {
-      close (fd); unlink (tmp);
-      *out_error = g_strdup (tr ("Failed to write temp script"));
-      return FALSE;
-    }
-  close (fd);
-
-  char *cmd = g_strdup_printf ("bash '%s'", tmp);
+  const char *cmd = enable ? "smbus enable" : "smbus disable";
   int exit_code = -1;
   GError *err = NULL;
   gboolean ok = epi_privilege_exec_sync (cmd, &exit_code, NULL, &err);
 
-  unlink (tmp);
-  g_free (cmd);
 
   if (ok && exit_code == 0) return TRUE;
 

@@ -25,8 +25,7 @@ static void
 ensure_config_dir (void)
 {
   if (g_config_dir) return;
-  const char *home = g_get_home_dir ();
-  g_config_dir = g_build_filename (home, ".config", "epinephrine", NULL);
+  g_config_dir = g_build_filename (g_get_user_config_dir (), "epinephrine", NULL);
   g_mkdir_with_parents (g_config_dir, 0755);
 }
 
@@ -35,6 +34,18 @@ get_config_file_path (const char *name)
 {
   ensure_config_dir ();
   return g_build_filename (g_config_dir, name, NULL);
+}
+
+static gboolean
+save_setting (const char *path, const char *contents, gssize length, GError **unused)
+{
+  (void) unused;
+  g_autoptr(GError) error = NULL;
+  if (g_file_set_contents_full (path, contents, length,
+        G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, &error)) return TRUE;
+  g_warning ("Could not save settings: %s", error->message);
+  epinephrine_show_toast (error->message);
+  return FALSE;
 }
 
 static char *
@@ -269,7 +280,7 @@ save_accent (AccentChoice choice)
 {
   char *path = get_config_file_path ("accent-color");
   char *data = g_strdup_printf ("%d", (int) choice);
-  g_file_set_contents (path, data, -1, NULL);
+  save_setting (path, data, -1, NULL);
   g_free (data);
   g_free (path);
 }
@@ -279,7 +290,7 @@ save_full_theme (gboolean enabled)
 {
   char *path = get_config_file_path ("full-theme");
   char *data = g_strdup_printf ("%d", enabled ? 1 : 0);
-  g_file_set_contents (path, data, -1, NULL);
+  save_setting (path, data, -1, NULL);
   g_free (data);
   g_free (path);
 }
@@ -310,7 +321,7 @@ settings_save_graph_speed (int speed_ms)
 {
   char *path = get_config_file_path ("graph-speed-ms");
   char *data = g_strdup_printf ("%d", speed_ms);
-  g_file_set_contents (path, data, -1, NULL);
+  save_setting (path, data, -1, NULL);
   g_free (data);
   g_free (path);
 }
@@ -338,7 +349,7 @@ settings_save_untrusted_launchers (gboolean enabled)
 {
   char *path = get_config_file_path ("untrusted-launchers");
   char *data = g_strdup_printf ("%d", enabled ? 1 : 0);
-  g_file_set_contents (path, data, -1, NULL);
+  save_setting (path, data, -1, NULL);
   g_free (data);
   g_free (path);
 }
@@ -389,7 +400,7 @@ void
 settings_save_language (const char *lang_code)
 {
   char *path = get_config_file_path ("language");
-  g_file_set_contents (path,
+  save_setting (path,
     lang_code && lang_code[0] ? lang_code : "system", -1, NULL);
   g_free (path);
 }

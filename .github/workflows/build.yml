@@ -1,0 +1,13 @@
+name: Build and tests
+on: [push, pull_request]
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    env:
+      ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y meson ninja-build libgtk-4-dev libadwaita-1-dev libgdk-pixbuf-2.0-dev libfontconfig-dev gettext xvfb
+      - run: meson setup _build -Db_sanitize=address,undefined -Db_lundef=false
+      - run: meson compile -C _build
+      - run: xvfb-run -a meson test -C _build --print-errorlogs
