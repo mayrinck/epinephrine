@@ -3,6 +3,7 @@
 #include "game-artwork.h"
 #include "window.h"
 #include "epi-privilege.h"
+#include "../epi-components.h"
 #include "hw-detail.h"
 #include "../epi-i18n.h"
 #include "../hydra-ldb.h"
@@ -25,18 +26,19 @@ typedef struct
   const char *appimage_name;
 } GamingResourceDef;
 
+G_STATIC_ASSERT (DASHBOARD_N_RESOURCES == EPI_COMPONENT_COUNT);
+
 static const GamingResourceDef RESOURCES[DASHBOARD_N_RESOURCES] = {
   { "Steam",          "/io/github/mayrinck/epinephrine/icons/launchers/steam.png",  NULL,                "steam",              "com.valvesoftware.Steam",          NULL,            NULL },
-  { "Heroic",         "/io/github/mayrinck/epinephrine/icons/launchers/heroic.png", NULL,                "heroic",             "com.heroicgameslauncher.hlg",      "heroic-games-launcher", "heroic" },
+  { "Heroic",         "/io/github/mayrinck/epinephrine/icons/launchers/heroic.png", NULL,                "heroic",             "com.heroicgameslauncher.hgl",      "heroic-games-launcher", "heroic" },
   { "Lutris",         "/io/github/mayrinck/epinephrine/icons/launchers/lutris.png", NULL,                "lutris",             "net.lutris.Lutris",                NULL,            NULL },
-  { "Bottles",        "/io/github/mayrinck/epinephrine/icons/launchers/bottles.png",NULL,                "bottles",            "org.usebottles.bottles",           NULL,            NULL },
+  { "Bottles",        "/io/github/mayrinck/epinephrine/icons/launchers/bottles.png",NULL,                "bottles",            "com.usebottles.bottles",           NULL,            NULL },
   { "OpenRGB",        "/io/github/mayrinck/epinephrine/icons-sym/bulb-symbolic.svg", NULL,                "openrgb",            "org.openrgb.OpenRGB",              NULL,            NULL },
   { "MangoHud",       NULL,                                                        "speedometer-symbolic", "mangohud",           NULL,                               NULL,            NULL },
   { "Valve Gamescope", NULL,                                                        "gamescope-symbolic", "gamescope",       NULL,                               NULL,            NULL },
   { "Feral GameMode", NULL,                                                        "addon-symbolic", "gamemode",           NULL,                               "gamemoderun",     NULL },
 };
 
-static const char *detected_pm = NULL;
 
 void
 dashboard_show_toast (const char *message)
@@ -73,149 +75,6 @@ dashboard_show_toast (const char *message)
     } \
     _out; \
   })
-
-static const char *
-detect_pm (void)
-{
-  if (g_file_test ("/usr/bin/apt",        G_FILE_TEST_IS_EXECUTABLE)) return "apt";
-  if (g_file_test ("/usr/bin/dnf",        G_FILE_TEST_IS_EXECUTABLE)) return "dnf";
-  if (g_file_test ("/usr/bin/pacman",     G_FILE_TEST_IS_EXECUTABLE)) return "pacman";
-  if (g_file_test ("/usr/bin/zypper",    G_FILE_TEST_IS_EXECUTABLE)) return "zypper";
-  if (g_file_test ("/usr/bin/xbps-install", G_FILE_TEST_IS_EXECUTABLE)) return "xbps";
-  return NULL;
-}
-
-static gboolean
-check_pkg_native (const char *pkg)
-{
-  if (!detected_pm || !pkg) return FALSE;
-
-  if (strcmp (detected_pm, "apt") == 0)
-    {
-      char *out = NULL;
-      g_spawn_sync (NULL,
-        (char *[]){ "dpkg-query", "-W", "-f=${Status}", (char *)pkg, NULL },
-        NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
-      gboolean ok = out && strstr (out, "ok installed");
-      g_free (out);
-      return ok;
-    }
-  else if (strcmp (detected_pm, "dnf") == 0 || strcmp (detected_pm, "zypper") == 0)
-    {
-      int rc = -1;
-      g_spawn_sync (NULL,
-        (char *[]){ "rpm", "-q", (char *)pkg, NULL },
-        NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &rc, NULL);
-      return g_spawn_check_wait_status (rc, NULL);
-    }
-  else if (strcmp (detected_pm, "pacman") == 0)
-    {
-      int rc = -1;
-      g_spawn_sync (NULL,
-        (char *[]){ "pacman", "-Q", (char *)pkg, NULL },
-        NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &rc, NULL);
-      return g_spawn_check_wait_status (rc, NULL);
-    }
-  else if (strcmp (detected_pm, "xbps") == 0)
-    {
-      int rc = -1;
-      g_spawn_sync (NULL,
-        (char *[]){ "xbps-query", (char *)pkg, NULL },
-        NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &rc, NULL);
-      return g_spawn_check_wait_status (rc, NULL);
-    }
-  else
-    return FALSE;
-}
-
-static gboolean
-check_flatpak_app (const char *app_id)
-{
-  if (!app_id) return FALSE;
-  int rc = -1;
-  g_spawn_sync (NULL,
-    (char *[]){ "flatpak", "info", (char *)app_id, NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &rc, NULL);
-  return g_spawn_check_wait_status (rc, NULL);
-}
-
-static gboolean
-check_snap_pkg (const char *pkg)
-{
-  if (!pkg) return FALSE;
-  int rc = -1;
-  g_spawn_sync (NULL,
-    (char *[]){ "snap", "list", (char *)pkg, NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, NULL, &rc, NULL);
-  return g_spawn_check_wait_status (rc, NULL);
-}
-
-static gboolean
-check_linglong_app (const char *app_id)
-{
-  if (!app_id) return FALSE;
-  char *out = NULL;
-  g_spawn_sync (NULL,
-    (char *[]){ "ll-cli", "list", NULL },
-    NULL, G_SPAWN_DEFAULT, NULL, NULL, &out, NULL, NULL, NULL);
-  if (!out) return FALSE;
-  gboolean found = strstr (out, app_id) != NULL;
-  g_free (out);
-  return found;
-}
-
-static gboolean
-check_appimage (const char *name)
-{
-  if (!name) return FALSE;
-
-  const char *home = g_get_home_dir ();
-  const char *dirs[] = { home, "/opt", "/usr/local/bin", NULL };
-  for (int d = 0; dirs[d]; d++)
-    {
-      char *pattern = g_strdup_printf ("%s/%s*.AppImage", dirs[d], name);
-      gboolean found = FALSE;
-      if (g_file_test (pattern, G_FILE_TEST_EXISTS))
-        found = TRUE;
-      g_free (pattern);
-      if (found) return TRUE;
-
-      pattern = g_strdup_printf ("%s/Applications/%s*.AppImage", dirs[d], name);
-      if (g_file_test (pattern, G_FILE_TEST_EXISTS))
-        found = TRUE;
-      g_free (pattern);
-      if (found) return TRUE;
-    }
-  return FALSE;
-}
-
-static gboolean
-check_flatpak_binary (const char *flatpak_id)
-{
-  if (!flatpak_id) return FALSE;
-  char buf[1024];
-  g_snprintf (buf, sizeof (buf), "/var/lib/flatpak/exports/bin/%s", flatpak_id);
-  if (g_file_test (buf, G_FILE_TEST_IS_EXECUTABLE)) return TRUE;
-  const char *home = g_get_home_dir ();
-  g_snprintf (buf, sizeof (buf),
-    "%s/.local/share/flatpak/exports/bin/%s", home, flatpak_id);
-  return g_file_test (buf, G_FILE_TEST_IS_EXECUTABLE);
-}
-
-static gboolean
-check_binary (const char *name)
-{
-  if (!name) return FALSE;
-  if (g_find_program_in_path (name)) return TRUE;
-  char buf[1024];
-  const char *home = g_get_home_dir ();
-  g_snprintf (buf, sizeof (buf),
-    "/var/lib/flatpak/exports/bin/%s", name);
-  if (g_file_test (buf, G_FILE_TEST_IS_EXECUTABLE)) return TRUE;
-  g_snprintf (buf, sizeof (buf),
-    "%s/.local/share/flatpak/exports/bin/%s", home, name);
-  return g_file_test (buf, G_FILE_TEST_IS_EXECUTABLE);
-}
 
 static char *
 format_play_time (int secs)
@@ -1015,7 +874,7 @@ resolve_nonsteam_prefix (const char *source, const char *key,
   if (g_strcmp0 (source, "bottles") == 0)
     {
       const char *cands[] = {
-        ".var/app/org.usebottles.bottles/data/bottles/bottles",
+        ".var/app/com.usebottles.bottles/data/bottles/bottles",
         ".local/share/bottles/bottles",
         NULL
       };
@@ -1980,65 +1839,62 @@ open_edit_dialog (DashboardPage *page, int idx)
 
 /* ---- Install ---- */
 
+typedef struct {
+  DashboardPage *page;
+  GtkWidget *keep_alive;
+  int idx;
+  guint pulse_id;
+} ComponentInstall;
+
 static gboolean
-restore_install_btn (gpointer data)
+pulse_install (gpointer data)
 {
-  DashboardPage *page = data;
-  for (int i = 0; i < DASHBOARD_N_RESOURCES; i++)
-    if (gtk_widget_get_visible (GTK_WIDGET (page->resources[i].progress)))
-      {
-        gtk_widget_set_visible (page->resources[i].install_btn, TRUE);
-        gtk_widget_set_sensitive (page->resources[i].install_btn, TRUE);
-        gtk_widget_set_visible (GTK_WIDGET (page->resources[i].progress), FALSE);
-      }
-  return G_SOURCE_REMOVE;
+  ComponentInstall *job = data;
+  gtk_progress_bar_pulse (job->page->resources[job->idx].progress);
+  return G_SOURCE_CONTINUE;
 }
 
-static const char *
-install_cmd_for_idx (int idx)
+static void
+component_install_done (GObject *source, GAsyncResult *result, gpointer data)
 {
-  if (!detected_pm) return NULL;
-  const char *pkg = RESOURCES[idx].pkg;
-  if (!pkg) return NULL;
-
-  static char buf[1024];
-  if (strcmp (detected_pm, "apt") == 0)
-    g_snprintf (buf, sizeof (buf), "apt install -y %s", pkg);
-  else if (strcmp (detected_pm, "dnf") == 0)
-    g_snprintf (buf, sizeof (buf), "dnf install -y %s", pkg);
-  else if (strcmp (detected_pm, "pacman") == 0)
-    g_snprintf (buf, sizeof (buf), "pacman -S --noconfirm %s", pkg);
-  else if (strcmp (detected_pm, "zypper") == 0)
-    g_snprintf (buf, sizeof (buf), "zypper install -y %s", pkg);
-  else if (strcmp (detected_pm, "xbps") == 0)
-    g_snprintf (buf, sizeof (buf), "xbps-install -y %s", pkg);
-  else
-    return NULL;
-
-  return buf;
+  (void) source;
+  ComponentInstall *job = data;
+  DashboardPage *page = job->page;
+  int idx = job->idx;
+  g_autoptr(GError) error = NULL;
+  gboolean ok = epi_component_install_finish (result, &error);
+  if (job->pulse_id) g_source_remove (job->pulse_id);
+  gtk_widget_set_visible (GTK_WIDGET (page->resources[idx].progress), FALSE);
+  gtk_widget_set_visible (page->resources[idx].install_btn, !ok);
+  gtk_widget_set_sensitive (page->resources[idx].install_btn, TRUE);
+  gtk_widget_set_visible (page->resources[idx].status_icon, ok);
+  gtk_widget_set_visible (page->resources[idx].installed_label, ok);
+  page->resources[idx].installed = ok;
+  adw_action_row_set_subtitle (page->resources[idx].row,
+                               ok ? tr ("Installed") : tr ("Installation failed"));
+  if (ok) dashboard_show_toast (tr ("Component installed"));
+  else dashboard_show_error_toast (tr ("Could not install component"), error->message);
+  g_object_unref (job->keep_alive);
+  g_free (job);
 }
 
 static void
 on_install_clicked (GtkButton *btn, gpointer data)
 {
-  DashboardPage *page = (DashboardPage *) data;
+  DashboardPage *page = data;
   int idx = GPOINTER_TO_INT (g_object_get_data (G_OBJECT (btn), "res-idx"));
-
-  const char *cmd = install_cmd_for_idx (idx);
-  if (!cmd) return;
-
+  if (idx < 0 || idx >= EPI_COMPONENT_COUNT) return;
+  ComponentInstall *job = g_new0 (ComponentInstall, 1);
+  job->page = page;
+  job->idx = idx;
+  job->keep_alive = g_object_ref (page->box);
+  gtk_widget_set_sensitive (GTK_WIDGET (btn), FALSE);
   gtk_widget_set_visible (GTK_WIDGET (btn), FALSE);
   gtk_widget_set_visible (GTK_WIDGET (page->resources[idx].progress), TRUE);
-  gtk_progress_bar_set_fraction (page->resources[idx].progress, 0.0);
-  adw_action_row_set_subtitle (page->resources[idx].row,
-    tr ("Installing..."));
-
-  epi_privilege_exec_async (cmd);
-
-  /* Restore button after a short delay (we can't track completion) */
-  g_timeout_add (5000, restore_install_btn, page);
+  adw_action_row_set_subtitle (page->resources[idx].row, tr ("Installing..."));
+  job->pulse_id = g_timeout_add (150, pulse_install, job);
+  epi_component_install_async ((EpiComponent) idx, NULL, component_install_done, job);
 }
-
 
 
 /* ---- Thread-safe data gathering ---- */
@@ -2808,25 +2664,7 @@ gather_all (void)
 
   for (int i = 0; i < DASHBOARD_N_RESOURCES; i++)
     {
-      gboolean installed = check_pkg_native (RESOURCES[i].pkg)
-                        || check_flatpak_app (RESOURCES[i].flatpak_id)
-                        || check_snap_pkg (RESOURCES[i].pkg)
-                        || check_linglong_app (RESOURCES[i].flatpak_id)
-                        || check_flatpak_binary (RESOURCES[i].pkg)
-                        || check_binary (RESOURCES[i].pkg)
-                        || (RESOURCES[i].binary_name && check_binary (RESOURCES[i].binary_name))
-                        || check_appimage (RESOURCES[i].appimage_name);
-
-      /* Feral GameMode: also check via gamemode_available() */
-      if (i == 7 && !installed)
-        installed = gamemode_available ();
-
-      /* Heroic: also try alternate package names */
-      if (i == 1 && !installed)
-        {
-          installed = check_pkg_native ("heroic-games-launcher")
-                   || check_pkg_native ("heroic-games-launcher-bin");
-        }
+      gboolean installed = epi_component_installed ((EpiComponent) i);
 
       r->resource_installed[i] = installed;
     }
@@ -3136,7 +2974,6 @@ dashboard_page_new (void)
 
   gtk_spinner_start (GTK_SPINNER (page->spinner));
 
-  detected_pm = detect_pm ();
 
   /* Load games config */
   load_games_config (page);

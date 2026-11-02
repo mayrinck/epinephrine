@@ -20,7 +20,7 @@ meson setup _build
 meson compile -C _build
 ```
 
-The binary will be at `_build/src/epinephrine`.
+The binary will be at `_build/src/epinephrine`. On Wayland, the task manager normally associates an application with its installed `.desktop` file and icon. Installing the project makes that association available; when running directly from the build directory, the in-window icon is supplied to compositors that support it, but taskbar behavior and live accent-color changes depend on the compositor.
 
 ## Install
 
@@ -72,6 +72,10 @@ required. No setuid bit is used. The helper only dispatches validated operations
 for package installation, supported device attributes, DMI, keyboard controls,
 configuration files and the SMBus GRUB option; arbitrary shell commands and
 user-provided scripts are refused.
+
+## Gaming components
+
+The dashboard detects host executables and native packages, plus application Flatpaks (including per-user installations). Steam, Heroic, Lutris, Bottles and OpenRGB are installed through a configured Flathub remote. MangoHud, Gamescope and GameMode use the supported system package manager: DNF, APT, pacman, zypper or XBPS. Package availability and 32-bit dependencies vary by distribution; Flatpak runtimes and extensions are separate from host tools. No repositories are enabled automatically. Errors and authorization failures are shown in the application. The system-package installer uses the root-owned administrative helper described above, or PackageKit (`pkcon`) and Polkit when the helper is unavailable. An uninstalled development build never elevates its own helper. After installing a utility from its empty settings page, restart the application to load that page.
 
 ## Tests
 

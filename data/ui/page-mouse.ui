@@ -99,7 +99,13 @@
                 <child>
                   <object class="AdwExpanderRow" id="mouse-accel-section">
                     <property name="title" translatable="yes">Acceleration and Speed</property>
-                    <property name="subtitle" translatable="yes">Configure mouse acceleration, speed, and natural scrolling via libinput.</property>
+                    <property name="subtitle" translatable="yes">GNOME global preferences or KWin settings for the selected mouse.</property>
+                    <child>
+                      <object class="AdwActionRow">
+                        <property name="title" translatable="yes">Desktop support</property>
+                        <property name="subtitle" translatable="yes">GNOME changes apply globally; KWin changes apply to the selected mouse.</property>
+                      </object>
+                    </child>
                     <child>
                       <object class="AdwActionRow" id="mouse-speed-row">
                         <property name="title" translatable="yes">Pointer Speed</property>
@@ -124,13 +130,13 @@
                     <child>
                       <object class="AdwActionRow" id="mouse-accel-row">
                         <property name="title" translatable="yes">Acceleration Profile</property>
-                        <property name="subtitle" translatable="yes">'flat' = no acceleration, 'adaptive' = standard, 'none' = raw.</property>
+                        <property name="subtitle" translatable="yes">Default follows the device; flat disables acceleration; adaptive varies with motion.</property>
                         <child type="widget">
                           <object class="GtkDropDown" id="mouse-accel-dropdown">
                             <property name="model">
                               <object class="GtkStringList">
                                 <items>
-                                  <item translatable="yes">none</item>
+                                  <item translatable="yes">default</item>
                                   <item translatable="yes">flat</item>
                                   <item translatable="yes">adaptive</item>
                                 </items>
@@ -144,6 +150,25 @@
                       <object class="AdwSwitchRow" id="mouse-natural-scroll-row">
                         <property name="title" translatable="yes">Natural Scrolling</property>
                         <property name="subtitle" translatable="yes">Reverse scroll direction (content follows fingers).</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwSwitchRow" id="mouse-scroll-button-row">
+                        <property name="title" translatable="yes">Scroll while holding a button</property>
+                        <property name="subtitle" translatable="yes">KWin: move the mouse while holding its configured scroll button.</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwActionRow" id="mouse-scroll-factor-row">
+                        <property name="title" translatable="yes">Scroll wheel factor</property>
+                        <property name="subtitle" translatable="yes">KWin only; 1.0 is the normal scroll amount.</property>
+                        <child type="widget">
+                          <object class="GtkSpinButton" id="mouse-scroll-factor">
+                            <property name="adjustment"><object class="GtkAdjustment"><property name="lower">0.1</property><property name="upper">10</property><property name="step-increment">0.1</property><property name="value">1</property></object></property>
+                            <property name="digits">1</property>
+                            <property name="valign">center</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
@@ -178,7 +203,7 @@
             </child>
             <child>
               <object class="GtkButton" id="mouse-save-g300-btn">
-                <property name="label" translatable="yes">Save to Hardware</property>
+                <property name="label" translatable="yes">Open Piper for G300s</property>
                 <property name="visible">False</property>
                 <style>
                   <class name="accent"/>

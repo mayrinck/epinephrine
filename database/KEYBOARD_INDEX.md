@@ -6,12 +6,15 @@ To add a new entry, insert a row in the table below with the keyboard official n
 
 ## Table
 
-| Keyboard Name | VID:PID | Keyset | Official Product Page | Features | Connection |
-|---|---|---|---|---|---|
+| Keyboard Name | VID:PID | Keyset | Official Product Page | Features | Connection | Exact Linux input name |
+|---|---|---|---|---|---|---|
 | Defender Gaming Keyboard | 0e6a:02c0 | QWERTY |  |  | USB |
 | GEMBIRD Flexible keyboard KB-109F-B-DE | 0e6a:6001 | QWERTY |  |  | USB |
 | Truly Ergonomic Computer Keyboard (DFU Mode) | 0e6a:030B | QWERTY |  |  | USB |
-| Truly Ergonomic Computer Keyboard | 0e6a:030C | QWERTY |  |  | USB |
+| Truly Ergonomic Computer Keyboard | 0e6a:030C | QWERTY |  |  | USB | |
+| AJAZZ AKP815 | 05ac:024f | QWERTY | https://www.a-jazz.com/en/pd.jsp?id=109 | LCD, RGB | USB | SONiX AKL982 Pro |
+
+The AKP815 input-name and USB ID pairing was observed on the user's connected device. Its USB ID is shared with Apple and many other keyboards, so identification requires the exact input name as well. Rows without an exact input name are informational and do not override detected names.
 
 ## Contributing
 

@@ -7,6 +7,7 @@ G_BEGIN_DECLS
 GtkWindow *epinephrine_window_new (EpinephrineApplication *app);
 void dashboard_navigate_to_games (void);
 void dashboard_navigate_to_hardware (void);
+void epinephrine_update_window_icon (int accent);
 void epinephrine_show_toast (const char *message);
 void dashboard_show_error_toast (const char *short_msg, const char *details);
 void epinephrine_retranslate (void);
