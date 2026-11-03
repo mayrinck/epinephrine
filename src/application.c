@@ -369,6 +369,7 @@ epinephrine_application_activate (GApplication *app)
   epi_i18n_set_language (lang);
   g_free (lang);
 
+  gtk_window_set_default_icon_name ("io.github.mayrinck.epinephrine");
   GtkWindow *win = epinephrine_window_new (epi_app);
   gtk_window_present (win);
 

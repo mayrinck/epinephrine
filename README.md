@@ -80,10 +80,7 @@ execução dos jogos continuam em `games.ini`.
 - **RAM**: módulos (DIMMs), total/usado, tecnologia e frequência.
 - **CPU**: governor, frequência min/máx, arquitetura, cores.
 - **Teclado**: informação do dispositivo, numlock/capslock/scrolllock, repetição de teclas, layout e backlight.
-- **Mouse**: velocidade, perfil de aceleração, scroll natural (libinput/gsettings/xinput) e configuração especial para dispositivos gamer como o mouse **Logitech G300s**:
-  - Perfis on-board (F3/F4/F5), DPI, polling rate, cor de LED e remapeamento de botões (G1–G9).
-  - Suporte a **ratbagd** via D-Bus API para configuração quando disponível.
-  - Perfis de fábrica restauráveis (MMO, FPS, Produtividade).
+- **Mouse**: velocidade, aceleração e rolagem no GNOME e no KWin/Wayland; editor de perfis de hardware via ratbagd para G300/G300s e cópias locais.
 - **Controles (joystick)**: teste em tempo real com visual de botões/analógicos (layouts padrão e arcade), indicadores de input, botões extras (M1–M4) detectados por `EVIOCGBIT`, e nome/URL vindos de banco de dados.
 
 ### Utilities (Utilitários)
@@ -145,13 +142,30 @@ sudo pacman -S meson gtk4 libadwaita fontconfig
 | `gamescope` | Aba Gamescope do Utilities |
 | `gamemoderun` / `gamemoded` | Aba GameMode do Utilities |
 | `mangoapp` / `mangohud` | Aba MangoHud do Utilities |
-| `gsettings` (GNOME) ou `xinput` (X11) | Aplicar configurações de mouse |
+| `gsettings-desktop-schemas` e sessão GNOME | Configurações globais de mouse via GSettings |
 | `openrgb` | Editar iluminação no OpenRGB |
 | `libinput` | Detecção de DPI do mouse |
 | `nvidia-smi` | Gerenciamento de GPU NVIDIA |
-| `ratbagd` | Configuração de mice gamer via D-Bus |
+| `libratbag` / `ratbagd` | Editor de perfis onboard de mouse; API D-Bus 2 |
+| `piper` | Interface alternativa para mouses suportados (opcional) |
 | `pkexec` | Operações privilegiadas (instalação de utilitários, tuning) |
 | `curl` | Refresh do banco usb.ids |
+
+### Identificação de dispositivos de entrada
+
+O inventário usa as interfaces de entrada e os índices em `database/`. Interfaces auxiliares de mouse de um teclado USB composto são ignoradas quando o mesmo dispositivo também anuncia uma interface de teclado principal com o mesmo nome. O índice de teclados exige o nome exato anunciado pelo Linux além do VID:PID nos modelos com identidade conhecida, pois alguns IDs são compartilhados. O receptor do AJAZZ AJ179 (`249a:5c2f`) também é usado por outros modelos: o programa mostra a família e não pode garantir o modelo exato apenas pelo ID. Reconhecer um dispositivo no inventário não habilita por si só funções de configuração ou da tela integrada.
+
+### Mouse e Logitech G300s
+
+Em uma sessão GNOME, velocidade, perfil de aceleração e rolagem natural são preferências globais de `org.gnome.desktop.peripherals.mouse`. Em Plasma/KWin no Wayland, selecione o mouse na lista de hardware: a página lê e altera as propriedades daquele dispositivo pelo D-Bus de sessão do KWin, inclusive o fator da roda e, se suportado, rolagem por movimento enquanto o botão de rolagem configurado está pressionado. A disponibilidade depende das capacidades reportadas pelo KWin; dispositivos idênticos que não possam ser diferenciados são recusados. O KWin mantém suas próprias configurações. Outros desktops e KDE no X11 ainda não têm backend; os controles ficam desativados. Inversão dos eixos X/Y do ponteiro não está implementada: rolagem natural inverte apenas a direção da rolagem.
+
+Para o G300s (USB `046d:c246`), instale **libratbag/ratbagd** com API D-Bus 2 (Debian/Ubuntu: normalmente `ratbagd`; Fedora: `libratbag`). O **Piper** é opcional. Conecte o mouse, selecione-o na página de hardware e clique em **Edit mouse profiles**. O editor consulta os perfis e os botões publicados pelo daemon, permite ativar perfil, escolher ações comuns para cada botão, editar DPI, taxa e LED e solicitar gravação onboard. Os botões Active e Default nas resoluções enviam imediatamente as respectivas alterações. As opções realmente suportadas dependem do driver; algumas ações ou valores podem ser recusados. Não use outro editor, como o Piper, ao mesmo tempo: o ratbagd compartilha alterações pendentes entre clientes.
+
+Os campos avançados usam a sintaxe de `GVariant` mostrada pelo próprio ratbagd. Exemplos de mapeamento: `(uint32 1, <uint32 1>)` para clique esquerdo e `(uint32 2, <uint32 1073741837>)` para alternar perfis. Uma tecla pode ser expressa como `(uint32 3, <uint32 30>)` para `KEY_A` (código evdev 30), se o dispositivo aceitar esse tipo. Macros usam o tipo 4 e uma lista `a(uu)` de eventos, por exemplo `(uint32 4, <[(uint32 1, uint32 30), (uint32 2, uint32 30)]>)` para pressionar e soltar A. Nem todo dispositivo suporta tecla ou macro arbitrária; consulte os exemplos e tipos da versão instalada do ratbagd. Os índices dos botões começam em zero e são os informados pelo daemon, não uma garantia da numeração física impressa no mouse.
+
+**Save local** salva uma cópia dos campos do perfil selecionado sob o nome informado em `~/.config/epinephrine/mouse-profiles.ini` (ou `$XDG_CONFIG_HOME/epinephrine/mouse-profiles.ini`); **Load local** recupera a cópia para edição. É possível manter vários nomes por perfil e modelo. A cópia não altera o hardware até **Apply to mouse** e não executa remapeamento em segundo plano. A gravação do ratbagd é assíncrona: a mensagem de solicitação não confirma que a memória foi gravada; aguarde possíveis erros, use **Reload**, reconecte e confira os valores e os botões. A equivalência completa ao LGS, troca automática por aplicativo e macros de software em execução não estão implementadas. Ainda é necessário testar as funções no G300s físico.
+
+Se o mouse não for detectado, confira `lsusb`, `ratbagctl list`, `ratbagctl <dispositivo> info`, o estado e os logs do ratbagd e as regras udev fornecidas pela distribuição. O acesso ao HID depende do serviço e das regras locais; não é necessário executar toda a aplicação como root. Consulte a [API D-Bus do libratbag](https://libratbag.github.io/dbus.html), a [documentação do ratbagctl](https://github.com/libratbag/libratbag/blob/master/tools/ratbagctl.1) e o [relato de suporte do G300s](https://github.com/libratbag/libratbag/issues/1216).
 
 ## Build
 
@@ -183,7 +197,8 @@ epinephrine/
 │   ├── window.c                # Janela principal, abas e sistema de erros
 │   ├── command-builder.c       # Gerador de comando do Gamescope
 │   ├── epi-privilege.c         # Execução privilegiada via pkexec
-│   ├── epi-ratbagd.c/h         # Integração com ratbagd via D-Bus
+│   ├── pages/mouse-ratbag*.c   # Editor e cliente D-Bus ratbagd
+│   ├── pages/mouse-kwin.c      # Configurações de mouse no KWin
 │   ├── epi-i18n.c/h            # Internacionalização
 │   ├── usb-ids.c               # Banco usb.ids (sistema + refresh online)
 │   └── pages/                  # Páginas do app (dashboard, games, hardware, ...)

@@ -12,8 +12,8 @@ sources = files(
   'command-builder.c',
   'hydra-ldb.c',
   'epi-privilege.c',
+  'epi-components.c',
   'epi-i18n.c',
-  'epi-ratbagd.c',
   'usb-ids.c',
   'pages/page-dashboard.c',
   'pages/page-games.c',
@@ -29,10 +29,16 @@ sources = files(
   'pages/hw-controller.c',
   'pages/hw-detail.c',
   'pages/hw-devices.c',
+  'pages/hw-input-classify.c',
+  'pages/hw-keyboard-index.c',
   'pages/hw-device-list.c',
   'pages/page-cpu.c',
   'pages/page-keyboard.c',
   'pages/page-mouse.c',
+  'pages/mouse-ratbag.c',
+  'pages/mouse-ratbag-client.c',
+  'pages/mouse-settings.c',
+  'pages/mouse-kwin.c',
   'pages/page-gamescope.c',
   'pages/page-gamemode.c',
   'pages/page-utilities.c',
@@ -72,3 +78,26 @@ icon_test = executable('test-game-icons', '../tests/test-game-icons.c',
 test('game-icons', icon_test)
 
 executable('epi-admin', 'epi-admin.c', resources, dependencies: [gtk4_dep], install: true, install_dir: join_paths(get_option('libexecdir'), 'epinephrine'))
+
+mouse_ratbag_test = executable('test-mouse-ratbag',
+  '../tests/test-mouse-ratbag.c', 'pages/mouse-ratbag-client.c',
+  include_directories: include_directories('.'), dependencies: [gtk4_dep])
+test('mouse-ratbag', mouse_ratbag_test)
+
+mouse_settings_test = executable('test-mouse-settings',
+  '../tests/test-mouse-settings.c', 'pages/mouse-settings.c',
+  include_directories: include_directories('.'), dependencies: [gtk4_dep])
+test('mouse-settings', mouse_settings_test, env: ['GSETTINGS_BACKEND=memory'])
+mouse_kwin_test = executable('test-mouse-kwin',
+  '../tests/test-mouse-kwin.c', 'pages/mouse-kwin.c',
+  include_directories: include_directories('.'), dependencies: [gtk4_dep, m_dep])
+test('mouse-kwin', mouse_kwin_test)
+mouse_ui_test = executable('test-mouse-ui', '../tests/test-mouse-ui.c',
+  include_directories: include_directories('.'), link_whole: core, dependencies: core_deps)
+test('mouse-ui', mouse_ui_test)
+hw_input_test = executable('test-hw-input', '../tests/test-hw-input.c', 'pages/hw-input-classify.c',
+  include_directories: include_directories('.'), dependencies: [gtk4_dep])
+test('hw-input', hw_input_test)
+components_test = executable('test-components', '../tests/test-components.c', 'epi-components.c', 'epi-privilege.c',
+  include_directories: include_directories('.'), dependencies: [gtk4_dep])
+test('components', components_test)

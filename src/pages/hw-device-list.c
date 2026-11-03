@@ -249,13 +249,13 @@ hw_device_list_on_selected (GtkListBox *box, GtkListBoxRow *row, gpointer user_d
   else if (g_strcmp0 (type, "keyboard") == 0 && page->keyboard_page)
     {
       keyboard_page_show_device (page->keyboard_page,
-        page->device_vendor[idx], page->device_product[idx]);
+        page->device_vendor[idx], page->device_product[idx], page->device_names[idx]);
       gtk_stack_set_visible_child_name (page->detail_stack, "keyboard");
     }
   else if (g_strcmp0 (type, "mouse") == 0 && page->mouse_page)
     {
       mouse_page_show_device (page->mouse_page,
-        page->device_vendor[idx], page->device_product[idx]);
+        page->device_vendor[idx], page->device_product[idx], page->device_names[idx]);
       gtk_stack_set_visible_child_name (page->detail_stack, "mouse");
     }
   else

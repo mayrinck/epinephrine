@@ -2,6 +2,8 @@
 #include <linux/input.h>
 #include "page-hardware.h"
 #include "hw-devices.h"
+#include "hw-input-classify.h"
+#include "hw-keyboard-index.h"
 #include "hw-gpu.h"
 #include "hw-controller.h"
 #include "hw-monitor.h"
@@ -157,6 +159,11 @@ extract_byid_name (const char *entry)
 static char *
 read_evdev_name (const char *devpath)
 {
+  g_autofree char *event = g_path_get_basename (devpath);
+  g_autofree char *name_path = g_build_filename ("/sys/class/input", event, "device", "name", NULL);
+  char *sys_name = NULL;
+  if (g_file_get_contents (name_path, &sys_name, NULL, NULL))
+    { g_strstrip (sys_name); if (*sys_name) return sys_name; g_free (sys_name); }
   int fd = open (devpath, O_RDONLY | O_NONBLOCK);
   if (fd < 0) return NULL;
   char buf[256] = {0};
@@ -254,6 +261,13 @@ process_input_device (HardwarePage *page, GHashTable *seen,
     if (g_str_has_prefix (base, "../")) base += 3;
     devpath = g_build_filename ("/dev/input", base, NULL);
   }
+
+  /* Some keyboards expose an auxiliary mouse interface. Do not let that
+   * interface claim the physical device before the real keyboard is seen. */
+  g_autofree char *event_name = g_path_get_basename (devpath);
+  if (g_strcmp0 (from_type, "mouse") == 0 &&
+      hw_input_is_keyboard_aux_mouse ("/sys/class/input", event_name))
+    { g_free (devpath); return; }
 
   if (g_hash_table_contains (seen, devpath))
     {
@@ -377,8 +391,12 @@ process_input_device (HardwarePage *page, GHashTable *seen,
         }
       else
         {
-          /* For keyboards and other devices — still read VID/PID */
           read_evdev_vid_pid (devpath, &vendor, &product);
+          if (g_strcmp0 (type, "keyboard") == 0)
+            {
+              char *override = hw_keyboard_index_lookup (vendor, product, display_name);
+              if (override) { g_free (display_name); display_name = override; }
+            }
         }
       add_device (page, display_name, type ? type : "input", type_to_subtitle (type), devpath,
         vendor, product, url, category);
@@ -880,6 +898,9 @@ hw_devices_detect (HardwarePage *page)
 
               const char *type = classify_evdev (fd);
               close (fd);
+              if (g_strcmp0 (type, "mouse") == 0 &&
+                  hw_input_is_keyboard_aux_mouse ("/sys/class/input", entry))
+                { g_free (name); g_free (devpath); continue; }
 
               if (!name && !type)
                 { g_free (devpath); continue; }
@@ -930,6 +951,17 @@ hw_devices_detect (HardwarePage *page)
                   uint16_t vendor = 0, product = 0;
                   const char *url = NULL;
                   const char *category = NULL;
+                  read_evdev_vid_pid (devpath, &vendor, &product);
+                  if (g_strcmp0 (type, "keyboard") == 0)
+                    {
+                      char *override = hw_keyboard_index_lookup (vendor, product, name);
+                      if (override) { g_free (name); name = override; }
+                    }
+                  if (g_strcmp0 (type, "mouse") == 0 && vendor)
+                    {
+                      const char *override = mouse_index_lookup_name (vendor, product);
+                      if (override) { g_free (name); name = g_strdup (override); }
+                    }
                   if ((g_strcmp0 (type, "joystick") == 0 || g_strcmp0 (type, "controller") == 0)
                       && read_evdev_vid_pid (devpath, &vendor, &product))
                     {

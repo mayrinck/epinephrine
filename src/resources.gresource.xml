@@ -25,6 +25,7 @@
     <file>icons/launchers/bottles.png</file>
     <file preprocess="xml-stripblanks">icons/launchers/hydra.svg</file>
     <file>icons/generic-ps2.svg</file>
+    <file alias="icons/io.github.mayrinck.epinephrine.svg">../data/io.github.mayrinck.epinephrine.svg</file>
     <file>icons/brand-default.svg</file>
     <file>icons/brand-blue.svg</file>
     <file>icons/brand-green.svg</file>
@@ -68,6 +69,7 @@
     <file preprocess="xml-stripblanks">icons-sym/bulb-symbolic.svg</file>
     <file alias="database/GPU_INDEX.md">../database/GPU_INDEX.md</file>
     <file alias="database/JOY_INDEX.md">../database/JOY_INDEX.md</file>
+    <file alias="database/KEYBOARD_INDEX.md">../database/KEYBOARD_INDEX.md</file>
     <file alias="database/MOUSE_INDEX.md">../database/MOUSE_INDEX.md</file>
     <file alias="database/RAM_INDEX.md">../database/RAM_INDEX.md</file>
     <file alias="scripts/admin_helper.py">../scripts/admin_helper.py</file>

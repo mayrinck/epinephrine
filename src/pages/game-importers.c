@@ -173,6 +173,7 @@ import_bottles_games (DashboardPage *page)
 
   /* Possible Bottles data directories */
   const char *bottles_candidates[] = {
+    ".var/app/com.usebottles.bottles/data/bottles/bottles",
     ".var/app/org.usebottles.bottles/data/bottles/bottles",
     ".local/share/bottles/bottles",
     NULL

@@ -476,6 +476,8 @@ settings_apply_accent (AccentChoice choice)
       g_accent_provider = NULL;
     }
 
+  epinephrine_update_window_icon (choice);
+
   /* Resolve Follow GPU to detected brand */
   if (choice == ACCENT_FOLLOW_GPU)
     choice = settings_detect_gpu_accent ();

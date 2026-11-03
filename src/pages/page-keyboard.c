@@ -728,14 +728,16 @@ keyboard_page_new (void)
 }
 
 void
-keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product)
+keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product, const char *detected_name)
 {
   if (!page) return;
 
   char *name = NULL, *vnd = NULL, *spd = NULL, *drv = NULL, *csp = NULL;
   find_keyboard_usb_info (vendor, product, &name, &vnd, &spd, &drv, &csp);
 
-  if (name && name[0])
+  if (detected_name && detected_name[0])
+    gtk_label_set_text (GTK_LABEL (page->brand_name_label), detected_name);
+  else if (name && name[0])
     gtk_label_set_text (GTK_LABEL (page->brand_name_label), name);
   else
     {

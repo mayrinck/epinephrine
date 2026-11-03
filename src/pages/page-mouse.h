@@ -21,6 +21,10 @@ typedef struct
   GtkWidget *speed_scale;
   GtkWidget *accel_dropdown;
   GtkWidget *natural_scroll_switch;
+  GtkWidget *scroll_factor;
+  GtkWidget *scroll_button_switch;
+  GDBusConnection *kwin_bus;
+  char *kwin_path;
   GtkWidget *dpi_label;
   GtkWidget *save_btn;
 
@@ -42,51 +46,9 @@ typedef struct
   uint16_t    cur_vendor;
   uint16_t    cur_product;
 
-  /* G300s detection */
-  int         hidraw_fd;
-  char       *hidraw_path;   /* set when direct access failed but admin session works */
-  gboolean    g300_detected;
-  gboolean    ratbagd_warned;
-
-  /* G300 profile data (raw 35-byte reports) */
-  uint8_t     profile_raw[3][35];
-  int         active_profile_idx;
-
-  /* Section revealers for G300-specific UI */
-  GtkWidget  *g300_section_revealer[5];   /* profiles, dpi, rate, led, buttons */
-
-  /* Profile selector */
-  GtkWidget  *profile_btn[3];             /* Perfil 1/2/3 toggle buttons */
-  char       *profile_names[3];           /* Custom profile names (NULL = default) */
-
-  /* DPI */
-  GtkWidget  *dpi_scales[4];
-  GtkWidget  *dpi_spin_btns[4];
-  GtkWidget  *dpi_default_btns[4];
-
-  /* Polling rate */
-  GtkWidget  *rate_btn[4];               /* 1000/125/250/500 Hz */
-
-  /* LED */
-  GtkWidget  *led_btn[8];                /* 8 color buttons */
-
-  /* Button mapping */
-  GtkWidget  *button_frames[9];          /* frames around each button config */
-  GtkWidget  *button_func_combo[9];
-  GtkWidget  *button_key_box[9];         /* revealed when function=Key */
-  GtkWidget  *button_capture_btn[9];
-  GtkWidget  *button_capture_label[9];
-  GtkWidget  *button_mod_grid[9];        /* modifier checkboxes */
-  gboolean    button_capturing[9];
-
-  /* Key capture evdev */
-  int         capture_ev_fd;
-  guint       capture_source_id;
-  int         capture_btn_idx;
-  int         capture_timeout_id;
-
   /* Save to mouse button */
   GtkWidget  *save_mouse_btn;
+  GtkWidget  *ratbag_editor_btn;
 
   /* Restore factory profiles button */
   GtkWidget  *restore_factory_btn;
@@ -99,7 +61,7 @@ typedef struct
 } MousePage;
 
 MousePage *mouse_page_new (void);
-void mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product);
+void mouse_page_show_device (MousePage *page, uint16_t vendor, uint16_t product, const char *detected_name);
 
 /* MOUSE_INDEX.md name lookup (for use during device detection) */
 const char *mouse_index_lookup_name (uint16_t vendor, uint16_t product);

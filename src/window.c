@@ -32,6 +32,36 @@ typedef struct
 
 static EpinephrineWindow *g_epi = NULL;
 
+/* X11 and compositors implementing toplevel icons may use the themed texture.
+ * Other Wayland compositors resolve the installed desktop file instead. */
+void
+epinephrine_update_window_icon (int accent)
+{
+  if (!g_epi || !g_epi->win) return;
+  if (accent == ACCENT_FOLLOW_GPU) accent = settings_detect_gpu_accent ();
+  const char *file = accent == ACCENT_INTEL ? "brand-blue.svg" :
+                     accent == ACCENT_NVIDIA ? "brand-green.svg" :
+                     accent == ACCENT_TUX ? "brand-orange.svg" : "brand-default.svg";
+  GdkSurface *surface = gtk_native_get_surface (GTK_NATIVE (g_epi->win));
+  if (!surface || !GDK_IS_TOPLEVEL (surface)) return;
+  g_autofree char *path = g_strconcat ("/io/github/mayrinck/epinephrine/icons/", file, NULL);
+  g_autoptr(GError) error = NULL;
+  g_autoptr(GdkPixbuf) pixbuf = gdk_pixbuf_new_from_resource_at_scale (path, 256, 256, TRUE, &error);
+  if (!pixbuf) { g_warning ("Cannot load application icon: %s", error->message); return; }
+  GdkTexture *texture = gdk_texture_new_for_pixbuf (pixbuf);
+  GList *icons = g_list_prepend (NULL, texture);
+  gdk_toplevel_set_icon_list (GDK_TOPLEVEL (surface), icons);
+  g_list_free (icons);
+  g_object_unref (texture);
+}
+
+static void
+on_window_realize (GtkWidget *widget, gpointer data)
+{
+  (void) widget; (void) data;
+  epinephrine_update_window_icon (settings_load_accent ());
+}
+
 static void
 on_window_destroy (void)
 {
@@ -272,6 +302,8 @@ epinephrine_window_new (EpinephrineApplication *app)
   g_epi = epi;
 
   epi->win = GTK_WINDOW (gtk_builder_get_object (builder, "window"));
+  gtk_window_set_icon_name (epi->win, "io.github.mayrinck.epinephrine");
+  g_signal_connect (epi->win, "realize", G_CALLBACK (on_window_realize), NULL);
   epi->view_stack = ADW_VIEW_STACK (gtk_builder_get_object (builder, "view-stack"));
   epi->toast_overlay = ADW_TOAST_OVERLAY (gtk_builder_get_object (builder, "toast-overlay"));
 

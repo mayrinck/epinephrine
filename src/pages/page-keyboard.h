@@ -40,6 +40,6 @@ typedef struct
 
 KeyboardPage *keyboard_page_new (void);
 
-void keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product);
+void keyboard_page_show_device (KeyboardPage *page, uint16_t vendor, uint16_t product, const char *detected_name);
 
 G_END_DECLS
