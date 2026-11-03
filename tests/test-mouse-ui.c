@@ -2,6 +2,7 @@
 #include "pages/page-mouse.h"
 #include "epi-i18n.h"
 #include "pages/hw-keyboard-index.h"
+#include "pages/mouse-settings.h"
 int main(int argc,char **argv) {
   (void)argc;(void)argv;g_setenv("GSETTINGS_BACKEND","memory",TRUE);g_setenv("XDG_CURRENT_DESKTOP","GNOME",TRUE);
   if(!gtk_init_check()) return 77;
@@ -18,7 +19,8 @@ int main(int argc,char **argv) {
   g_assert_null(hw_keyboard_index_lookup(0x05ac,0x024f,"Apple Keyboard"));
   g_assert_null(hw_keyboard_index_lookup(0x1234,0x024f,"SONiX AKL982 Pro"));
   MousePage *p=mouse_page_new();g_assert_nonnull(p);g_assert_nonnull(p->scroll_factor);
-  g_assert_true(gtk_widget_get_sensitive(p->speed_scale));g_assert_false(gtk_widget_get_sensitive(p->scroll_factor));
+  g_autoptr(GSettings) settings = mouse_settings_open("GNOME");
+  g_assert_cmpint(gtk_widget_get_sensitive(p->speed_scale), ==, settings != NULL);g_assert_false(gtk_widget_get_sensitive(p->scroll_factor));
   mouse_page_show_device(p,0x046d,0xc246,NULL);g_assert_true(gtk_widget_get_visible(p->ratbag_editor_btn));
   mouse_page_show_device(p,0x1234,0xabcd,"Example mouse");g_assert_false(gtk_widget_get_visible(p->ratbag_editor_btn));
   g_assert_cmpstr(gtk_label_get_text(GTK_LABEL(p->mouse_name_label)),==,"Example mouse");
